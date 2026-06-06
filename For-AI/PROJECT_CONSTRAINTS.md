@@ -79,6 +79,14 @@ a saved config with trigger mappings is loaded. Each enabled manifest trigger
 maps to a questionnaire block, and questionnaire completion should default to
 returning to the calling scenario APK.
 
+The questionnaire builder layout should behave like a one-page website: a fixed
+left navigation menu with vertically arranged links, and a single scrolling
+content column where each workflow step is one section. Keep panels and control
+groups stacked vertically. Do not reintroduce side-by-side dashboard columns for
+the builder workflow. The left rail should include an always-visible Downloads
+group for the accompanying local companion software and launchers, because the
+hosted static GUI depends on that local companion for trusted PC actions.
+
 The hosted GitHub Pages page is an interface only. It cannot directly install
 packages, read arbitrary local files, run build tools, access hardware, or hold
 private experiment data. Anything real must go through the local companion or

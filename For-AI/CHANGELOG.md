@@ -16,3 +16,6 @@ Use absolute dates.
 - Made the questionnaire builder APK-first: fresh sessions must load a scenario
   APK or trigger catalog before downstream block editing, local dependency,
   validation, export, and APK-generation controls become active.
+- Constrained the questionnaire builder UI to a vertically stacked one-page
+  website with a fixed left navigation rail, including always-visible downloads
+  for the local companion software and launchers.

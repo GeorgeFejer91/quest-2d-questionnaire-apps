@@ -53,7 +53,7 @@
     .content {
       margin-left: 256px;
       padding: 24px 28px 48px;
-      max-width: 1180px;
+      max-width: 920px;
       min-width: 0;
     }
 
@@ -116,9 +116,9 @@
 
     .nav-link {
       display: grid;
-      grid-template-columns: 28px minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 8px;
+      grid-template-columns: 1fr;
+      align-items: start;
+      gap: 2px;
       min-height: 38px;
       padding: 7px 8px;
       border-radius: 6px;
@@ -165,6 +165,13 @@
       text-decoration: underline;
     }
 
+    .download-link {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+      padding: 7px 8px;
+    }
+
     .stage {
       scroll-margin-top: 20px;
       padding: 0 0 28px;
@@ -174,18 +181,16 @@
     }
 
     .section-title {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
+      display: grid;
+      gap: 8px;
+      align-items: stretch;
       margin-bottom: 14px;
     }
 
     .stage-heading {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: flex-start;
+      display: grid;
+      gap: 8px;
+      align-items: stretch;
       margin-bottom: 14px;
     }
 
@@ -238,12 +243,12 @@
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 12px;
     }
 
     .grid.two {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
     }
 
     label {
@@ -309,8 +314,12 @@
 
     .button-row {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       gap: 8px;
+    }
+
+    .button-row button {
+      width: 100%;
     }
 
     .block-list {
@@ -320,9 +329,9 @@
 
     .block-row {
       display: grid;
-      grid-template-columns: 1fr auto auto;
+      grid-template-columns: 1fr;
       gap: 8px;
-      align-items: center;
+      align-items: stretch;
       border: 1px solid var(--line);
       border-radius: 6px;
       padding: 8px;
@@ -330,7 +339,7 @@
     }
 
     .trigger-row {
-      grid-template-columns: 64px minmax(0, 1fr);
+      grid-template-columns: 1fr;
       align-items: start;
       padding: 12px;
     }
@@ -345,7 +354,7 @@
     }
 
     .registry-row {
-      grid-template-columns: 72px minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-columns: 1fr;
     }
 
     .registry-number {
@@ -361,7 +370,7 @@
 
     .metric-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 10px;
     }
 
@@ -436,19 +445,19 @@
     }
 
     .file-row {
-      display: flex;
+      display: grid;
       gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
+      align-items: stretch;
     }
 
     .file-row input {
-      width: auto;
+      width: 100%;
       max-width: 100%;
     }
 
     .toggle-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
       gap: 10px;
       align-items: flex-start;
       padding: 8px 0;
@@ -462,7 +471,7 @@
 
     .palette {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 8px;
       margin-bottom: 12px;
     }
@@ -505,7 +514,7 @@
 
     .compact-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 12px;
       margin-top: 10px;
     }
@@ -558,12 +567,12 @@
       <nav class="workflow-nav">
         <a id="navApk" class="nav-link" href="#apk-stage">
           <span class="nav-number">01</span>
-          <span>APK</span>
+          <span>Load APK</span>
           <span id="navApkState" class="nav-state">Required</span>
         </a>
         <a id="navTriggers" class="nav-link locked" href="#trigger-stage">
           <span class="nav-number">02</span>
-          <span>Blocks</span>
+          <span>Block builder</span>
           <span id="navTriggersState" class="nav-state">Locked</span>
         </a>
         <a id="navQuestionnaires" class="nav-link locked" href="#questionnaire-stage">
@@ -595,6 +604,13 @@
       </div>
 
       <div class="side-group">
+        <div class="side-group-title">Downloads</div>
+        <a class="side-link download-link" href="https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/archive/refs/heads/main.zip">Companion software ZIP</a>
+        <a class="side-link download-link" href="https://raw.githubusercontent.com/GeorgeFejer91/quest-2d-questionnaire-apps/main/MyQuestionnaireVR-2D/Start-QuestionnaireBuilderOnlineConnector.cmd">Online connector launcher</a>
+        <a class="side-link download-link" href="https://raw.githubusercontent.com/GeorgeFejer91/quest-2d-questionnaire-apps/main/MyQuestionnaireVR-2D/Start-QuestionnaireBuilderApp.cmd">Offline desktop launcher</a>
+      </div>
+
+      <div class="side-group">
         <div class="side-group-title">Local companion</div>
         <button id="dependencyStatusButton" type="button" data-requires-apk-control>Dependency status</button>
         <button id="installDependenciesButton" type="button" data-requires-apk-control>Install dependencies</button>
@@ -615,15 +631,15 @@
       <section id="apk-stage" class="stage">
         <div class="stage-heading">
           <div>
-            <h2>1. Choose existing APK</h2>
-            <p class="subtle">Start from a scenario APK or trigger catalog so the builder can create one questionnaire block per embedded trigger.</p>
+            <h2>1. Load APK and scan triggers</h2>
+            <p class="subtle">Start by loading the scenario APK. The builder scans its trigger manifest and counts the questionnaire trigger events it contains.</p>
           </div>
           <div id="apkStageState" class="stage-state">Waiting for APK</div>
         </div>
 
         <div class="panel">
           <div class="section-title">
-            <h3>Trigger manifest</h3>
+            <h3>APK trigger scan</h3>
             <div class="file-row">
               <input id="loadScenarioApkInput" type="file" accept=".apk,application/vnd.android.package-archive,application/json,.json">
             </div>
@@ -645,8 +661,8 @@
       <section id="trigger-stage" class="stage" data-requires-apk>
         <div class="stage-heading">
           <div>
-            <h2>2. Assign questionnaire blocks</h2>
-            <p id="triggerSummary" class="subtle">No trigger blocks available yet.</p>
+            <h2>2. Build questionnaire blocks</h2>
+            <p id="triggerSummary" class="subtle">After the APK scan, each detected trigger becomes a block slot for a questionnaire.</p>
           </div>
           <div class="stage-state">Locked</div>
         </div>

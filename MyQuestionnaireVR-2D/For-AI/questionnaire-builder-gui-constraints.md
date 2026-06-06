@@ -34,6 +34,12 @@ Workflow constraint:
 - Trigger mappings are the source of block-builder structure: each enabled
   manifest trigger should become one questionnaire block, with completion
   returning to the calling scenario APK by default.
+- The page should behave like a one-page website with a fixed left navigation
+  rail and vertically stacked content sections. Do not arrange workflow panels
+  side by side.
+- Keep an always-visible Downloads group in the left rail for the companion
+  software package and Windows launchers, because the hosted GUI needs that
+  local companion for trusted PC actions.
 
 Security and portability constraints:
 

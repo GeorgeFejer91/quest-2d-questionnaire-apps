@@ -1,11 +1,24 @@
 param(
     [string]$ConfigPath = "",
-    [string]$ReferenceProjectPath = "C:\Users\cogpsy-vrlab\Documents\GithubVR\MyQuestionnaireVR"
+    [string]$ReferenceProjectPath = ""
 )
 
 $ErrorActionPreference = 'Stop'
 
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($ReferenceProjectPath)) {
+    $siblingReference = Join-Path (Split-Path -Parent $ProjectRoot) 'MyQuestionnaireVR'
+    if (Test-Path -LiteralPath $siblingReference) {
+        $ReferenceProjectPath = [System.IO.Path]::GetFullPath($siblingReference)
+    }
+    else {
+        $ReferenceProjectPath = $ProjectRoot
+    }
+}
+else {
+    $ReferenceProjectPath = [System.IO.Path]::GetFullPath($ReferenceProjectPath)
+}
+
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
     $ConfigPath = Join-Path $ProjectRoot 'QuestionnaireConfigs\viscereality-maia2.config.json'
 }
@@ -111,6 +124,61 @@ if ($config.PSObject.Properties.Name -contains 'chainDefaults' -and $null -ne $c
     }
     if ($config.chainDefaults.autoCloseDelayMs -and [int]$config.chainDefaults.autoCloseDelayMs -lt 0) {
         Add-ConfigError "chainDefaults.autoCloseDelayMs must be 0 or greater."
+    }
+}
+
+if ($config.PSObject.Properties.Name -contains 'triggerQuestionnaireMapping' -and $null -ne $config.triggerQuestionnaireMapping) {
+    $mapping = $config.triggerQuestionnaireMapping
+    if ($mapping.schemaVersion -and $mapping.schemaVersion -ne 'mq.quest_questionnaire_trigger_mapping.v1') {
+        Add-ConfigError "triggerQuestionnaireMapping.schemaVersion must be mq.quest_questionnaire_trigger_mapping.v1."
+    }
+
+    if (-not ($mapping.PSObject.Properties.Name -contains 'triggers')) {
+        Add-ConfigError "triggerQuestionnaireMapping.triggers is required when triggerQuestionnaireMapping is present."
+    }
+
+    $allowedTriggerModes = @('none', 'baseline', 'maia2', 'pictographic', 'slider', 'full')
+    $seenTriggers = @{}
+    foreach ($trigger in @($mapping.triggers)) {
+        $triggerId = [string]$trigger.triggerId
+        $triggerId = $triggerId.Trim()
+        if ([string]::IsNullOrWhiteSpace($triggerId)) {
+            Add-ConfigError "A trigger mapping is missing triggerId."
+            continue
+        }
+
+        $key = $triggerId.ToLowerInvariant()
+        if ($seenTriggers.ContainsKey($key)) {
+            Add-ConfigError "Trigger $triggerId is mapped more than once."
+        }
+        $seenTriggers[$key] = $true
+
+        $mode = [string]$trigger.questionnaireMode
+        if ([string]::IsNullOrWhiteSpace($mode)) {
+            $mode = 'none'
+        }
+        if ($allowedTriggerModes -notcontains $mode) {
+            Add-ConfigError "Trigger $triggerId uses unsupported questionnaireMode $mode."
+        }
+
+        $enabled = $true
+        if ($trigger.PSObject.Properties.Name -contains 'enabled') {
+            $enabled = [bool]$trigger.enabled
+        }
+        if ($enabled -and $mode -ne 'none') {
+            if ([string]::IsNullOrWhiteSpace([string]$trigger.blockId)) {
+                Add-ConfigError "Trigger $triggerId needs a blockId."
+            }
+            if (-not ([string]$trigger.blockNumber -match '^\d{3}$')) {
+                Add-ConfigError "Trigger $triggerId needs a three-digit blockNumber."
+            }
+        }
+
+        if ($trigger.PSObject.Properties.Name -contains 'autoCloseDelayMs' -and $null -ne $trigger.autoCloseDelayMs) {
+            if ([int]$trigger.autoCloseDelayMs -lt 0) {
+                Add-ConfigError "Trigger $triggerId autoCloseDelayMs must be 0 or greater."
+            }
+        }
     }
 }
 

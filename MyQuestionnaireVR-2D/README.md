@@ -8,6 +8,13 @@ canvas. It launches as a regular 2D panel in Horizon OS / Meta Home and uses
 standard Android panel input from controllers, hands, keyboard, mouse, or touch.
 It is a 2D panel app, not a full immersive XR app.
 
+## AI Agent Notes
+
+Before making code changes, AI agents should read `For-AI\README.md`. That
+folder records evolving project constraints, including the requirement that the
+offline desktop GUI and online connector GUI stay functionally identical except
+for the pairing mechanism to the local companion program.
+
 ## Terminology
 
 Use these terms consistently:
@@ -39,16 +46,52 @@ Gradle launcher so Android Studio does not need to be installed for v1.
 
 ## Questionnaire Builder
 
-The static config editor is here:
+For the offline desktop app workflow, double-click this file from Windows
+Explorer:
+
+```text
+Start-QuestionnaireBuilderApp.cmd
+```
+
+Or start the local app backend explicitly:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-questionnaire-builder-app.ps1
+```
+
+The launcher opens the questionnaire builder HTML at `http://127.0.0.1:8765/`.
+All user input stays in the browser UI. The local backend saves configs under
+`QuestionnaireConfigs\generated\`, runs the PowerShell validator, and can run
+APK generation from the `Windows App Runner` panel.
+
+For the online connector workflow, start the local companion first:
+
+```text
+Start-QuestionnaireBuilderOnlineConnector.cmd
+```
+
+That opens the hosted static builder page and prints a local pairing token. In
+the page's `Windows App Runner` panel, keep the connector URL as
+`http://127.0.0.1:8765`, enter the pairing token, then use the same controls as
+offline mode. The online page is only a static GUI. File access, dependency
+checks, config validation, APK generation, and render previews are performed by
+the local companion running on the user's PC.
+
+The offline and online GUI paths should stay functionally identical except for
+the online pairing step. Do not add features to one path without keeping the
+other path aligned.
+
+The static config editor can still be opened directly when backend actions are
+not needed:
 
 ```text
 tools\questionnaire-config-editor\index.html
 ```
 
-Save generated configs under `QuestionnaireConfigs\`. The editor keeps the v1
-contract: language selection, demographics, MAIA-2, pictographic selections,
-and one custom slider block. It also shows participant-experience counts and
-prints the matching APK generator command.
+The editor keeps the v1 contract: language selection, demographics, MAIA-2,
+pictographic selections, and one custom slider block. It also scans Unity APK
+trigger catalogs, maps trigger event IDs to questionnaire blocks, shows
+participant-experience counts, and prints the matching APK generator command.
 
 Generate a named APK from any config:
 
@@ -96,6 +139,21 @@ Outputs:
 Builds\QuestionnaireBuilder\index.html
 Builds\QuestionnaireBuilder.zip
 Builds\QuestionnaireBuilder-package-summary.json
+```
+
+Stage the same HTML GUI into a local GitHub Pages checkout:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\publish-questionnaire-builder-github-pages.ps1
+```
+
+By default this writes `questionnaire-builder\index.html` into the parent
+`quest-2d-questionnaire-apps` repository when this project is nested there.
+Commit and push that folder from the Pages repository to publish the hosted GUI
+at:
+
+```text
+https://georgefejer91.github.io/quest-2d-questionnaire-apps/questionnaire-builder/
 ```
 
 Prove the browser builder can emit a config that goes directly through APK
@@ -228,7 +286,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-questionnai
 Exports are written on-device under:
 
 ```text
-/sdcard/Android/data/org.viscereality.questionnaires2d/files/QuestionnaireExports
+/sdcard/Android/data/org.mesmerprism.viscereality.questionnaires2d/files/QuestionnaireExports
 ```
 
 ## APK Chain Broker
@@ -242,9 +300,9 @@ For the full experiment-chain recipe and current stress-test evidence, see
 `docs\experiment-chain-workflow.md`.
 
 ```text
-package: org.viscereality.orchestrator
-activity: org.viscereality.orchestrator.ExperimentOrchestratorActivity
-action: org.viscereality.orchestrator.BROKER
+package: org.mesmerprism.viscereality.orchestrator
+activity: org.mesmerprism.viscereality.orchestrator.ExperimentOrchestratorActivity
+action: org.mesmerprism.viscereality.orchestrator.BROKER
 ```
 
 Build output:
@@ -261,9 +319,9 @@ The questionnaire APK also keeps its own compatible broker for small
 questionnaire-centered chains and backward compatibility:
 
 ```text
-package: org.viscereality.questionnaires2d
-activity: org.viscereality.questionnaires2d.QuestChainBrokerActivity
-action: org.viscereality.questionnaires2d.BROKER
+package: org.mesmerprism.viscereality.questionnaires2d
+activity: org.mesmerprism.viscereality.questionnaires2d.QuestChainBrokerActivity
+action: org.mesmerprism.viscereality.questionnaires2d.BROKER
 ```
 
 Both brokers accept `mq.brokerCommand` values:
@@ -275,13 +333,13 @@ startPlan, continuePlan, clearPlan, startQuestionnaire, openApp, goHome, ping
 The standalone orchestrator stores chain state under:
 
 ```text
-/sdcard/Android/data/org.viscereality.orchestrator/files/ExperimentOrchestrator
+/sdcard/Android/data/org.mesmerprism.viscereality.orchestrator/files/ExperimentOrchestrator
 ```
 
 The questionnaire-owned broker stores chain state under:
 
 ```text
-/sdcard/Android/data/org.viscereality.questionnaires2d/files/ChainBroker
+/sdcard/Android/data/org.mesmerprism.viscereality.questionnaires2d/files/ChainBroker
 ```
 
 Recommended flow:
@@ -295,7 +353,7 @@ entry point. The broker can identify that app by package/activity and issue a
 hook command using:
 
 ```text
-intent action: org.viscereality.CHAIN_COMMAND
+intent action: org.mesmerprism.viscereality.CHAIN_COMMAND
 extra: mq.hookCommand=startScenario
 extras: mq.chainId, mq.chainStepId, mq.chainStepIndex
 callback extras: mq.brokerAction, mq.brokerPackage, mq.brokerActivity
@@ -321,9 +379,9 @@ Builds\ViscerealityChainHookWrapper.apk
 The wrapper advertises the same discoverable hook action:
 
 ```text
-package: org.viscereality.chainhookwrapper
-activity: org.viscereality.chainhookwrapper.ChainHookActivity
-action: org.viscereality.CHAIN_COMMAND
+package: org.mesmerprism.viscereality.chainhookwrapper
+activity: org.mesmerprism.viscereality.chainhookwrapper.ChainHookActivity
+action: org.mesmerprism.viscereality.CHAIN_COMMAND
 ```
 
 In a chain plan, target the wrapper and pass the old APK target through extras:
@@ -332,9 +390,9 @@ In a chain plan, target the wrapper and pass the old APK target through extras:
 {
   "id": "peripersonal-space-right-wrapper",
   "type": "scenario",
-  "package": "org.viscereality.chainhookwrapper",
+  "package": "org.mesmerprism.viscereality.chainhookwrapper",
   "activity": ".ChainHookActivity",
-  "action": "org.viscereality.CHAIN_COMMAND",
+  "action": "org.mesmerprism.viscereality.CHAIN_COMMAND",
   "command": "launchTarget",
   "extras": {
     "targetPackage": "com.Viscereality.ViscerealityPeriPersonalSpaceRight",
@@ -357,7 +415,7 @@ C:\Users\cogpsy-vrlab\Documents\GithubVR\Viscereality\Viscereality\Assets\Script
 C:\Users\cogpsy-vrlab\Documents\GithubVR\Viscereality\Viscereality\Assets\Plugins\Android\AndroidManifest.xml
 ```
 
-Those source builds expose the same `org.viscereality.CHAIN_COMMAND`
+Those source builds expose the same `org.mesmerprism.viscereality.CHAIN_COMMAND`
 action directly from the Unity activity. At the semantic end of a scenario, call
 this from Unity:
 

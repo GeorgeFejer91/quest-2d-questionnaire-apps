@@ -1,12 +1,81 @@
 param(
-    [string]$UnityAndroidRoot = "C:\Users\cogpsy-vrlab\Unity\Hub\Editor\6000.2.7f2\Editor\Data\PlaybackEngines\AndroidPlayer",
+    [string]$UnityAndroidRoot = "",
     [string]$ProjectPath = (Split-Path -Parent $PSScriptRoot),
     [string]$ConfigPath = "",
-    [string]$ReferenceProjectPath = "C:\Users\cogpsy-vrlab\Documents\GithubVR\MyQuestionnaireVR",
+    [string]$ReferenceProjectPath = "",
     [switch]$SkipTests
 )
 
 $ErrorActionPreference = 'Stop'
+
+function Test-UnityAndroidRoot {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $false
+    }
+    return (Test-Path -LiteralPath (Join-Path $Path 'OpenJDK\bin\java.exe')) -and
+        (Test-Path -LiteralPath (Join-Path $Path 'SDK'))
+}
+
+function Resolve-UnityAndroidRoot {
+    param([string]$RequestedRoot)
+
+    $candidates = New-Object 'System.Collections.Generic.List[string]'
+    if (-not [string]::IsNullOrWhiteSpace($RequestedRoot)) {
+        $candidates.Add($RequestedRoot) | Out-Null
+    }
+    if (-not [string]::IsNullOrWhiteSpace($env:UNITY_ANDROID_ROOT)) {
+        $candidates.Add($env:UNITY_ANDROID_ROOT) | Out-Null
+    }
+
+    $editorRoots = @()
+    if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
+        $editorRoots += Join-Path $env:USERPROFILE 'Unity\Hub\Editor'
+    }
+    if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
+        $editorRoots += Join-Path $env:ProgramFiles 'Unity\Hub\Editor'
+    }
+    if (-not [string]::IsNullOrWhiteSpace(${env:ProgramFiles(x86)})) {
+        $editorRoots += Join-Path ${env:ProgramFiles(x86)} 'Unity\Hub\Editor'
+    }
+
+    foreach ($editorRoot in $editorRoots) {
+        if (Test-Path -LiteralPath $editorRoot) {
+            Get-ChildItem -LiteralPath $editorRoot -Directory -ErrorAction SilentlyContinue |
+                Sort-Object Name -Descending |
+                ForEach-Object {
+                    $candidates.Add((Join-Path $_.FullName 'Editor\Data\PlaybackEngines\AndroidPlayer')) | Out-Null
+                }
+        }
+    }
+
+    foreach ($candidate in $candidates) {
+        if (Test-UnityAndroidRoot -Path $candidate) {
+            return [System.IO.Path]::GetFullPath($candidate)
+        }
+    }
+    return ''
+}
+
+$ProjectPath = [System.IO.Path]::GetFullPath($ProjectPath)
+if ([string]::IsNullOrWhiteSpace($ReferenceProjectPath)) {
+    $siblingReference = Join-Path (Split-Path -Parent $ProjectPath) 'MyQuestionnaireVR'
+    if (Test-Path -LiteralPath $siblingReference) {
+        $ReferenceProjectPath = [System.IO.Path]::GetFullPath($siblingReference)
+    }
+    else {
+        $ReferenceProjectPath = $ProjectPath
+    }
+}
+else {
+    $ReferenceProjectPath = [System.IO.Path]::GetFullPath($ReferenceProjectPath)
+}
+
+$UnityAndroidRoot = Resolve-UnityAndroidRoot -RequestedRoot $UnityAndroidRoot
+if ([string]::IsNullOrWhiteSpace($UnityAndroidRoot)) {
+    throw "Unity Android Build Support was not found. Install Unity with Android Build Support or set UNITY_ANDROID_ROOT to the AndroidPlayer folder."
+}
 
 $javaHome = Join-Path $UnityAndroidRoot 'OpenJDK'
 $sdk = Join-Path $UnityAndroidRoot 'SDK'

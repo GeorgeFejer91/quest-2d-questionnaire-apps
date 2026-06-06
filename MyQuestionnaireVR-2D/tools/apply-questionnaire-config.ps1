@@ -1,11 +1,24 @@
 param(
     [string]$ConfigPath = "",
-    [string]$ReferenceProjectPath = "C:\Users\cogpsy-vrlab\Documents\GithubVR\MyQuestionnaireVR"
+    [string]$ReferenceProjectPath = ""
 )
 
 $ErrorActionPreference = 'Stop'
 
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($ReferenceProjectPath)) {
+    $siblingReference = Join-Path (Split-Path -Parent $ProjectRoot) 'MyQuestionnaireVR'
+    if (Test-Path -LiteralPath $siblingReference) {
+        $ReferenceProjectPath = [System.IO.Path]::GetFullPath($siblingReference)
+    }
+    else {
+        $ReferenceProjectPath = $ProjectRoot
+    }
+}
+else {
+    $ReferenceProjectPath = [System.IO.Path]::GetFullPath($ReferenceProjectPath)
+}
+
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
     $ConfigPath = Join-Path $ProjectRoot 'QuestionnaireConfigs\viscereality-maia2.config.json'
 }
@@ -52,13 +65,12 @@ function Copy-Source {
 
 function Write-Utf8Lines {
     param([object[]]$Items, [string]$Target)
-    [System.IO.File]::WriteAllText($Target, (@($Items) -join "`n"), [System.Text.UTF8Encoding]::new($false))
+    [System.IO.File]::WriteAllText($Target, (@($Items) -join [Environment]::NewLine), [System.Text.UTF8Encoding]::new($false))
 }
 
 function Write-Utf8Json {
     param([object[]]$Items, [string]$Target)
-    $json = ((@($Items) | ConvertTo-Json -Depth 20) -replace "`r`n", "`n") -replace "`r", "`n"
-    [System.IO.File]::WriteAllText($Target, $json, [System.Text.UTF8Encoding]::new($false))
+    [System.IO.File]::WriteAllText($Target, (@($Items) | ConvertTo-Json -Depth 20), [System.Text.UTF8Encoding]::new($false))
 }
 
 if ($config.uiTextSource) {
@@ -170,7 +182,7 @@ $runtimeConfig = [ordered]@{
     questionnaireVersion = $config.questionnaireVersion
     appVersion = $config.appVersion
     sourceConfig = 'QuestionnaireConfigs/' + [System.IO.Path]::GetFileName($ConfigPath)
-    sourceRepository = if ($config.sourceRepository) { $config.sourceRepository } else { 'Viscereality' }
+    sourceRepository = if ($config.sourceRepository) { $config.sourceRepository } else { 'MesmerPrism/Viscereality' }
     sourceCommit = if ($config.sourceCommit) { $config.sourceCommit } else { '7f0f7c9a40885aa841892b9a680acf45fa45b2d7' }
     maia2SourcePath = if ($config.maia2SourcePath) { $config.maia2SourcePath } else { 'C:\Users\cogpsy-vrlab\Documents\GitHub\maia-2\questionnaire\src' }
     languages = @($config.languages)
@@ -200,8 +212,10 @@ $runtimeConfig = [ordered]@{
         }
     }
 }
-$runtimeJson = (($runtimeConfig | ConvertTo-Json -Depth 20) -replace "`r`n", "`n") -replace "`r", "`n"
-[System.IO.File]::WriteAllText((Join-Path $assets 'QuestionnaireConfig.json'), $runtimeJson, [System.Text.UTF8Encoding]::new($false))
+if ($config.PSObject.Properties.Name -contains 'triggerQuestionnaireMapping' -and $null -ne $config.triggerQuestionnaireMapping) {
+    $runtimeConfig.triggerQuestionnaireMapping = $config.triggerQuestionnaireMapping
+}
+[System.IO.File]::WriteAllText((Join-Path $assets 'QuestionnaireConfig.json'), ($runtimeConfig | ConvertTo-Json -Depth 20), [System.Text.UTF8Encoding]::new($false))
 
 [pscustomobject]@{
     AppliedConfig = (Resolve-Path -LiteralPath $ConfigPath).Path

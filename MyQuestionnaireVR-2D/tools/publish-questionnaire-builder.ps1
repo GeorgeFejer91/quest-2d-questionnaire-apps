@@ -95,6 +95,16 @@ New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
 
 Copy-Item -LiteralPath $sourceHtml -Destination (Join-Path $packageDir 'index.html') -Force
 
+$launcherFiles = @(
+    (Join-Path $projectFull 'Start-QuestionnaireBuilderApp.cmd'),
+    (Join-Path $projectFull 'Start-QuestionnaireBuilderOnlineConnector.cmd')
+)
+foreach ($launcherFile in $launcherFiles) {
+    if (Test-Path -LiteralPath $launcherFile) {
+        Copy-Item -LiteralPath $launcherFile -Destination (Join-Path $packageDir ([System.IO.Path]::GetFileName($launcherFile))) -Force
+    }
+}
+
 $exampleFiles = @(
     (Join-Path $projectFull 'QuestionnaireConfigs\viscereality-maia2.config.json'),
     (Join-Path $projectFull 'QuestionnaireConfigs\examples\custom-presence-check.config.json'),
@@ -105,7 +115,8 @@ $exampleFiles = @(
     (Join-Path $projectFull 'QuestionnaireConfigs\examples\peripersonal-source-hook-candidate-smoke.chain-plan.json'),
     (Join-Path $projectFull 'QuestionnaireConfigs\examples\sussex-polar-controller-then-questionnaire.chain-plan.json'),
     (Join-Path $projectFull 'QuestionnaireConfigs\examples\source-hook-stub-then-questionnaire.chain-plan.json'),
-    (Join-Path $projectFull 'QuestionnaireConfigs\examples\lsl-start-questionnaire.example.json')
+    (Join-Path $projectFull 'QuestionnaireConfigs\examples\lsl-start-questionnaire.example.json'),
+    (Join-Path $projectFull 'QuestionnaireConfigs\examples\scenario-trigger-catalog.example.json')
 )
 foreach ($example in $exampleFiles) {
     if (Test-Path -LiteralPath $example) {
@@ -115,7 +126,9 @@ foreach ($example in $exampleFiles) {
 
 $schemaFiles = @(
     (Join-Path $projectFull 'QuestionnaireConfigs\chain-plan.schema.json'),
-    (Join-Path $projectFull 'QuestionnaireConfigs\lsl-chain-command.schema.json')
+    (Join-Path $projectFull 'QuestionnaireConfigs\lsl-chain-command.schema.json'),
+    (Join-Path $projectFull 'QuestionnaireConfigs\trigger-catalog.schema.json'),
+    (Join-Path $projectFull 'QuestionnaireConfigs\trigger-questionnaire-mapping.schema.json')
 )
 foreach ($schema in $schemaFiles) {
     if (Test-Path -LiteralPath $schema) {
@@ -126,6 +139,7 @@ foreach ($schema in $schemaFiles) {
 $unityFiles = @(
     (Join-Path $projectFull 'tools\unity\QuestQuestionnaireChainBridge.cs'),
     (Join-Path $projectFull 'tools\unity\ChainLinkControllerHook.cs'),
+    (Join-Path $projectFull 'tools\unity\ChainLinkTimedTrigger.cs'),
     (Join-Path $projectFull 'tools\unity\README.md')
 )
 foreach ($unityFile in $unityFiles) {
@@ -136,6 +150,10 @@ foreach ($unityFile in $unityFiles) {
 
 $toolFiles = @(
     (Join-Path $projectFull 'tools\get-apk-launch-info.ps1'),
+    (Join-Path $projectFull 'tools\start-questionnaire-builder-app.ps1'),
+    (Join-Path $projectFull 'tools\generate-questionnaire-apk.ps1'),
+    (Join-Path $projectFull 'tools\validate-questionnaire-config.ps1'),
+    (Join-Path $projectFull 'tools\apply-questionnaire-config.ps1'),
     (Join-Path $projectFull 'tools\quest-adb-readiness.ps1'),
     (Join-Path $projectFull 'tools\run-live-chainlink-stress.ps1'),
     (Join-Path $projectFull 'tools\validate-experiment-setup.ps1'),
@@ -160,7 +178,8 @@ $toolFiles = @(
     (Join-Path $projectFull 'tools\quest-chainlink-plan-validate.ps1'),
     (Join-Path $projectFull 'tools\lsl-chain-bridge.ps1'),
     (Join-Path $projectFull 'tools\lsl-chain-bridge.py'),
-    (Join-Path $projectFull 'tools\lsl-send-command.py')
+    (Join-Path $projectFull 'tools\lsl-send-command.py'),
+    (Join-Path $projectFull 'tools\publish-questionnaire-builder-github-pages.ps1')
 )
 foreach ($toolFile in $toolFiles) {
     if (Test-Path -LiteralPath $toolFile) {
@@ -177,6 +196,13 @@ Open index.html in a browser, edit or import questionnaire items, then download
 the generated *.config.json file. Also download the matching
 *.quality-report.json file and keep it beside the config as study-design
 evidence.
+
+For the desktop app flow, double-click Start-QuestionnaireBuilderApp.cmd. It
+starts a localhost companion and opens this same HTML GUI in the local browser.
+For the online GitHub Pages flow, double-click
+Start-QuestionnaireBuilderOnlineConnector.cmd, open the hosted page, and enter
+the pairing token printed by the local companion. The hosted page is static; it
+only talks to the local companion API on 127.0.0.1.
 
 The builder runs local quality guardrails for headset questionnaire use:
 language item-count parity, participant burden, duplicate items, long wording,
@@ -265,12 +291,22 @@ $manifest = [ordered]@{
         'examples\sussex-polar-controller-then-questionnaire.chain-plan.json',
         'examples\source-hook-stub-then-questionnaire.chain-plan.json',
         'examples\lsl-start-questionnaire.example.json',
+        'examples\scenario-trigger-catalog.example.json',
         'schemas\chain-plan.schema.json',
         'schemas\lsl-chain-command.schema.json',
+        'schemas\trigger-catalog.schema.json',
+        'schemas\trigger-questionnaire-mapping.schema.json',
+        'Start-QuestionnaireBuilderApp.cmd',
+        'Start-QuestionnaireBuilderOnlineConnector.cmd',
         'unity\QuestQuestionnaireChainBridge.cs',
         'unity\ChainLinkControllerHook.cs',
+        'unity\ChainLinkTimedTrigger.cs',
         'unity\README.md',
         'tools\get-apk-launch-info.ps1',
+        'tools\start-questionnaire-builder-app.ps1',
+        'tools\generate-questionnaire-apk.ps1',
+        'tools\validate-questionnaire-config.ps1',
+        'tools\apply-questionnaire-config.ps1',
         'tools\quest-adb-readiness.ps1',
         'tools\run-live-chainlink-stress.ps1',
         'tools\validate-experiment-setup.ps1',
@@ -294,9 +330,12 @@ $manifest = [ordered]@{
         'tools\quest-chainlink-plan-validate.ps1',
         'tools\lsl-chain-bridge.ps1',
         'tools\lsl-chain-bridge.py',
-        'tools\lsl-send-command.py'
+        'tools\lsl-send-command.py',
+        'tools\publish-questionnaire-builder-github-pages.ps1'
     )
     recommendedCommands = [ordered]@{
+        offlineDesktopApp = 'Start-QuestionnaireBuilderApp.cmd'
+        onlineConnector = 'Start-QuestionnaireBuilderOnlineConnector.cmd'
         generateApk = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\generate-questionnaire-apk.ps1 -ConfigPath .\QuestionnaireConfigs\<downloaded-config>.config.json -RenderPreview'
         fullPipeline = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-questionnaire-pipeline.ps1 -ConfigPath .\QuestionnaireConfigs\<downloaded-config>.config.json -Serial <quest-serial>'
         generateWrapperChainPlan = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\new-wrapper-chain-plan.ps1 -TargetApk <scenario.apk> -ScenarioId <scenario-id> -HookMode Wrapper -OutputPath .\QuestionnaireConfigs\examples\<scenario-id>.chain-plan.json'

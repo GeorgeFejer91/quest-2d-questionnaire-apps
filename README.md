@@ -16,6 +16,19 @@ The repo intentionally excludes generated Gradle state, build outputs, and
 large validation evidence folders. The requested installable questionnaire APKs
 are kept in `apks/`.
 
+## Online Questionnaire Builder
+
+Hosted GUI:
+
+```text
+https://georgefejer91.github.io/quest-2d-questionnaire-apps/questionnaire-builder/
+```
+
+The online page is a static browser GUI. For local file writes, dependency
+checks, validation, and APK generation, start the local companion from
+`MyQuestionnaireVR-2D\Start-QuestionnaireBuilderOnlineConnector.cmd` and enter
+the printed pairing token in the page.
+
 ## Current APKs
 
 | App | APK | Package | Launch action |

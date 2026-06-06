@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ConfigPath,
     [string]$ProjectPath = "",
-    [string]$ReferenceProjectPath = "C:\Users\cogpsy-vrlab\Documents\GithubVR\MyQuestionnaireVR",
+    [string]$ReferenceProjectPath = "",
     [string]$RunId = "",
     [switch]$SkipBuild,
     [switch]$SkipTests,
@@ -13,6 +13,20 @@ $ErrorActionPreference = 'Stop'
 
 if ([string]::IsNullOrWhiteSpace($ProjectPath)) {
     $ProjectPath = Split-Path -Parent $PSScriptRoot
+}
+$ProjectPath = [System.IO.Path]::GetFullPath($ProjectPath)
+
+if ([string]::IsNullOrWhiteSpace($ReferenceProjectPath)) {
+    $siblingReference = Join-Path (Split-Path -Parent $ProjectPath) 'MyQuestionnaireVR'
+    if (Test-Path -LiteralPath $siblingReference) {
+        $ReferenceProjectPath = [System.IO.Path]::GetFullPath($siblingReference)
+    }
+    else {
+        $ReferenceProjectPath = $ProjectPath
+    }
+}
+else {
+    $ReferenceProjectPath = [System.IO.Path]::GetFullPath($ReferenceProjectPath)
 }
 
 function Get-SafeName {

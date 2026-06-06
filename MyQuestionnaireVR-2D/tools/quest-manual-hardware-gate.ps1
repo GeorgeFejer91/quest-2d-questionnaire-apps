@@ -15,9 +15,9 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$package = "org.mesmerprism.viscereality.questionnaires2d"
-$activity = "org.mesmerprism.viscereality.questionnaires2d.MainActivity"
-$legacyUnityPackage = "org.mesmerprism.viscereality.questionnaires"
+$package = "org.viscereality.questionnaires2d"
+$activity = "org.viscereality.questionnaires2d.MainActivity"
+$legacyUnityPackage = "org.viscereality.questionnaires"
 $manualMarkerName = "manual-hardware-gate.txt"
 $deviceFilesDir = "/sdcard/Android/data/$package/files"
 $deviceManualMarker = "$deviceFilesDir/$manualMarkerName"

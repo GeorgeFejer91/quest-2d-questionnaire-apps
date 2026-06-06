@@ -3,14 +3,14 @@ using UnityEngine;
 
 public static class QuestQuestionnaireChainBridge
 {
-    public const string QuestionnairePackage = "org.mesmerprism.viscereality.questionnaires2d";
-    public const string QuestionnaireActivity = "org.mesmerprism.viscereality.questionnaires2d.MainActivity";
-    public const string BrokerActivity = "org.mesmerprism.viscereality.questionnaires2d.QuestChainBrokerActivity";
-    public const string ChainLinkPackage = "org.mesmerprism.viscereality.chainlink";
-    public const string ChainLinkActivity = "org.mesmerprism.viscereality.chainlink.ChainLinkActivity";
-    public const string RunAction = "org.mesmerprism.viscereality.questionnaires2d.RUN";
-    public const string BrokerAction = "org.mesmerprism.viscereality.questionnaires2d.BROKER";
-    public const string ChainLinkCommandAction = "org.mesmerprism.viscereality.chainlink.COMMAND";
+    public const string QuestionnairePackage = "org.viscereality.questionnaires2d";
+    public const string QuestionnaireActivity = "org.viscereality.questionnaires2d.MainActivity";
+    public const string BrokerActivity = "org.viscereality.questionnaires2d.QuestChainBrokerActivity";
+    public const string ChainLinkPackage = "org.viscereality.chainlink";
+    public const string ChainLinkActivity = "org.viscereality.chainlink.ChainLinkActivity";
+    public const string RunAction = "org.viscereality.questionnaires2d.RUN";
+    public const string BrokerAction = "org.viscereality.questionnaires2d.BROKER";
+    public const string ChainLinkCommandAction = "org.viscereality.chainlink.COMMAND";
     public const string BrokerActionExtra = "mq.brokerAction";
     public const string BrokerPackageExtra = "mq.brokerPackage";
     public const string BrokerActivityExtra = "mq.brokerActivity";

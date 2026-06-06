@@ -192,11 +192,11 @@ foreach ($relative in $hookFiles) {
 $manifestAndroid = Join-Path $projectPath 'Assets\Plugins\Android\AndroidManifest.xml'
 if (Test-Path -LiteralPath $manifestAndroid) {
     $androidManifestText = Get-Content -LiteralPath $manifestAndroid -Raw
-    if ($androidManifestText -match 'org\.mesmerprism\.viscereality\.CHAIN_COMMAND') {
-        $checks.Add((New-Check 'android-chain-intent-filter' 'pass' 'AndroidManifest.xml exposes org.mesmerprism.viscereality.CHAIN_COMMAND.' $manifestAndroid))
+    if ($androidManifestText -match 'org\.viscereality\.CHAIN_COMMAND') {
+        $checks.Add((New-Check 'android-chain-intent-filter' 'pass' 'AndroidManifest.xml exposes org.viscereality.CHAIN_COMMAND.' $manifestAndroid))
     }
     else {
-        $checks.Add((New-Check 'android-chain-intent-filter' 'fail' 'AndroidManifest.xml does not expose org.mesmerprism.viscereality.CHAIN_COMMAND.' $manifestAndroid))
+        $checks.Add((New-Check 'android-chain-intent-filter' 'fail' 'AndroidManifest.xml does not expose org.viscereality.CHAIN_COMMAND.' $manifestAndroid))
     }
 }
 

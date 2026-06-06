@@ -59,9 +59,9 @@ $bridgeText = if (Test-Path -LiteralPath $bridgePath) { Get-Content -LiteralPath
 $hookText = if (Test-Path -LiteralPath $hookPath) { Get-Content -LiteralPath $hookPath -Raw } else { '' }
 $readmeText = if (Test-Path -LiteralPath $readmePath) { Get-Content -LiteralPath $readmePath -Raw } else { '' }
 
-Add-Check -Name 'ChainLink package constant' -Pass (Test-Text $bridgeText 'ChainLinkPackage\s*=\s*"org\.mesmerprism\.viscereality\.chainlink"') -Detail 'Bridge targets ChainLink package.'
-Add-Check -Name 'ChainLink activity constant' -Pass (Test-Text $bridgeText 'ChainLinkActivity\s*=\s*"org\.mesmerprism\.viscereality\.chainlink\.ChainLinkActivity"') -Detail 'Bridge targets ChainLink activity.'
-Add-Check -Name 'ChainLink command action' -Pass (Test-Text $bridgeText 'ChainLinkCommandAction\s*=\s*"org\.mesmerprism\.viscereality\.chainlink\.COMMAND"') -Detail 'Bridge uses command action.'
+Add-Check -Name 'ChainLink package constant' -Pass (Test-Text $bridgeText 'ChainLinkPackage\s*=\s*"org\.viscereality\.chainlink"') -Detail 'Bridge targets ChainLink package.'
+Add-Check -Name 'ChainLink activity constant' -Pass (Test-Text $bridgeText 'ChainLinkActivity\s*=\s*"org\.viscereality\.chainlink\.ChainLinkActivity"') -Detail 'Bridge targets ChainLink activity.'
+Add-Check -Name 'ChainLink command action' -Pass (Test-Text $bridgeText 'ChainLinkCommandAction\s*=\s*"org\.viscereality\.chainlink\.COMMAND"') -Detail 'Bridge uses command action.'
 Add-Check -Name 'nextBlock command extra' -Pass (Test-Text $bridgeText 'ChainLinkCommandExtra\s*=\s*"mq\.command".*?ChainLinkNextBlockCommand\s*=\s*"nextBlock"') -Detail 'Bridge defines mq.command=nextBlock.'
 Add-Check -Name 'direct ChainLink command method' -Pass (Test-Text $bridgeText 'SendChainLinkCommand\s*\(.*?setClassName"\s*,\s*ChainLinkPackage\s*,\s*ChainLinkActivity.*?putExtra"\s*,\s*ChainLinkCommandExtra') -Detail 'Bridge starts ChainLink explicitly.'
 Add-Check -Name 'direct nextBlock helper' -Pass (Test-Text $bridgeText 'SendChainLinkNextBlock\s*\(.*?SendChainLinkCommand\s*\(\s*ChainLinkNextBlockCommand') -Detail 'Bridge exposes SendChainLinkNextBlock.'
@@ -75,7 +75,7 @@ Add-Check -Name 'metadata extras' -Pass (Test-Text $hookText 'mq\.experimentId.*
 Add-Check -Name 'hook calls ChainLink bridge' -Pass (Test-Text $hookText 'QuestQuestionnaireChainBridge\.SendChainLinkNextBlock') -Detail 'Hook sends ChainLink nextBlock.'
 
 Add-Check -Name 'README documents hook files' -Pass ((Test-Text $readmeText 'ChainLinkControllerHook\.cs') -and (Test-Text $readmeText 'QuestQuestionnaireChainBridge\.cs')) -Detail 'README lists both Unity files.'
-Add-Check -Name 'README documents command contract' -Pass (Test-Text $readmeText 'org\.mesmerprism\.viscereality\.chainlink\.COMMAND.*?mq\.command\s*=\s*nextBlock') -Detail 'README states ChainLink command contract.'
+Add-Check -Name 'README documents command contract' -Pass (Test-Text $readmeText 'org\.viscereality\.chainlink\.COMMAND.*?mq\.command\s*=\s*nextBlock') -Detail 'README states ChainLink command contract.'
 
 $failed = @($checks | Where-Object { -not $_.pass })
 $summary = [ordered]@{

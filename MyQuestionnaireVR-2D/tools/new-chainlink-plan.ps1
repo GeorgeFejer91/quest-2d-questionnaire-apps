@@ -120,9 +120,9 @@ if ([string]::IsNullOrWhiteSpace($OutputPath)) {
     $OutputPath = Join-Path (Split-Path -Parent $PSScriptRoot) "QuestionnaireConfigs\examples\$(Get-SafeFileStem $PlanId).chain-plan.json"
 }
 
-$questionnairePackage = 'org.mesmerprism.viscereality.questionnaires2d'
-$questionnaireActivity = 'org.mesmerprism.viscereality.questionnaires2d.MainActivity'
-$questionnaireAction = 'org.mesmerprism.viscereality.questionnaires2d.RUN'
+$questionnairePackage = 'org.viscereality.questionnaires2d'
+$questionnaireActivity = 'org.viscereality.questionnaires2d.MainActivity'
+$questionnaireAction = 'org.viscereality.questionnaires2d.RUN'
 $blocks = New-Object System.Collections.Generic.List[object]
 
 $blocks.Add((New-RegisteredBlock -Index 1 -Id 'baseline_questionnaire' -Type 'questionnaire' -Label 'Language, demographics, MAIA-2' `

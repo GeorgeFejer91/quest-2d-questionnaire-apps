@@ -4,7 +4,7 @@
     "questionnaireVersion":  "1.0.0",
     "appVersion":  "1.0.0",
     "sourceConfig":  "QuestionnaireConfigs/viscereality-maia2.config.json",
-    "sourceRepository":  "MesmerPrism/Viscereality",
+    "sourceRepository":  "Viscereality",
     "sourceCommit":  "7f0f7c9a40885aa841892b9a680acf45fa45b2d7",
     "maia2SourcePath":  "C:\\Users\\cogpsy-vrlab\\Documents\\GitHub\\maia-2\\questionnaire\\src",
     "languages":  [

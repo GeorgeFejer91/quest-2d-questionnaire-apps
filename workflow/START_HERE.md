@@ -31,9 +31,9 @@ Expose an explicit launch contract so Unity apps, ChainLink, or ADB can start
 the questionnaire deterministically:
 
 - package/activity, for example
-  `org.mesmerprism.viscereality.questionnaires2d/.MainActivity`
+  `org.viscereality.questionnaires2d/.MainActivity`
 - action, for example
-  `org.mesmerprism.viscereality.questionnaires2d.RUN`
+  `org.viscereality.questionnaires2d.RUN`
 - `launchMode="singleTop"` plus `onNewIntent()` so repeated invocations reset
   cleanly.
 

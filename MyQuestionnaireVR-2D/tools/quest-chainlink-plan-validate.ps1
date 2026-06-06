@@ -23,12 +23,12 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$questionnairePackage = "org.mesmerprism.viscereality.questionnaires2d"
-$questionnaireActivity = "org.mesmerprism.viscereality.questionnaires2d.MainActivity"
-$chainLinkPackage = "org.mesmerprism.viscereality.chainlink"
-$chainLinkActivity = "org.mesmerprism.viscereality.chainlink.ChainLinkActivity"
-$chainLinkRunAction = "org.mesmerprism.viscereality.chainlink.RUN"
-$chainLinkCommandAction = "org.mesmerprism.viscereality.chainlink.COMMAND"
+$questionnairePackage = "org.viscereality.questionnaires2d"
+$questionnaireActivity = "org.viscereality.questionnaires2d.MainActivity"
+$chainLinkPackage = "org.viscereality.chainlink"
+$chainLinkActivity = "org.viscereality.chainlink.ChainLinkActivity"
+$chainLinkRunAction = "org.viscereality.chainlink.RUN"
+$chainLinkCommandAction = "org.viscereality.chainlink.COMMAND"
 $questionnaireFiles = "/sdcard/Android/data/$questionnairePackage/files"
 $questionnaireExports = "$questionnaireFiles/QuestionnaireExports"
 $chainLinkFiles = "/sdcard/Android/data/$chainLinkPackage/files"

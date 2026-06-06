@@ -228,7 +228,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-questionnai
 Exports are written on-device under:
 
 ```text
-/sdcard/Android/data/org.mesmerprism.viscereality.questionnaires2d/files/QuestionnaireExports
+/sdcard/Android/data/org.viscereality.questionnaires2d/files/QuestionnaireExports
 ```
 
 ## APK Chain Broker
@@ -242,9 +242,9 @@ For the full experiment-chain recipe and current stress-test evidence, see
 `docs\experiment-chain-workflow.md`.
 
 ```text
-package: org.mesmerprism.viscereality.orchestrator
-activity: org.mesmerprism.viscereality.orchestrator.ExperimentOrchestratorActivity
-action: org.mesmerprism.viscereality.orchestrator.BROKER
+package: org.viscereality.orchestrator
+activity: org.viscereality.orchestrator.ExperimentOrchestratorActivity
+action: org.viscereality.orchestrator.BROKER
 ```
 
 Build output:
@@ -261,9 +261,9 @@ The questionnaire APK also keeps its own compatible broker for small
 questionnaire-centered chains and backward compatibility:
 
 ```text
-package: org.mesmerprism.viscereality.questionnaires2d
-activity: org.mesmerprism.viscereality.questionnaires2d.QuestChainBrokerActivity
-action: org.mesmerprism.viscereality.questionnaires2d.BROKER
+package: org.viscereality.questionnaires2d
+activity: org.viscereality.questionnaires2d.QuestChainBrokerActivity
+action: org.viscereality.questionnaires2d.BROKER
 ```
 
 Both brokers accept `mq.brokerCommand` values:
@@ -275,13 +275,13 @@ startPlan, continuePlan, clearPlan, startQuestionnaire, openApp, goHome, ping
 The standalone orchestrator stores chain state under:
 
 ```text
-/sdcard/Android/data/org.mesmerprism.viscereality.orchestrator/files/ExperimentOrchestrator
+/sdcard/Android/data/org.viscereality.orchestrator/files/ExperimentOrchestrator
 ```
 
 The questionnaire-owned broker stores chain state under:
 
 ```text
-/sdcard/Android/data/org.mesmerprism.viscereality.questionnaires2d/files/ChainBroker
+/sdcard/Android/data/org.viscereality.questionnaires2d/files/ChainBroker
 ```
 
 Recommended flow:
@@ -295,7 +295,7 @@ entry point. The broker can identify that app by package/activity and issue a
 hook command using:
 
 ```text
-intent action: org.mesmerprism.viscereality.CHAIN_COMMAND
+intent action: org.viscereality.CHAIN_COMMAND
 extra: mq.hookCommand=startScenario
 extras: mq.chainId, mq.chainStepId, mq.chainStepIndex
 callback extras: mq.brokerAction, mq.brokerPackage, mq.brokerActivity
@@ -321,9 +321,9 @@ Builds\ViscerealityChainHookWrapper.apk
 The wrapper advertises the same discoverable hook action:
 
 ```text
-package: org.mesmerprism.viscereality.chainhookwrapper
-activity: org.mesmerprism.viscereality.chainhookwrapper.ChainHookActivity
-action: org.mesmerprism.viscereality.CHAIN_COMMAND
+package: org.viscereality.chainhookwrapper
+activity: org.viscereality.chainhookwrapper.ChainHookActivity
+action: org.viscereality.CHAIN_COMMAND
 ```
 
 In a chain plan, target the wrapper and pass the old APK target through extras:
@@ -332,9 +332,9 @@ In a chain plan, target the wrapper and pass the old APK target through extras:
 {
   "id": "peripersonal-space-right-wrapper",
   "type": "scenario",
-  "package": "org.mesmerprism.viscereality.chainhookwrapper",
+  "package": "org.viscereality.chainhookwrapper",
   "activity": ".ChainHookActivity",
-  "action": "org.mesmerprism.viscereality.CHAIN_COMMAND",
+  "action": "org.viscereality.CHAIN_COMMAND",
   "command": "launchTarget",
   "extras": {
     "targetPackage": "com.Viscereality.ViscerealityPeriPersonalSpaceRight",
@@ -357,7 +357,7 @@ C:\Users\cogpsy-vrlab\Documents\GithubVR\Viscereality\Viscereality\Assets\Script
 C:\Users\cogpsy-vrlab\Documents\GithubVR\Viscereality\Viscereality\Assets\Plugins\Android\AndroidManifest.xml
 ```
 
-Those source builds expose the same `org.mesmerprism.viscereality.CHAIN_COMMAND`
+Those source builds expose the same `org.viscereality.CHAIN_COMMAND`
 action directly from the Unity activity. At the semantic end of a scenario, call
 this from Unity:
 

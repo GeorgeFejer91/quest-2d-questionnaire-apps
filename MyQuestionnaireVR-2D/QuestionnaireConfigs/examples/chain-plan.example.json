@@ -10,7 +10,7 @@
       "type": "scenario",
       "package": "org.example.scenario01",
       "activity": "org.example.scenario01.ChainHookActivity",
-      "action": "org.mesmerprism.viscereality.CHAIN_COMMAND",
+      "action": "org.viscereality.CHAIN_COMMAND",
       "command": "startScenario",
       "extras": {
         "scenarioId": "unity-scenario-01",
@@ -20,9 +20,9 @@
     {
       "id": "questionnaire-after-scenario-01",
       "type": "questionnaire",
-      "package": "org.mesmerprism.viscereality.questionnaires2d",
-      "activity": "org.mesmerprism.viscereality.questionnaires2d.MainActivity",
-      "action": "org.mesmerprism.viscereality.questionnaires2d.RUN",
+      "package": "org.viscereality.questionnaires2d",
+      "activity": "org.viscereality.questionnaires2d.MainActivity",
+      "action": "org.viscereality.questionnaires2d.RUN",
       "extras": {
         "mq.sessionId": "participant-001-session-a",
         "mq.experimentId": "viscereality-study",
@@ -39,7 +39,7 @@
       "type": "scenario",
       "package": "org.example.scenario02",
       "activity": "org.example.scenario02.ChainHookActivity",
-      "action": "org.mesmerprism.viscereality.CHAIN_COMMAND",
+      "action": "org.viscereality.CHAIN_COMMAND",
       "command": "startScenario",
       "extras": {
         "scenarioId": "unity-scenario-02"

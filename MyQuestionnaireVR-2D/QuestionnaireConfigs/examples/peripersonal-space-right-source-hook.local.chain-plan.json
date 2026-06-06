@@ -1,4 +1,4 @@
-﻿{
+{
     "schemaVersion":  "my-questionnaire-2d.chain-plan.v1",
     "chainId":  "peripersonal-space-right-source-hook-chain",
     "questionnaireId":  "viscereality-maia2",
@@ -9,7 +9,7 @@
                       "id":  "peripersonal-space-right-source-hook",
                       "type":  "scenario",
                       "package":  "com.Viscereality.ViscerealityPeriPersonalSpaceRight",
-                      "action":  "org.mesmerprism.viscereality.CHAIN_COMMAND",
+                      "action":  "org.viscereality.CHAIN_COMMAND",
                       "command":  "startScenario",
                       "extras":  {
                                      "scenarioId":  "peripersonal-space-right",
@@ -27,7 +27,7 @@
                   {
                       "id":  "questionnaire-after-peripersonal-space-right",
                       "type":  "questionnaire",
-                      "package":  "org.mesmerprism.viscereality.questionnaires2d",
+                      "package":  "org.viscereality.questionnaires2d",
                       "activity":  ".MainActivity",
                       "extras":  {
                                      "mq.sessionId":  "peripersonal-space-right-session",

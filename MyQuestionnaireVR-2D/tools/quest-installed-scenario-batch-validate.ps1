@@ -17,8 +17,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$questionnairePackage = "org.mesmerprism.viscereality.questionnaires2d"
-$wrapperPackage = "org.mesmerprism.viscereality.chainhookwrapper"
+$questionnairePackage = "org.viscereality.questionnaires2d"
+$wrapperPackage = "org.viscereality.chainhookwrapper"
 $singleValidator = Join-Path $ProjectPath 'tools\quest-orchestrator-wrapper-chain-validate.ps1'
 
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
@@ -90,7 +90,7 @@ function New-Plan {
         type = "scenario"
         package = $wrapperPackage
         activity = ".ChainHookActivity"
-        action = "org.mesmerprism.viscereality.CHAIN_COMMAND"
+        action = "org.viscereality.CHAIN_COMMAND"
         command = "launchTarget"
         extras = [ordered]@{
             targetPackage = $PackageName

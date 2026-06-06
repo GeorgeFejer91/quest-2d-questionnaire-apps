@@ -17,8 +17,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$package = "org.mesmerprism.viscereality.questionnaires2d"
-$activity = "org.mesmerprism.viscereality.questionnaires2d.MainActivity"
+$package = "org.viscereality.questionnaires2d"
+$activity = "org.viscereality.questionnaires2d.MainActivity"
 $deviceExports = "/sdcard/Android/data/$package/files/QuestionnaireExports"
 
 function Resolve-Adb {

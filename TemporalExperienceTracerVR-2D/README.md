@@ -4,11 +4,11 @@ Native Android 2D panel app for Meta Horizon OS / Quest. This ports the Unity te
 
 ## App Contract
 
-- Package: `org.mesmerprism.viscereality.temporaltracer2d`
+- Package: `org.viscereality.temporaltracer2d`
 - Activity: `.MainActivity`
-- Intent action: `org.mesmerprism.viscereality.temporaltracer2d.RUN`
+- Intent action: `org.viscereality.temporaltracer2d.RUN`
 - Debug APK output: `Builds\TemporalExperienceTracerVR-2D.apk`
-- Device exports: `/sdcard/Android/data/org.mesmerprism.viscereality.temporaltracer2d/files/TemporalTraceExports`
+- Device exports: `/sdcard/Android/data/org.viscereality.temporaltracer2d/files/TemporalTraceExports`
 
 Launch extras mirror the questionnaire chain style: `mq.sessionId`, `mq.participantId`, `mq.participantName`, `mq.language`, `mq.experimentId`, `mq.scenarioId`, `mq.trialId`, `mq.finishBehavior`, `mq.callerPackage`, `mq.nextPackage`, plus `mq.autoTrace=true` for command-replay validation.
 
@@ -78,7 +78,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\build-apk.ps1
 Quest auto replay launch example:
 
 ```powershell
-adb -s <serial> shell am start -n org.mesmerprism.viscereality.temporaltracer2d/org.mesmerprism.viscereality.temporaltracer2d.MainActivity `
+adb -s <serial> shell am start -n org.viscereality.temporaltracer2d/org.viscereality.temporaltracer2d.MainActivity `
   --ez mq.autoTrace true `
   --es mq.participantName AutoTemporal `
   --es mq.participantId AUTO001 `

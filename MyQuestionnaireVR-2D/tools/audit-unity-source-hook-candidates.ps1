@@ -187,7 +187,7 @@ $bestCandidates = @($sceneInfos | Where-Object { $_.score -gt 0 } | Select-Objec
 
 $status = if (@($matchingProfiles).Count -gt 0 -and @($experimentRunScenes).Count -gt 0) {
     'pass'
-} elseif ($manifestText -match 'org\.mesmerprism\.viscereality\.CHAIN_COMMAND' -and $experimentRunText -match 'ContinueCurrentPlan') {
+} elseif ($manifestText -match 'org\.viscereality\.CHAIN_COMMAND' -and $experimentRunText -match 'ContinueCurrentPlan') {
     'source-hook-ready-exact-build-profile-missing'
 } else {
     'fail'
@@ -198,7 +198,7 @@ $summary = [ordered]@{
     status = $status
     unityProjectPath = $projectPath
     targetPackage = $TargetPackage
-    manifestHasChainCommandIntent = $manifestText -match 'org\.mesmerprism\.viscereality\.CHAIN_COMMAND'
+    manifestHasChainCommandIntent = $manifestText -match 'org\.viscereality\.CHAIN_COMMAND'
     hookFiles = [ordered]@{
         experimentRun = [ordered]@{
             path = $experimentRunPath

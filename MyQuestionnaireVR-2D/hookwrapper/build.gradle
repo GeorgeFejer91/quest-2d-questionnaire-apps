@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'org.mesmerprism.viscereality.chainhookwrapper'
+    namespace 'org.viscereality.chainhookwrapper'
     compileSdk 35
 
     defaultConfig {
-        applicationId 'org.mesmerprism.viscereality.chainhookwrapper'
+        applicationId 'org.viscereality.chainhookwrapper'
         minSdk 29
         targetSdk 35
         versionCode 1

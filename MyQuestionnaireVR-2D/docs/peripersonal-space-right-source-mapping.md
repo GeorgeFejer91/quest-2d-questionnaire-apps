@@ -47,7 +47,7 @@ Assets\Configs\PE_AdvancedConfig.asset
 Its Android manifest now exposes the source-hook action:
 
 ```text
-org.mesmerprism.viscereality.CHAIN_COMMAND
+org.viscereality.CHAIN_COMMAND
 ```
 
 The source-hook scripts are staged under:

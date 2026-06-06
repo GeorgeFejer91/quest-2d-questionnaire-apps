@@ -16,7 +16,7 @@
             android:noHistory="false"
             android:resizeableActivity="true">
             <intent-filter>
-                <action android:name="org.mesmerprism.viscereality.CHAIN_COMMAND" />
+                <action android:name="org.viscereality.CHAIN_COMMAND" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <layout

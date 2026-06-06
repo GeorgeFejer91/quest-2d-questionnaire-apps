@@ -8,7 +8,7 @@ Viscereality Unity APKs and the native Android questionnaire 2D panel app.
 Use the standalone orchestrator APK as the chain owner:
 
 ```text
-org.mesmerprism.viscereality.orchestrator/.ExperimentOrchestratorActivity
+org.viscereality.orchestrator/.ExperimentOrchestratorActivity
 ```
 
 Install these APKs on the headset:
@@ -266,7 +266,7 @@ The questionnaire saves locally before returning to any broker or next app.
 Exports live on the headset under:
 
 ```text
-/sdcard/Android/data/org.mesmerprism.viscereality.questionnaires2d/files/QuestionnaireExports
+/sdcard/Android/data/org.viscereality.questionnaires2d/files/QuestionnaireExports
 ```
 
 Each run gets a unique run id and participant-safe filename:

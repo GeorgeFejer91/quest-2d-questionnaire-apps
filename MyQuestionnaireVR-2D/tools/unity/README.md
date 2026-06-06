@@ -82,8 +82,8 @@ At runtime, the hook listens with Unity XR input while the Unity APK owns the
 foreground OpenXR session. On a rising button edge it starts ChainLink with:
 
 ```text
-action = org.mesmerprism.viscereality.chainlink.COMMAND
-component = org.mesmerprism.viscereality.chainlink/.ChainLinkActivity
+action = org.viscereality.chainlink.COMMAND
+component = org.viscereality.chainlink/.ChainLinkActivity
 mq.command = nextBlock
 mq.triggerTimestampUtc = <UTC ISO-8601 timestamp>
 mq.triggerTimestampUnixMs = <milliseconds since epoch>
@@ -105,7 +105,7 @@ QuestQuestionnaireChainBridge.SendChainLinkNextBlock(new Dictionary<string, stri
 ```
 
 For rebuilt Viscereality scenario APKs, also add an Android intent filter for
-`org.mesmerprism.viscereality.CHAIN_COMMAND` to the Unity activity. The
+`org.viscereality.CHAIN_COMMAND` to the Unity activity. The
 `QuestExperimentChainHook` script in the Viscereality source tree does this
 passively: it logs incoming broker commands, refreshes launch intents while the
 Unity activity stays alive, and exposes one completion call for scenario
@@ -133,7 +133,7 @@ string chainPlanJson = @"{
     {
       ""id"": ""questionnaire-after-scenario-01"",
       ""type"": ""questionnaire"",
-      ""package"": ""org.mesmerprism.viscereality.questionnaires2d"",
+      ""package"": ""org.viscereality.questionnaires2d"",
       ""activity"": "".MainActivity"",
       ""extras"": {
         ""mq.sessionId"": ""participant-001-session-a"",
@@ -208,7 +208,7 @@ Treat source-hook rebuild validation as blocked until that preflight and Unity
 compilation pass.
 
 For source-hook APKs, chain-plan scenario steps should target the Unity package
-directly with `action=org.mesmerprism.viscereality.CHAIN_COMMAND`. For compiled
+directly with `action=org.viscereality.CHAIN_COMMAND`. For compiled
 APKs that cannot be rebuilt, use the separate hook-wrapper APK instead.
 
 Simple direct launch, without broker state:

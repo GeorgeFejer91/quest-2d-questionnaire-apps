@@ -6,17 +6,17 @@ For multi-APK experiments, use the standalone orchestrator APK as the plan
 owner when possible:
 
 ```text
-package: org.mesmerprism.viscereality.orchestrator
-activity: org.mesmerprism.viscereality.orchestrator.ExperimentOrchestratorActivity
-action: org.mesmerprism.viscereality.orchestrator.BROKER
+package: org.viscereality.orchestrator
+activity: org.viscereality.orchestrator.ExperimentOrchestratorActivity
+action: org.viscereality.orchestrator.BROKER
 ```
 
 The questionnaire app also keeps a compatible questionnaire-owned broker:
 
 ```text
-package: org.mesmerprism.viscereality.questionnaires2d
-activity: org.mesmerprism.viscereality.questionnaires2d.QuestChainBrokerActivity
-action: org.mesmerprism.viscereality.questionnaires2d.BROKER
+package: org.viscereality.questionnaires2d
+activity: org.viscereality.questionnaires2d.QuestChainBrokerActivity
+action: org.viscereality.questionnaires2d.BROKER
 ```
 
 Both broker styles accept commands such as:
@@ -89,13 +89,13 @@ Install and launch a questionnaire APK:
 
 ```powershell
 adb -s <serial> install -r -d .\apks\demographic-questionnaire\MyQuestionnaireVR-2D.apk
-adb -s <serial> shell am start -n org.mesmerprism.viscereality.questionnaires2d/.MainActivity
+adb -s <serial> shell am start -n org.viscereality.questionnaires2d/.MainActivity
 ```
 
 Launch temporal tracer command replay:
 
 ```powershell
-adb -s <serial> shell am start -n org.mesmerprism.viscereality.temporaltracer2d/org.mesmerprism.viscereality.temporaltracer2d.MainActivity --ez mq.autoTrace true --es mq.participantName AutoTemporal --es mq.participantId AUTO001 --es mq.language English --es mq.sessionId temporal-smoke
+adb -s <serial> shell am start -n org.viscereality.temporaltracer2d/org.viscereality.temporaltracer2d.MainActivity --ez mq.autoTrace true --es mq.participantName AutoTemporal --es mq.participantId AUTO001 --es mq.language English --es mq.sessionId temporal-smoke
 ```
 
 ## Controller Boundary

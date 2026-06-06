@@ -33,7 +33,7 @@ if (Test-Path -LiteralPath $jdk) {
     "-DtemporalTracer.render.outputDir=$OutputRoot" `
     "-DtemporalTracer.render.runId=$RunId" `
     "-DtemporalTracer.render.sizes=$Sizes" `
-    :app:testDebugUnitTest --tests org.mesmerprism.viscereality.temporaltracer2d.RenderTemporalTracerVisualsTest
+    :app:testDebugUnitTest --tests org.viscereality.temporaltracer2d.RenderTemporalTracerVisualsTest
 if ($LASTEXITCODE -ne 0) {
     throw "Temporal tracer render validation failed with exit code $LASTEXITCODE"
 }

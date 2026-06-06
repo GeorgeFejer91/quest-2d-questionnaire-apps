@@ -8,7 +8,7 @@
     {
       "id": "questionnaire-before-peripersonal-space-right",
       "type": "questionnaire",
-      "package": "org.mesmerprism.viscereality.questionnaires2d",
+      "package": "org.viscereality.questionnaires2d",
       "activity": ".MainActivity",
       "extras": {
         "mq.sessionId": "questionnaire-before-peripersonal-space-right-session",
@@ -24,9 +24,9 @@
     {
       "id": "peripersonal-space-right-wrapper",
       "type": "scenario",
-      "package": "org.mesmerprism.viscereality.chainhookwrapper",
+      "package": "org.viscereality.chainhookwrapper",
       "activity": ".ChainHookActivity",
-      "action": "org.mesmerprism.viscereality.CHAIN_COMMAND",
+      "action": "org.viscereality.CHAIN_COMMAND",
       "command": "launchTarget",
       "extras": {
         "targetPackage": "com.Viscereality.ViscerealityPeriPersonalSpaceRight",

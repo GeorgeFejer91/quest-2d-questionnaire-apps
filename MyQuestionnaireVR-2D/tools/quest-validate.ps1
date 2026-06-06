@@ -16,9 +16,9 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$package = "org.mesmerprism.viscereality.questionnaires2d"
-$activity = "org.mesmerprism.viscereality.questionnaires2d.MainActivity"
-$legacyUnityPackage = "org.mesmerprism.viscereality.questionnaires"
+$package = "org.viscereality.questionnaires2d"
+$activity = "org.viscereality.questionnaires2d.MainActivity"
+$legacyUnityPackage = "org.viscereality.questionnaires"
 if ([string]::IsNullOrWhiteSpace($Apk)) {
     $apk = Join-Path $ProjectPath 'Builds\MyQuestionnaireVR-2D.apk'
 }

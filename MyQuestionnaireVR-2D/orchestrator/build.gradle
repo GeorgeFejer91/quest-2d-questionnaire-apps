@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'org.mesmerprism.viscereality.orchestrator'
+    namespace 'org.viscereality.orchestrator'
     compileSdk 35
 
     defaultConfig {
-        applicationId 'org.mesmerprism.viscereality.orchestrator'
+        applicationId 'org.viscereality.orchestrator'
         minSdk 29
         targetSdk 35
         versionCode 1

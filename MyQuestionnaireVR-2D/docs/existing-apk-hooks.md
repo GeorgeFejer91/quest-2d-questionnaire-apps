@@ -11,7 +11,7 @@ Use the wrapper hook for closed or already-built APKs that you do not want to re
 The orchestrator launches:
 
 ```text
-org.mesmerprism.viscereality.chainhookwrapper/.ChainHookActivity
+org.viscereality.chainhookwrapper/.ChainHookActivity
 ```
 
 The wrapper then launches the real target app from chain-plan extras:

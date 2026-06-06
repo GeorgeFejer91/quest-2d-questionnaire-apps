@@ -8,9 +8,9 @@
     {
       "id": "source-hook-stub-scenario",
       "type": "scenario",
-      "package": "org.mesmerprism.viscereality.sourcehookstub",
-      "activity": "org.mesmerprism.viscereality.sourcehookstub.SourceHookStubActivity",
-      "action": "org.mesmerprism.viscereality.CHAIN_COMMAND",
+      "package": "org.viscereality.sourcehookstub",
+      "activity": "org.viscereality.sourcehookstub.SourceHookStubActivity",
+      "action": "org.viscereality.CHAIN_COMMAND",
       "command": "startScenario",
       "extras": {
         "scenarioId": "source-hook-stub",
@@ -20,7 +20,7 @@
     {
       "id": "questionnaire-after-source-hook-stub",
       "type": "questionnaire",
-      "package": "org.mesmerprism.viscereality.questionnaires2d",
+      "package": "org.viscereality.questionnaires2d",
       "activity": ".MainActivity",
       "extras": {
         "mq.sessionId": "source-hook-stub-session",

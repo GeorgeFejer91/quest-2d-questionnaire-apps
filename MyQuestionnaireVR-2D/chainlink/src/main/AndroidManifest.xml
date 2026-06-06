@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <queries>
-        <package android:name="org.mesmerprism.viscereality.questionnaires2d" />
+        <package android:name="org.viscereality.questionnaires2d" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
@@ -11,10 +11,10 @@
             <category android:name="android.intent.category.INFO" />
         </intent>
         <intent>
-            <action android:name="org.mesmerprism.viscereality.CHAIN_COMMAND" />
+            <action android:name="org.viscereality.CHAIN_COMMAND" />
         </intent>
         <intent>
-            <action android:name="org.mesmerprism.viscereality.questionnaires2d.RUN" />
+            <action android:name="org.viscereality.questionnaires2d.RUN" />
         </intent>
     </queries>
 
@@ -45,8 +45,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter>
-                <action android:name="org.mesmerprism.viscereality.chainlink.RUN" />
-                <action android:name="org.mesmerprism.viscereality.chainlink.COMMAND" />
+                <action android:name="org.viscereality.chainlink.RUN" />
+                <action android:name="org.viscereality.chainlink.COMMAND" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <intent-filter>

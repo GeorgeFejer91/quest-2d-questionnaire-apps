@@ -15,11 +15,11 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 
-QUESTIONNAIRE_PACKAGE = "org.mesmerprism.viscereality.questionnaires2d"
-QUESTIONNAIRE_ACTIVITY = "org.mesmerprism.viscereality.questionnaires2d.MainActivity"
-BROKER_ACTIVITY = "org.mesmerprism.viscereality.questionnaires2d.QuestChainBrokerActivity"
-RUN_ACTION = "org.mesmerprism.viscereality.questionnaires2d.RUN"
-BROKER_ACTION = "org.mesmerprism.viscereality.questionnaires2d.BROKER"
+QUESTIONNAIRE_PACKAGE = "org.viscereality.questionnaires2d"
+QUESTIONNAIRE_ACTIVITY = "org.viscereality.questionnaires2d.MainActivity"
+BROKER_ACTIVITY = "org.viscereality.questionnaires2d.QuestChainBrokerActivity"
+RUN_ACTION = "org.viscereality.questionnaires2d.RUN"
+BROKER_ACTION = "org.viscereality.questionnaires2d.BROKER"
 DEVICE_FILES_DIR = f"/sdcard/Android/data/{QUESTIONNAIRE_PACKAGE}/files"
 DEVICE_BROKER_DIR = f"{DEVICE_FILES_DIR}/ChainBroker"
 

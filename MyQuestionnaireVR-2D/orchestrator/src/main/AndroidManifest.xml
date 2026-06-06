@@ -2,10 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <queries>
         <intent>
-            <action android:name="org.mesmerprism.viscereality.CHAIN_COMMAND" />
+            <action android:name="org.viscereality.CHAIN_COMMAND" />
         </intent>
         <intent>
-            <action android:name="org.mesmerprism.viscereality.questionnaires2d.RUN" />
+            <action android:name="org.viscereality.questionnaires2d.RUN" />
         </intent>
     </queries>
 
@@ -28,7 +28,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter>
-                <action android:name="org.mesmerprism.viscereality.orchestrator.BROKER" />
+                <action android:name="org.viscereality.orchestrator.BROKER" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

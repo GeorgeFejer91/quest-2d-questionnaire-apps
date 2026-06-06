@@ -20,8 +20,8 @@ are kept in `apks/`.
 
 | App | APK | Package | Launch action |
 | --- | --- | --- | --- |
-| Demographic questionnaire | `apks/demographic-questionnaire/MyQuestionnaireVR-2D.apk` | `org.mesmerprism.viscereality.questionnaires2d` | `org.mesmerprism.viscereality.questionnaires2d.RUN` |
-| Temporal experience tracer | `apks/temporal-experience-tracer/TemporalExperienceTracerVR-2D.apk` | `org.mesmerprism.viscereality.temporaltracer2d` | `org.mesmerprism.viscereality.temporaltracer2d.RUN` |
+| Demographic questionnaire | `apks/demographic-questionnaire/MyQuestionnaireVR-2D.apk` | `org.viscereality.questionnaires2d` | `org.viscereality.questionnaires2d.RUN` |
+| Temporal experience tracer | `apks/temporal-experience-tracer/TemporalExperienceTracerVR-2D.apk` | `org.viscereality.temporaltracer2d` | `org.viscereality.temporaltracer2d.RUN` |
 
 Install with ADB:
 

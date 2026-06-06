@@ -12,11 +12,11 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$questionnairePackage = "org.mesmerprism.viscereality.questionnaires2d"
-$brokerActivity = "org.mesmerprism.viscereality.questionnaires2d.QuestChainBrokerActivity"
-$brokerAction = "org.mesmerprism.viscereality.questionnaires2d.BROKER"
-$sourcePackage = "org.mesmerprism.viscereality.sourcehookstub"
-$sourceActivity = "org.mesmerprism.viscereality.sourcehookstub.SourceHookStubActivity"
+$questionnairePackage = "org.viscereality.questionnaires2d"
+$brokerActivity = "org.viscereality.questionnaires2d.QuestChainBrokerActivity"
+$brokerAction = "org.viscereality.questionnaires2d.BROKER"
+$sourcePackage = "org.viscereality.sourcehookstub"
+$sourceActivity = "org.viscereality.sourcehookstub.SourceHookStubActivity"
 $deviceFiles = "/sdcard/Android/data/$questionnairePackage/files"
 $deviceExports = "$deviceFiles/QuestionnaireExports"
 $deviceBroker = "$deviceFiles/ChainBroker"
@@ -108,7 +108,7 @@ $plan = [ordered]@{
             type = 'scenario'
             package = $sourcePackage
             activity = $sourceActivity
-            action = 'org.mesmerprism.viscereality.CHAIN_COMMAND'
+            action = 'org.viscereality.CHAIN_COMMAND'
             command = 'startScenario'
             extras = [ordered]@{
                 scenarioId = 'source-hook-stub'

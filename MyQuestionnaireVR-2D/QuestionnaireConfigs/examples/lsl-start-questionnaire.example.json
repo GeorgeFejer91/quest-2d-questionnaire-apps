@@ -26,7 +26,7 @@
       {
         "id": "questionnaire-after-scenario-01",
         "type": "questionnaire",
-        "package": "org.mesmerprism.viscereality.questionnaires2d",
+        "package": "org.viscereality.questionnaires2d",
         "activity": ".MainActivity",
         "extras": {
           "mq.sessionId": "participant-001-session-a",

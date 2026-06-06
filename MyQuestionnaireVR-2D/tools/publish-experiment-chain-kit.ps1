@@ -499,7 +499,7 @@ The questionnaire writes draft data during the run and final JSON/CSV exports
 before returning to the orchestrator. Device path:
 
 ```text
-/sdcard/Android/data/org.mesmerprism.viscereality.questionnaires2d/files/QuestionnaireExports
+/sdcard/Android/data/org.viscereality.questionnaires2d/files/QuestionnaireExports
 ```
 
 Each invocation uses a unique run id, participant-safe filename, and

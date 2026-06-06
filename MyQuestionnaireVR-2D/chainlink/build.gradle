@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'org.mesmerprism.viscereality.chainlink'
+    namespace 'org.viscereality.chainlink'
     compileSdk 35
 
     defaultConfig {
-        applicationId 'org.mesmerprism.viscereality.chainlink'
+        applicationId 'org.viscereality.chainlink'
         minSdk 29
         targetSdk 35
         versionCode 1

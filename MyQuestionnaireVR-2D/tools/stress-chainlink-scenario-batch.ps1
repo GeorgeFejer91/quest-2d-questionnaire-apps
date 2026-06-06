@@ -100,10 +100,10 @@ function Get-ShortRunName {
 function Is-CorePackage {
     param([string]$PackageName)
     $corePackages = @(
-        'org.mesmerprism.viscereality.questionnaires2d',
-        'org.mesmerprism.viscereality.chainlink',
-        'org.mesmerprism.viscereality.orchestrator',
-        'org.mesmerprism.viscereality.chainhookwrapper'
+        'org.viscereality.questionnaires2d',
+        'org.viscereality.chainlink',
+        'org.viscereality.orchestrator',
+        'org.viscereality.chainhookwrapper'
     )
     return $corePackages -contains $PackageName
 }

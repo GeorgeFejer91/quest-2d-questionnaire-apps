@@ -10,7 +10,7 @@
       "type": "scenario",
       "package": "com.Viscereality.ViscerealityPeriPersonalSpaceRight.SourceHook",
       "activity": "com.unity3d.player.UnityPlayerGameActivity",
-      "action": "org.mesmerprism.viscereality.CHAIN_COMMAND",
+      "action": "org.viscereality.CHAIN_COMMAND",
       "command": "startScenario",
       "extras": {
         "scenarioId": "peripersonal-source-hook-candidate",
@@ -28,7 +28,7 @@
     {
       "id": "questionnaire-after-source-hook-candidate",
       "type": "questionnaire",
-      "package": "org.mesmerprism.viscereality.questionnaires2d",
+      "package": "org.viscereality.questionnaires2d",
       "activity": ".MainActivity",
       "extras": {
         "mq.sessionId": "peripersonal-source-hook-candidate-session",

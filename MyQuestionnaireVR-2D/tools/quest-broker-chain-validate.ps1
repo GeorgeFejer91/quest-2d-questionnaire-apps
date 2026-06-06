@@ -15,10 +15,10 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$package = "org.mesmerprism.viscereality.questionnaires2d"
-$brokerActivity = "org.mesmerprism.viscereality.questionnaires2d.QuestChainBrokerActivity"
-$brokerAction = "org.mesmerprism.viscereality.questionnaires2d.BROKER"
-$legacyUnityPackage = "org.mesmerprism.viscereality.questionnaires"
+$package = "org.viscereality.questionnaires2d"
+$brokerActivity = "org.viscereality.questionnaires2d.QuestChainBrokerActivity"
+$brokerAction = "org.viscereality.questionnaires2d.BROKER"
+$legacyUnityPackage = "org.viscereality.questionnaires"
 $deviceFiles = "/sdcard/Android/data/$package/files"
 $deviceExports = "$deviceFiles/QuestionnaireExports"
 $deviceBroker = "$deviceFiles/ChainBroker"

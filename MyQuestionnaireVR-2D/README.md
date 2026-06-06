@@ -10,10 +10,12 @@ It is a 2D panel app, not a full immersive XR app.
 
 ## AI Agent Notes
 
-Before making code changes, AI agents should read `For-AI\README.md`. That
-folder records evolving project constraints, including the requirement that the
-offline desktop GUI and online connector GUI stay functionally identical except
-for the pairing mechanism to the local companion program.
+Before making code changes, AI agents should read
+[../For-AI/START_HERE.md](../For-AI/START_HERE.md). That root folder records
+evolving project constraints, including the requirement that the offline desktop
+GUI and online connector GUI stay functionally identical except for the pairing
+mechanism to the local companion program. For app-specific notes, also read
+[For-AI/README.md](For-AI/README.md).
 
 ## Terminology
 
@@ -92,6 +94,10 @@ The editor keeps the v1 contract: language selection, demographics, MAIA-2,
 pictographic selections, and one custom slider block. It also scans Unity APK
 trigger catalogs, maps trigger event IDs to questionnaire blocks, shows
 participant-experience counts, and prints the matching APK generator command.
+The builder UI is APK-first: downstream block-building, questionnaire editing,
+validation, local dependency, export, and APK-generation controls remain
+disabled until an existing scenario APK, trigger catalog JSON, or saved config
+with trigger mappings is loaded.
 
 Generate a named APK from any config:
 

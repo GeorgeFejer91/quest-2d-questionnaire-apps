@@ -23,6 +23,10 @@
       box-sizing: border-box;
     }
 
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
       margin: 0;
       background: var(--bg);
@@ -32,10 +36,25 @@
       line-height: 1.45;
     }
 
-    main {
-      max-width: 1320px;
-      margin: 0 auto;
-      padding: 24px;
+    .app-shell {
+      min-height: 100vh;
+    }
+
+    .side-nav {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: 256px;
+      overflow-y: auto;
+      border-right: 1px solid var(--line);
+      background: #efefec;
+      padding: 18px 14px;
+    }
+
+    .content {
+      margin-left: 256px;
+      padding: 24px 28px 48px;
+      max-width: 1180px;
+      min-width: 0;
     }
 
     h1,
@@ -46,12 +65,12 @@
     }
 
     h1 {
-      font-size: 24px;
+      font-size: 18px;
       font-weight: 650;
     }
 
     h2 {
-      font-size: 17px;
+      font-size: 20px;
       font-weight: 650;
     }
 
@@ -60,14 +79,16 @@
       font-weight: 650;
     }
 
-    .top {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: flex-end;
-      padding-bottom: 18px;
+    .sidebar-title {
+      padding: 0 6px 16px;
       border-bottom: 1px solid var(--line);
-      margin-bottom: 18px;
+      margin-bottom: 12px;
+    }
+
+    .sidebar-title p {
+      color: var(--muted);
+      margin-top: 4px;
+      font-size: 13px;
     }
 
     .subtle {
@@ -75,23 +96,81 @@
       margin-top: 4px;
     }
 
-    .layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 460px;
-      gap: 18px;
-      align-items: start;
-    }
-
+    .workflow-nav,
+    .side-group,
     .column {
       display: grid;
-      gap: 14px;
+      gap: 8px;
+      min-width: 0;
     }
 
-    section {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 16px;
+    .column > *,
+    #pipelineCommands > * {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .workflow-nav {
+      margin-bottom: 16px;
+    }
+
+    .nav-link {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 7px 8px;
+      border-radius: 6px;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .nav-link:hover {
+      background: #e6e6e2;
+    }
+
+    .nav-link.locked {
+      color: var(--muted);
+    }
+
+    .nav-number {
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .nav-state {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .side-group {
+      padding: 14px 6px;
+      border-top: 1px solid var(--line);
+    }
+
+    .side-group-title {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .side-link {
+      color: var(--text);
+      text-decoration: none;
+      padding: 4px 0;
+    }
+
+    .side-link:hover {
+      text-decoration: underline;
+    }
+
+    .stage {
+      scroll-margin-top: 20px;
+      padding: 0 0 28px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--line);
+      min-width: 0;
     }
 
     .section-title {
@@ -100,6 +179,61 @@
       gap: 12px;
       align-items: center;
       margin-bottom: 14px;
+    }
+
+    .stage-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+
+    .stage-heading p {
+      max-width: 720px;
+    }
+
+    .stage-state {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 5px 8px;
+      color: var(--muted);
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .stage.locked .stage-state {
+      color: var(--danger);
+      border-color: #e4b8b2;
+      background: #fff7f6;
+    }
+
+    .locked-message {
+      display: none;
+      margin-bottom: 12px;
+    }
+
+    .stage.locked .locked-message {
+      display: block;
+    }
+
+    .stage.locked .stage-body {
+      max-height: 180px;
+      overflow: hidden;
+      opacity: 0.38;
+      pointer-events: none;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      min-width: 0;
+    }
+
+    .panel + .panel {
+      margin-top: 12px;
     }
 
     .grid {
@@ -195,6 +329,17 @@
       background: var(--panel-soft);
     }
 
+    .trigger-row {
+      grid-template-columns: 64px minmax(0, 1fr);
+      align-items: start;
+      padding: 12px;
+    }
+
+    .trigger-number {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
     .block-label {
       font-weight: 650;
     }
@@ -241,6 +386,7 @@
     .command {
       display: block;
       overflow-x: auto;
+      max-width: 100%;
       border: 1px solid var(--line);
       border-radius: 6px;
       background: #101211;
@@ -277,6 +423,7 @@
       margin: 0;
       min-height: 520px;
       max-height: 720px;
+      max-width: 100%;
       overflow: auto;
       border: 1px solid var(--line);
       border-radius: 6px;
@@ -297,6 +444,7 @@
 
     .file-row input {
       width: auto;
+      max-width: 100%;
     }
 
     .toggle-row {
@@ -312,330 +460,535 @@
       margin-top: 4px;
     }
 
+    .palette {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .palette-item {
+      display: grid;
+      gap: 4px;
+      text-align: left;
+      min-height: 72px;
+      background: #ffffff;
+    }
+
+    .palette-item[aria-pressed="true"] {
+      border-color: var(--accent);
+      outline: 2px solid rgba(15, 118, 110, 0.18);
+    }
+
+    .palette-item span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .drop-zone {
+      border: 1px dashed #b7b8b1;
+      border-radius: 6px;
+      background: #ffffff;
+      padding: 10px;
+      margin-top: 10px;
+    }
+
+    .drop-zone.drag-over {
+      border-color: var(--accent);
+      outline: 2px solid rgba(15, 118, 110, 0.16);
+    }
+
+    .drop-zone.empty {
+      color: var(--muted);
+    }
+
+    .compact-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+
     @media (max-width: 980px) {
-      main {
+      .side-nav {
+        position: static;
+        width: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .content {
+        margin-left: 0;
         padding: 16px;
       }
 
-      .layout,
       .grid,
-      .grid.two {
+      .grid.two,
+      .palette,
+      .compact-grid {
         grid-template-columns: 1fr;
       }
 
-      .top {
+      .stage-heading {
         align-items: stretch;
         flex-direction: column;
+      }
+
+      .section-title {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .file-row,
+      .file-row input {
+        width: 100%;
       }
     }
   </style>
 </head>
 <body>
-  <main>
-    <div class="top">
-      <div>
-        <h1>Quest 2D Panel Questionnaire Builder</h1>
-        <p class="subtle">Create a v1 questionnaire config for an Android 2D panel app for Meta Horizon OS.</p>
+  <div class="app-shell">
+    <aside class="side-nav" aria-label="Builder workflow">
+      <div class="sidebar-title">
+        <h1>Quest Questionnaire Builder</h1>
+        <p>APK-first trigger routing</p>
       </div>
-      <div class="button-row">
-        <button id="loadCurrentButton" type="button">Load current defaults</button>
-        <button id="copyButton" type="button">Copy JSON</button>
-        <button id="downloadBlockRegistryButton" type="button">Download block registry</button>
-        <button id="downloadChainPlanButton" type="button">Download chain plan</button>
-        <button id="downloadQualityButton" type="button">Download quality report</button>
-        <button id="downloadButton" class="primary" type="button">Download config</button>
+
+      <nav class="workflow-nav">
+        <a id="navApk" class="nav-link" href="#apk-stage">
+          <span class="nav-number">01</span>
+          <span>APK</span>
+          <span id="navApkState" class="nav-state">Required</span>
+        </a>
+        <a id="navTriggers" class="nav-link locked" href="#trigger-stage">
+          <span class="nav-number">02</span>
+          <span>Blocks</span>
+          <span id="navTriggersState" class="nav-state">Locked</span>
+        </a>
+        <a id="navQuestionnaires" class="nav-link locked" href="#questionnaire-stage">
+          <span class="nav-number">03</span>
+          <span>Questionnaires</span>
+          <span id="navQuestionnairesState" class="nav-state">Locked</span>
+        </a>
+        <a id="navProject" class="nav-link locked" href="#project-stage">
+          <span class="nav-number">04</span>
+          <span>Project</span>
+          <span id="navProjectState" class="nav-state">Locked</span>
+        </a>
+        <a id="navRunner" class="nav-link locked" href="#runner-stage">
+          <span class="nav-number">05</span>
+          <span>Export</span>
+          <span id="navRunnerState" class="nav-state">Locked</span>
+        </a>
+        <a id="navReview" class="nav-link locked" href="#review-stage">
+          <span class="nav-number">06</span>
+          <span>Review</span>
+          <span id="navReviewState" class="nav-state">Locked</span>
+        </a>
+      </nav>
+
+      <div class="side-group">
+        <div class="side-group-title">Reference</div>
+        <a class="side-link" href="https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/blob/main/MyQuestionnaireVR-2D/README.md" target="_blank" rel="noreferrer">Instructions</a>
+        <a class="side-link" href="https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/blob/main/workflow/START_HERE.md" target="_blank" rel="noreferrer">Workflow docs</a>
       </div>
-    </div>
 
-    <div class="layout">
-      <div class="column">
-        <section>
-          <div class="section-title">
-            <h2>Project</h2>
-            <div class="file-row">
-              <input id="loadFileInput" type="file" accept="application/json,.json">
-            </div>
-          </div>
-          <div class="grid">
-            <label>
-              Questionnaire id
-              <input id="questionnaireId" value="viscereality-maia2">
-            </label>
-            <label>
-              Questionnaire version
-              <input id="questionnaireVersion" value="1.0.0">
-            </label>
-            <label>
-              App version
-              <input id="appVersion" value="1.0.0">
-            </label>
-          </div>
-        </section>
+      <div class="side-group">
+        <div class="side-group-title">Local companion</div>
+        <button id="dependencyStatusButton" type="button" data-requires-apk-control>Dependency status</button>
+        <button id="installDependenciesButton" type="button" data-requires-apk-control>Install dependencies</button>
+      </div>
 
-        <section>
-          <div class="section-title">
-            <h2>Experiment Chaining</h2>
-            <p class="subtle">Launch extras can override these defaults for each experiment step.</p>
-          </div>
-          <div class="grid">
-            <label>
-              Finish behavior
-              <input id="chainFinishBehavior" value="staySaved" placeholder="staySaved, resumeCaller, or openNext">
-            </label>
-            <label>
-              Auto close delay ms
-              <input id="chainAutoCloseDelayMs" type="number" min="0" step="100" value="2000">
-            </label>
-            <label>
-              Caller package
-              <input id="chainCallerPackage" placeholder="org.example.scenario">
-            </label>
-          </div>
-          <div class="grid">
-            <label>
-              Caller activity
-              <input id="chainCallerActivity" placeholder="org.example.scenario.MainActivity">
-            </label>
-            <label>
-              Next package
-              <input id="chainNextPackage" placeholder="org.example.nextscenario">
-            </label>
-            <label>
-              Next activity
-              <input id="chainNextActivity" placeholder="org.example.nextscenario.MainActivity">
-            </label>
-          </div>
-        </section>
+      <div class="side-group">
+        <div class="side-group-title">Files</div>
+        <button id="loadCurrentButton" type="button" data-requires-apk-control>Reload preview config</button>
+        <button id="copyButton" type="button" data-requires-apk-control>Copy JSON</button>
+        <button id="downloadBlockRegistryButton" type="button" data-requires-apk-control>Download block registry</button>
+        <button id="downloadChainPlanButton" type="button" data-requires-apk-control>Download chain plan</button>
+        <button id="downloadQualityButton" type="button" data-requires-apk-control>Download quality report</button>
+        <button id="downloadButton" class="primary" type="button" data-requires-apk-control>Download config</button>
+      </div>
+    </aside>
 
-        <section>
+    <main class="content">
+      <section id="apk-stage" class="stage">
+        <div class="stage-heading">
+          <div>
+            <h2>1. Choose existing APK</h2>
+            <p class="subtle">Start from a scenario APK or trigger catalog so the builder can create one questionnaire block per embedded trigger.</p>
+          </div>
+          <div id="apkStageState" class="stage-state">Waiting for APK</div>
+        </div>
+
+        <div class="panel">
           <div class="section-title">
-            <h2>APK Trigger Catalog</h2>
+            <h3>Trigger manifest</h3>
             <div class="file-row">
               <input id="loadScenarioApkInput" type="file" accept=".apk,application/vnd.android.package-archive,application/json,.json">
             </div>
           </div>
-          <p class="subtle" style="margin-bottom: 10px;">Import a Unity scenario APK that embeds `mq/questionnaire-trigger-catalog.json`, then map each event ID to a questionnaire block.</p>
           <div id="triggerCatalogStatus" class="issue">No trigger catalog loaded.</div>
-          <div id="triggerMappingList" class="block-list" style="margin-top: 10px;"></div>
-        </section>
+        </div>
 
-        <section>
+        <div class="panel">
           <div class="section-title">
-            <h2>Experiment Block Registry</h2>
-            <p class="subtle">Numbered blocks become the ChainLink execution map for APK switches and repeated questionnaire calls.</p>
-          </div>
-          <div class="grid">
-            <label>
-              Experiment id
-              <input id="experimentId" value="peripersonal-space-right-orbit">
-            </label>
-            <label>
-              ChainLink plan id
-              <input id="chainlinkPlanId" value="peripersonal-space-right-maia2-pictographic">
-            </label>
-            <label>
-              Trigger button
-              <input id="chainlinkTriggerButton" value="auto-unused-non-breath-tracking" placeholder="auto-unused-non-breath-tracking">
-            </label>
-          </div>
-          <div class="grid">
-            <label>
-              Target APK package
-              <input id="chainlinkScenarioPackage" value="com.Viscereality.ViscerealityPeriPersonalSpaceRight">
-            </label>
-            <label>
-              Target APK activity
-              <input id="chainlinkScenarioActivity" value="com.unity3d.player.UnityPlayerGameActivity">
-            </label>
-            <label>
-              Pictographic repeats
-              <input id="chainlinkPictographicRepeats" type="number" min="1" max="50" step="1" value="2">
-            </label>
-          </div>
-          <label>
-            Target APK label
-            <input id="chainlinkScenarioLabel" value="Peripersonal Space Right orbital scenario">
-          </label>
-          <div class="button-row" style="margin: 10px 0;">
-            <button id="refreshRegistryButton" type="button">Refresh registered blocks</button>
-          </div>
-          <div id="experimentBlockRegistryList" class="block-list"></div>
-        </section>
-
-        <section>
-          <div class="section-title">
-            <h2>CSV Import</h2>
+            <h3>Existing builder config</h3>
             <div class="file-row">
-              <input id="loadCsvInput" type="file" accept=".csv,text/csv">
+              <input id="loadFileInput" type="file" accept="application/json,.json">
             </div>
           </div>
-          <p class="subtle" style="margin-bottom: 10px;">Accepted headers include questionnaireId, questionnaireVersion, appVersion, block, language, order, text, min, max, leftAnchor, and rightAnchor.</p>
-          <div id="csvStatus" class="issue">No CSV loaded.</div>
-        </section>
+          <p class="subtle">A saved config only unlocks the workflow when it already contains trigger mappings.</p>
+        </div>
+      </section>
 
-        <section>
-          <div class="section-title">
-            <h2>Block Order</h2>
-            <p class="subtle">Demographics, custom slider items, and the final black screen are required. MAIA-2 and pictographic screens are optional.</p>
+      <section id="trigger-stage" class="stage" data-requires-apk>
+        <div class="stage-heading">
+          <div>
+            <h2>2. Assign questionnaire blocks</h2>
+            <p id="triggerSummary" class="subtle">No trigger blocks available yet.</p>
           </div>
-          <label class="toggle-row">
-            <input id="includeMaia" type="checkbox" checked>
-            <span>Include MAIA-2 interoception block</span>
-          </label>
-          <label class="toggle-row">
-            <input id="includePictographic" type="checkbox" checked>
-            <span>Include pictographic embodiment scales</span>
-          </label>
-          <div id="blockList" class="block-list"></div>
-        </section>
+          <div class="stage-state">Locked</div>
+        </div>
+        <div class="locked-message issue error">Choose an existing APK before editing trigger blocks.</div>
+        <div class="stage-body">
+          <div class="panel">
+            <div id="questionnairePalette" class="palette" aria-label="Questionnaire block palette">
+              <button class="palette-item" type="button" draggable="true" data-mode="baseline">
+                Baseline
+                <span>Demographics and MAIA-2</span>
+              </button>
+              <button class="palette-item" type="button" draggable="true" data-mode="maia2">
+                MAIA-2
+                <span>Interoception only</span>
+              </button>
+              <button class="palette-item" type="button" draggable="true" data-mode="pictographic">
+                Pictographic
+                <span>Embodiment scales</span>
+              </button>
+              <button class="palette-item" type="button" draggable="true" data-mode="slider">
+                Slider
+                <span>Custom Viscereality items</span>
+              </button>
+              <button class="palette-item" type="button" draggable="true" data-mode="full">
+                Full
+                <span>All included screens</span>
+              </button>
+              <button class="palette-item" type="button" draggable="true" data-mode="none">
+                Skip
+                <span>No questionnaire</span>
+              </button>
+            </div>
+            <div id="triggerMappingList" class="block-list"></div>
+          </div>
+        </div>
+      </section>
 
-        <section>
-          <div class="section-title">
-            <h2>MAIA-2</h2>
-            <p class="subtle">Use a source file, or paste a JSON array to inline items.</p>
+      <section id="questionnaire-stage" class="stage" data-requires-apk>
+        <div class="stage-heading">
+          <div>
+            <h2>3. Build questionnaire content</h2>
+            <p class="subtle">Choose the reusable screens that are available to the trigger blocks.</p>
           </div>
-          <div class="grid two">
-            <label>
-              Source path
-              <input id="maiaSource" value="Assets/StreamingAssets/MAIA2_Questions.json">
-            </label>
-            <label>
-              Expected item count
-              <input id="maiaExpectedCount" type="number" min="1" step="1" value="37">
-            </label>
+          <div class="stage-state">Locked</div>
+        </div>
+        <div class="locked-message issue error">Choose an existing APK before editing questionnaires.</div>
+        <div class="stage-body">
+          <div class="panel">
+            <div class="section-title">
+              <h3>CSV import</h3>
+              <div class="file-row">
+                <input id="loadCsvInput" type="file" accept=".csv,text/csv">
+              </div>
+            </div>
+            <div id="csvStatus" class="issue">No CSV loaded.</div>
           </div>
-          <label style="margin-top: 12px;">
-            Inline MAIA-2 JSON items
-            <textarea id="maiaInline" placeholder='[{"id":"maia_01","text":"..."}]'></textarea>
-          </label>
-        </section>
 
-        <section>
-          <div class="section-title">
-            <h2>Viscereality Slider Items</h2>
-            <p class="subtle">Leave text empty to keep the existing source files. One item per line when pasted.</p>
+          <div class="panel">
+            <div class="section-title">
+              <h3>Available blocks</h3>
+            </div>
+            <label class="toggle-row">
+              <input id="includeMaia" type="checkbox" checked>
+              <span>Include MAIA-2 interoception block</span>
+            </label>
+            <label class="toggle-row">
+              <input id="includePictographic" type="checkbox" checked>
+              <span>Include pictographic embodiment scales</span>
+            </label>
+            <div id="blockList" class="block-list"></div>
           </div>
-          <div class="grid">
-            <label>
-              Expected item count
-              <input id="sliderExpectedCount" type="number" min="1" step="1" value="42">
-            </label>
-            <label>
-              Minimum
-              <input id="sliderMin" type="number" step="1" value="0">
-            </label>
-            <label>
-              Maximum
-              <input id="sliderMax" type="number" step="1" value="100">
-            </label>
-          </div>
-          <div class="grid two" style="margin-top: 12px;">
-            <label>
-              Left anchor
-              <input id="sliderLeftAnchor" value="NO, not more than usual">
-            </label>
-            <label>
-              Right anchor
-              <input id="sliderRightAnchor" value="YES, much more than usual">
-            </label>
-          </div>
-          <div class="grid two" style="margin-top: 12px;">
-            <label>
-              English items
-              <textarea id="englishItems"></textarea>
-            </label>
-            <label>
-              German items
-              <textarea id="germanItems"></textarea>
-            </label>
-          </div>
-        </section>
 
-        <section>
-          <div class="section-title">
-            <h2>Pictographic Scales</h2>
-            <p class="subtle">Keep three image prompts unless the Unity runtime is extended.</p>
-          </div>
-          <div id="pictographicFields" class="column"></div>
-        </section>
-      </div>
-
-      <div class="column">
-        <section>
-          <div class="section-title">
-            <h2>Participant Experience</h2>
-          </div>
-          <div id="experienceMetrics" class="metric-grid"></div>
-          <div id="experienceIssues" class="issues" style="margin-top: 10px;"></div>
-        </section>
-
-        <section>
-          <div class="section-title">
-            <h2>APK Generator</h2>
-          </div>
-          <p class="subtle">Download the config, place it in `QuestionnaireConfigs`, then run this command from the project folder.</p>
-          <code id="generatorCommand" class="command"></code>
-        </section>
-
-        <section>
-          <div class="section-title">
-            <h2>Windows App Runner</h2>
-          </div>
-          <p class="subtle">Use the offline local launcher or connect this page to the local Windows companion.</p>
-          <div class="grid two" style="margin-top: 10px;">
-            <label>
-              Connector URL
-              <input id="appBackendUrl" type="url" value="http://127.0.0.1:8765" spellcheck="false">
-            </label>
-            <label>
-              Pairing token
-              <input id="appBackendToken" type="password" autocomplete="off" spellcheck="false">
+          <div class="panel">
+            <div class="section-title">
+              <h3>MAIA-2</h3>
+            </div>
+            <div class="grid two">
+              <label>
+                Source path
+                <input id="maiaSource" value="Assets/StreamingAssets/MAIA2_Questions.json">
+              </label>
+              <label>
+                Expected item count
+                <input id="maiaExpectedCount" type="number" min="1" step="1" value="37">
+              </label>
+            </div>
+            <label style="margin-top: 12px;">
+              Inline MAIA-2 JSON items
+              <textarea id="maiaInline" placeholder='[{"id":"maia_01","text":"..."}]'></textarea>
             </label>
           </div>
-          <div id="appBackendStatus" class="issue">Backend not checked.</div>
-          <div class="toggle-row" style="margin-top: 10px;">
-            <input id="appRunTests" type="checkbox" checked>
-            <span>Run unit tests during APK generation</span>
-          </div>
-          <div class="toggle-row">
-            <input id="appRenderPreview" type="checkbox">
-            <span>Render preview after APK generation</span>
-          </div>
-          <div class="button-row" style="margin-top: 10px;">
-            <button id="checkBackendButton" type="button">Check backend</button>
-            <button id="dependencyStatusButton" type="button">Dependency status</button>
-            <button id="installDependenciesButton" type="button">Install dependencies</button>
-            <button id="saveConfigAppButton" type="button">Save config</button>
-            <button id="validateConfigAppButton" type="button">Validate config</button>
-            <button id="generateApkAppButton" class="primary" type="button">Generate APK</button>
-          </div>
-          <pre id="appBackendLog" style="margin-top: 10px; max-height: 280px;"></pre>
-        </section>
 
-        <section>
-          <div class="section-title">
-            <h2>Validation Pipeline</h2>
+          <div class="panel">
+            <div class="section-title">
+              <h3>Viscereality slider items</h3>
+            </div>
+            <div class="grid">
+              <label>
+                Expected item count
+                <input id="sliderExpectedCount" type="number" min="1" step="1" value="42">
+              </label>
+              <label>
+                Minimum
+                <input id="sliderMin" type="number" step="1" value="0">
+              </label>
+              <label>
+                Maximum
+                <input id="sliderMax" type="number" step="1" value="100">
+              </label>
+            </div>
+            <div class="grid two" style="margin-top: 12px;">
+              <label>
+                Left anchor
+                <input id="sliderLeftAnchor" value="NO, not more than usual">
+              </label>
+              <label>
+                Right anchor
+                <input id="sliderRightAnchor" value="YES, much more than usual">
+              </label>
+            </div>
+            <div class="grid two" style="margin-top: 12px;">
+              <label>
+                English items
+                <textarea id="englishItems"></textarea>
+              </label>
+              <label>
+                German items
+                <textarea id="germanItems"></textarea>
+              </label>
+            </div>
           </div>
-          <p class="subtle">Use these commands as the web-to-APK-to-Quest handoff for this questionnaire.</p>
-          <div id="pipelineCommands" class="column" style="margin-top: 10px;"></div>
-        </section>
 
-        <section>
-          <div class="section-title">
-            <h2>Validation</h2>
+          <div class="panel">
+            <div class="section-title">
+              <h3>Pictographic scales</h3>
+            </div>
+            <div id="pictographicFields" class="column"></div>
           </div>
-          <div id="issues" class="issues"></div>
-        </section>
+        </div>
+      </section>
 
-        <section>
-          <div class="section-title">
-            <h2>Config JSON</h2>
+      <section id="project-stage" class="stage" data-requires-apk>
+        <div class="stage-heading">
+          <div>
+            <h2>4. Set project and return behavior</h2>
+            <p class="subtle">These values are written into the generated config, registry, and chain plan.</p>
           </div>
-          <pre id="preview"></pre>
-        </section>
-      </div>
-    </div>
-  </main>
+          <div class="stage-state">Locked</div>
+        </div>
+        <div class="locked-message issue error">Choose an existing APK before editing project settings.</div>
+        <div class="stage-body">
+          <div class="panel">
+            <div class="section-title">
+              <h3>Project</h3>
+            </div>
+            <div class="grid">
+              <label>
+                Questionnaire id
+                <input id="questionnaireId" value="viscereality-maia2">
+              </label>
+              <label>
+                Questionnaire version
+                <input id="questionnaireVersion" value="1.0.0">
+              </label>
+              <label>
+                App version
+                <input id="appVersion" value="1.0.0">
+              </label>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="section-title">
+              <h3>Experiment handoff</h3>
+            </div>
+            <div class="grid">
+              <label>
+                Finish behavior
+                <input id="chainFinishBehavior" value="resumeCaller" placeholder="staySaved, resumeCaller, or openNext">
+              </label>
+              <label>
+                Auto close delay ms
+                <input id="chainAutoCloseDelayMs" type="number" min="0" step="100" value="2000">
+              </label>
+              <label>
+                Caller package
+                <input id="chainCallerPackage" placeholder="org.example.scenario">
+              </label>
+            </div>
+            <div class="grid">
+              <label>
+                Caller activity
+                <input id="chainCallerActivity" placeholder="org.example.scenario.MainActivity">
+              </label>
+              <label>
+                Next package
+                <input id="chainNextPackage" placeholder="org.example.nextscenario">
+              </label>
+              <label>
+                Next activity
+                <input id="chainNextActivity" placeholder="org.example.nextscenario.MainActivity">
+              </label>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="section-title">
+              <h3>Experiment block registry</h3>
+              <button id="refreshRegistryButton" type="button">Refresh registered blocks</button>
+            </div>
+            <div class="grid">
+              <label>
+                Experiment id
+                <input id="experimentId" value="peripersonal-space-right-orbit">
+              </label>
+              <label>
+                ChainLink plan id
+                <input id="chainlinkPlanId" value="peripersonal-space-right-maia2-pictographic">
+              </label>
+              <label>
+                Trigger button
+                <input id="chainlinkTriggerButton" value="auto-unused-non-breath-tracking" placeholder="auto-unused-non-breath-tracking">
+              </label>
+            </div>
+            <div class="grid">
+              <label>
+                Target APK package
+                <input id="chainlinkScenarioPackage" value="com.Viscereality.ViscerealityPeriPersonalSpaceRight">
+              </label>
+              <label>
+                Target APK activity
+                <input id="chainlinkScenarioActivity" value="com.unity3d.player.UnityPlayerGameActivity">
+              </label>
+              <label>
+                Pictographic repeats
+                <input id="chainlinkPictographicRepeats" type="number" min="1" max="50" step="1" value="2">
+              </label>
+            </div>
+            <label>
+              Target APK label
+              <input id="chainlinkScenarioLabel" value="Peripersonal Space Right orbital scenario">
+            </label>
+            <div id="experimentBlockRegistryList" class="block-list" style="margin-top: 10px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="runner-stage" class="stage" data-requires-apk>
+        <div class="stage-heading">
+          <div>
+            <h2>5. Save and generate APK</h2>
+            <p class="subtle">The hosted page sends local actions to the companion on this PC.</p>
+          </div>
+          <div class="stage-state">Locked</div>
+        </div>
+        <div class="locked-message issue error">Choose an existing APK before saving or generating outputs.</div>
+        <div class="stage-body">
+          <div class="panel">
+            <div class="section-title">
+              <h3>Local companion</h3>
+            </div>
+            <div class="grid two">
+              <label>
+                Connector URL
+                <input id="appBackendUrl" type="url" value="http://127.0.0.1:8765" spellcheck="false">
+              </label>
+              <label>
+                Pairing token
+                <input id="appBackendToken" type="password" autocomplete="off" spellcheck="false">
+              </label>
+            </div>
+            <div id="appBackendStatus" class="issue">Backend not checked.</div>
+            <div class="compact-grid">
+              <label class="toggle-row">
+                <input id="appRunTests" type="checkbox" checked>
+                <span>Run unit tests</span>
+              </label>
+              <label class="toggle-row">
+                <input id="appRenderPreview" type="checkbox">
+                <span>Render preview</span>
+              </label>
+            </div>
+            <div class="button-row" style="margin-top: 10px;">
+              <button id="checkBackendButton" type="button">Check backend</button>
+              <button id="saveConfigAppButton" type="button">Save config</button>
+              <button id="validateConfigAppButton" type="button">Validate config</button>
+              <button id="generateApkAppButton" class="primary" type="button">Generate APK</button>
+            </div>
+            <pre id="appBackendLog" style="margin-top: 10px; max-height: 280px;"></pre>
+          </div>
+
+          <div class="panel">
+            <div class="section-title">
+              <h3>APK generator command</h3>
+            </div>
+            <code id="generatorCommand" class="command"></code>
+          </div>
+        </div>
+      </section>
+
+      <section id="review-stage" class="stage" data-requires-apk>
+        <div class="stage-heading">
+          <div>
+            <h2>6. Review output</h2>
+            <p class="subtle">Check participant burden, validation, pipeline commands, and generated JSON.</p>
+          </div>
+          <div class="stage-state">Locked</div>
+        </div>
+        <div class="locked-message issue error">Choose an existing APK before reviewing generated outputs.</div>
+        <div class="stage-body">
+          <div class="panel">
+            <div class="section-title">
+              <h3>Participant experience</h3>
+            </div>
+            <div id="experienceMetrics" class="metric-grid"></div>
+            <div id="experienceIssues" class="issues" style="margin-top: 10px;"></div>
+          </div>
+
+          <div class="panel">
+            <div class="section-title">
+              <h3>Validation pipeline</h3>
+            </div>
+            <div id="pipelineCommands" class="column"></div>
+          </div>
+
+          <div class="panel">
+            <div class="section-title">
+              <h3>Validation</h3>
+            </div>
+            <div id="issues" class="issues"></div>
+          </div>
+
+          <div class="panel">
+            <div class="section-title">
+              <h3>Config JSON</h3>
+            </div>
+            <pre id="preview"></pre>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <script>
     const blockDefaults = [
@@ -686,6 +1039,23 @@
     ];
 
     const triggerQuestionnaireModes = ["none", "baseline", "maia2", "pictographic", "slider", "full"];
+    const questionnaireModeLabels = {
+      none: "Skip",
+      baseline: "Baseline",
+      maia2: "MAIA-2",
+      pictographic: "Pictographic",
+      slider: "Slider",
+      full: "Full"
+    };
+    const questionnaireModeDetails = {
+      none: "No questionnaire runs for this trigger.",
+      baseline: "Demographics and MAIA-2.",
+      maia2: "MAIA-2 interoception block.",
+      pictographic: "Three embodiment scales.",
+      slider: "Custom Viscereality slider items.",
+      full: "All included questionnaire screens."
+    };
+    let selectedQuestionnaireMode = "pictographic";
 
     function byId(id) {
       return document.getElementById(id);
@@ -771,11 +1141,12 @@
     }
 
     function registeredBlock(index, raw) {
-      const number = blockNumber(index);
-      const idStem = safeFileStem(raw.id || raw.label || `block-${number}`, `block-${number}`);
+      const rawNumber = String(raw.number || "").trim();
+      const number = /^\d{3}$/.test(rawNumber) ? rawNumber : blockNumber(index);
+      const idStem = safeFileStem(raw.blockId || raw.id || raw.label || `block-${number}`, `block-${number}`);
       return {
         number,
-        id: `${number}_${idStem}`,
+        id: raw.blockId ? safeFileStem(raw.blockId, `${number}_${idStem}`) : `${number}_${idStem}`,
         type: raw.type,
         label: raw.label,
         trigger: raw.trigger,
@@ -860,9 +1231,11 @@
       }));
       if (triggerCatalog.package) {
         byId("chainlinkScenarioPackage").value = triggerCatalog.package;
+        byId("chainCallerPackage").value = triggerCatalog.package;
       }
       if (triggerCatalog.activity) {
         byId("chainlinkScenarioActivity").value = triggerCatalog.activity;
+        byId("chainCallerActivity").value = triggerCatalog.activity;
       }
       if (triggerCatalog.label) {
         byId("chainlinkScenarioLabel").value = triggerCatalog.label;
@@ -925,15 +1298,69 @@
       };
     }
 
+    function questionnaireModeLabel(mode) {
+      return questionnaireModeLabels[mode] || mode || "Skip";
+    }
+
+    function questionnaireModeDetail(mode) {
+      return questionnaireModeDetails[mode] || "";
+    }
+
+    function setTriggerSummary() {
+      const summary = byId("triggerSummary");
+      if (!summary) {
+        return;
+      }
+      if (triggerMappings.length === 0) {
+        summary.textContent = "No trigger blocks available yet.";
+        return;
+      }
+      const enabled = readTriggerMappingsFromDom().filter(mapping => mapping.enabled).length;
+      summary.textContent = `${triggerMappings.length} manifest trigger${triggerMappings.length === 1 ? "" : "s"} found. ${enabled} questionnaire block${enabled === 1 ? "" : "s"} enabled.`;
+    }
+
+    function updateTriggerDropZone(index) {
+      const select = byId(`triggerMode${index}`);
+      if (typeof document.querySelector !== "function") {
+        return;
+      }
+      const zone = document.querySelector(`[data-trigger-drop="${index}"]`);
+      if (!select || !zone) {
+        return;
+      }
+      const mode = select.value || "none";
+      zone.classList.toggle("empty", mode === "none");
+      zone.innerHTML = `
+        <div class="block-label">${escapeHtml(questionnaireModeLabel(mode))}</div>
+        <div class="subtle">${escapeHtml(questionnaireModeDetail(mode))}</div>
+      `;
+    }
+
+    function assignTriggerMode(index, mode) {
+      if (!triggerQuestionnaireModes.includes(mode)) {
+        return;
+      }
+      const select = byId(`triggerMode${index}`);
+      if (!select) {
+        return;
+      }
+      select.value = mode;
+      updateTriggerDropZone(index);
+      triggerMappings = readTriggerMappingsFromDom();
+      setTriggerSummary();
+      refresh();
+    }
+
     function renderTriggerMappingList() {
       const host = byId("triggerMappingList");
       host.innerHTML = "";
       if (triggerMappings.length === 0) {
+        setTriggerSummary();
         return;
       }
       triggerMappings.forEach((mapping, index) => {
         const row = document.createElement("div");
-        row.className = "block-row registry-row";
+        row.className = "block-row trigger-row";
         const label = escapeHtml(mapping.label || `Trigger ${mapping.triggerId}`);
         const triggerId = escapeHtml(mapping.triggerId);
         const blockNumberValue = escapeHtml(mapping.blockNumber);
@@ -944,14 +1371,15 @@
           .map(mode => `<option value="${mode}">${mode}</option>`)
           .join("");
         row.innerHTML = `
-          <div class="block-handle">${String(index + 1).padStart(2, "0")}</div>
+          <div class="trigger-number">${String(index + 1).padStart(2, "0")}</div>
           <div>
             <strong>${label}</strong>
             <div class="subtle">Event ID: ${triggerId}</div>
+            <div class="drop-zone" data-trigger-drop="${index}" tabindex="0"></div>
           </div>
           <div class="grid" style="grid-column: 1 / -1; margin-top: 8px;">
             <label>
-              Questionnaire mode
+              Questionnaire block
               <select id="triggerMode${index}">${modeOptions}</select>
             </label>
             <label>
@@ -976,7 +1404,36 @@
         `;
         host.appendChild(row);
         byId(`triggerMode${index}`).value = mapping.questionnaireMode || "none";
+        updateTriggerDropZone(index);
+        byId(`triggerMode${index}`).addEventListener("change", () => {
+          updateTriggerDropZone(index);
+          triggerMappings = readTriggerMappingsFromDom();
+          setTriggerSummary();
+        });
+        if (typeof row.querySelector !== "function") {
+          return;
+        }
+        const dropZone = row.querySelector(`[data-trigger-drop="${index}"]`);
+        if (!dropZone) {
+          return;
+        }
+        dropZone.addEventListener("dragover", event => {
+          event.preventDefault();
+          dropZone.classList.add("drag-over");
+        });
+        dropZone.addEventListener("dragleave", () => {
+          dropZone.classList.remove("drag-over");
+        });
+        dropZone.addEventListener("drop", event => {
+          event.preventDefault();
+          dropZone.classList.remove("drag-over");
+          assignTriggerMode(index, event.dataTransfer.getData("text/plain"));
+        });
+        dropZone.addEventListener("click", () => {
+          assignTriggerMode(index, selectedQuestionnaireMode);
+        });
       });
+      setTriggerSummary();
     }
 
     function setTriggerCatalogStatus(text, level = "") {
@@ -1079,6 +1536,31 @@
       }
     }
 
+    function expectedOutputsForQuestionnaireMode(mode) {
+      if (mode === "baseline") {
+        return { demographics: true, maia2Answers: 37, maia2Scores: 8 };
+      }
+      if (mode === "maia2") {
+        return { maia2Answers: 37, maia2Scores: 8 };
+      }
+      if (mode === "pictographic") {
+        return { pictographicSelections: 3 };
+      }
+      if (mode === "slider") {
+        return { sliderAnswers: numberValue("sliderExpectedCount", 42) };
+      }
+      if (mode === "full") {
+        return {
+          demographics: true,
+          maia2Answers: 37,
+          maia2Scores: 8,
+          pictographicSelections: 3,
+          sliderAnswers: numberValue("sliderExpectedCount", 42)
+        };
+      }
+      return {};
+    }
+
     function buildExperimentBlockRegistry(config = currentExperimentStub()) {
       const defaults = config.chainDefaults || chainDefaults();
       const questionnaireId = config.questionnaireId || byId("questionnaireId").value.trim() || "questionnaire";
@@ -1093,6 +1575,71 @@
       const questionnairePackage = "org.mesmerprism.viscereality.questionnaires2d";
       const questionnaireActivity = "org.mesmerprism.viscereality.questionnaires2d.MainActivity";
       const questionnaireAction = "org.mesmerprism.viscereality.questionnaires2d.RUN";
+      const mappedTriggers = readTriggerMappingsFromDom()
+        .filter(mapping => mapping.enabled && mapping.questionnaireMode !== "none");
+
+      if (mappedTriggers.length > 0) {
+        const triggerBlocks = mappedTriggers.map((mapping, index) => ({
+          number: /^\d{3}$/.test(String(mapping.blockNumber || "")) ? mapping.blockNumber : blockNumber(index),
+          blockId: mapping.blockId,
+          id: mapping.blockId || `trigger_${safeFileStem(mapping.triggerId, `trigger-${index + 1}`)}`,
+          type: "questionnaire",
+          label: mapping.label || `Trigger ${mapping.triggerId}`,
+          trigger: {
+            type: "apkManifestTrigger",
+            triggerId: mapping.triggerId,
+            foregroundPackage: scenarioPackage
+          },
+          package: questionnairePackage,
+          activity: questionnaireActivity,
+          action: questionnaireAction,
+          questionnaireMode: mapping.questionnaireMode,
+          saveNamespace: mapping.saveNamespace || `trigger_${safeFileStem(mapping.triggerId, `trigger-${index + 1}`)}`,
+          expectedOutputs: expectedOutputsForQuestionnaireMode(mapping.questionnaireMode),
+          extras: {
+            "mq.questionnaireMode": mapping.questionnaireMode,
+            "mq.flowMode": mapping.questionnaireMode,
+            "mq.triggerId": mapping.triggerId,
+            "mq.finishBehavior": defaults.finishBehavior || "resumeCaller",
+            "mq.callerPackage": scenarioPackage,
+            "mq.callerActivity": scenarioActivity,
+            "mq.autoCloseDelayMs": mapping.autoCloseDelayMs ?? defaults.autoCloseDelayMs,
+            ...(mapping.language ? { "mq.language": mapping.language } : {})
+          }
+        }));
+
+        return {
+          schemaVersion: "viscereality.chainlink.block-registry.v1",
+          experimentId,
+          planId,
+          questionnaireId,
+          questionnaireVersion,
+          controllerTriggerButton: triggerButton,
+          sourceTriggerCatalog: triggerCatalog ? {
+            schemaVersion: triggerCatalog.schemaVersion,
+            catalogVersion: triggerCatalog.catalogVersion,
+            sourceApkName: triggerCatalog.sourceApkName,
+            triggerCount: triggerCatalog.triggers.length
+          } : null,
+          scenario: {
+            label: scenarioLabel,
+            package: scenarioPackage,
+            activity: scenarioActivity
+          },
+          targetApp: {
+            label: scenarioLabel,
+            package: scenarioPackage,
+            activity: scenarioActivity
+          },
+          dataPolicy: {
+            uniqueRunPerBlock: true,
+            perResponseTimestampUtc: true,
+            appendOnlyExports: true,
+            noOverwrite: true
+          },
+          blocks: triggerBlocks.map((block, index) => registeredBlock(index, block))
+        };
+      }
 
       const rawBlocks = [
         {
@@ -1441,6 +1988,9 @@
       }
       if (finishBehavior === "resumeCaller" && !config.chainDefaults?.callerPackage) {
         issues.push({ level: "warn", text: "resumeCaller needs a caller package at launch time or in chain defaults." });
+      }
+      if (!config.triggerQuestionnaireMapping || !Array.isArray(config.triggerQuestionnaireMapping.triggers) || config.triggerQuestionnaireMapping.triggers.length === 0) {
+        issues.push({ level: "error", text: "Load an APK trigger catalog before exporting a questionnaire APK." });
       }
       const registry = config.experimentBlockRegistry;
       if (!registry || !Array.isArray(registry.blocks) || registry.blocks.length === 0) {
@@ -1799,6 +2349,8 @@
       renderGeneratorCommand(config);
       renderPipelineCommands(config);
       renderIssues(validate(config));
+      setTriggerSummary();
+      updateWorkflowGate();
     }
 
     function loadConfig(config) {
@@ -1819,6 +2371,12 @@
       byId("chainlinkScenarioPackage").value = targetApp.package || byId("chainlinkScenarioPackage").value || "com.Viscereality.ViscerealityPeriPersonalSpaceRight";
       byId("chainlinkScenarioActivity").value = targetApp.activity || byId("chainlinkScenarioActivity").value || "com.unity3d.player.UnityPlayerGameActivity";
       byId("chainlinkScenarioLabel").value = targetApp.label || byId("chainlinkScenarioLabel").value || "Peripersonal Space Right orbital scenario";
+      if (!byId("chainCallerPackage").value && targetApp.package) {
+        byId("chainCallerPackage").value = targetApp.package;
+      }
+      if (!byId("chainCallerActivity").value && targetApp.activity) {
+        byId("chainCallerActivity").value = targetApp.activity;
+      }
       const pictographicRepeats = Array.isArray(registry.blocks)
         ? registry.blocks.filter(block => block.questionnaireMode === "pictographic").length
         : Number(byId("chainlinkPictographicRepeats").value || 2);
@@ -2288,6 +2846,102 @@
       log.textContent = log.textContent ? `${log.textContent}\n\n${text}` : text;
     }
 
+    function setSelectedPaletteMode(mode) {
+      if (!triggerQuestionnaireModes.includes(mode)) {
+        return;
+      }
+      selectedQuestionnaireMode = mode;
+      if (typeof document.querySelectorAll !== "function") {
+        return;
+      }
+      document.querySelectorAll("#questionnairePalette [data-mode]").forEach(button => {
+        button.setAttribute("aria-pressed", button.dataset.mode === selectedQuestionnaireMode ? "true" : "false");
+      });
+    }
+
+    function initializeQuestionnairePalette() {
+      if (typeof document.querySelectorAll !== "function") {
+        return;
+      }
+      document.querySelectorAll("#questionnairePalette [data-mode]").forEach(button => {
+        button.addEventListener("click", () => {
+          setSelectedPaletteMode(button.dataset.mode);
+        });
+        button.addEventListener("dragstart", event => {
+          setSelectedPaletteMode(button.dataset.mode);
+          event.dataTransfer.setData("text/plain", button.dataset.mode);
+          event.dataTransfer.effectAllowed = "copy";
+        });
+      });
+      setSelectedPaletteMode(selectedQuestionnaireMode);
+    }
+
+    function hasTriggerManifest() {
+      return triggerMappings.length > 0;
+    }
+
+    function setDisabledTree(root, disabled) {
+      root.querySelectorAll("input, select, textarea, button").forEach(control => {
+        if (disabled) {
+          if (!control.disabled) {
+            control.dataset.workflowDisabled = "true";
+          }
+          control.disabled = true;
+        } else if (control.dataset.workflowDisabled === "true") {
+          control.disabled = false;
+          delete control.dataset.workflowDisabled;
+        }
+      });
+    }
+
+    function setNavState(id, unlocked) {
+      const link = byId(`nav${id}`);
+      const state = byId(`nav${id}State`);
+      if (link) {
+        link.classList.toggle("locked", !unlocked);
+        link.setAttribute("aria-disabled", unlocked ? "false" : "true");
+      }
+      if (state) {
+        state.textContent = unlocked ? "Ready" : "Locked";
+      }
+    }
+
+    function updateWorkflowGate() {
+      if (typeof document.querySelectorAll !== "function") {
+        return;
+      }
+      const unlocked = hasTriggerManifest();
+      document.querySelectorAll("[data-requires-apk]").forEach(stage => {
+        stage.classList.toggle("locked", !unlocked);
+        const state = stage.querySelector(".stage-state");
+        if (state) {
+          state.textContent = unlocked ? "Ready" : "Locked";
+        }
+        const body = stage.querySelector(".stage-body");
+        if (body) {
+          setDisabledTree(body, !unlocked);
+        }
+      });
+      document.querySelectorAll("[data-requires-apk-control]").forEach(control => {
+        if (!unlocked) {
+          if (!control.disabled) {
+            control.dataset.workflowDisabled = "true";
+          }
+          control.disabled = true;
+        } else if (control.dataset.workflowDisabled === "true") {
+          control.disabled = false;
+          delete control.dataset.workflowDisabled;
+        }
+      });
+      if (byId("apkStageState")) {
+        byId("apkStageState").textContent = unlocked ? "Manifest loaded" : "Waiting for APK";
+      }
+      if (byId("navApkState")) {
+        byId("navApkState").textContent = unlocked ? "Done" : "Required";
+      }
+      ["Triggers", "Questionnaires", "Project", "Runner", "Review"].forEach(id => setNavState(id, unlocked));
+    }
+
     async function callAppBackend(path, payload = null) {
       const base = appBackendAvailableUrl();
       if (!base) {
@@ -2407,6 +3061,7 @@
     }
 
     initializeAppBackendControls();
+    initializeQuestionnairePalette();
 
     byId("downloadButton").addEventListener("click", downloadConfig);
     byId("downloadBlockRegistryButton").addEventListener("click", downloadBlockRegistry);

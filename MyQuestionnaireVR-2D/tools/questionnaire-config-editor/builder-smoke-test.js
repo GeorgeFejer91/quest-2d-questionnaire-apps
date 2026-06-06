@@ -142,7 +142,7 @@ function loadEditor() {
   };
   context.window = context;
   vm.createContext(context);
-  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, refresh, buildExperimentBlockRegistry, buildChainPlan };`, context, {
+  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, refresh, buildExperimentBlockRegistry, buildChainPlan };`, context, {
     filename: htmlPath
   });
   return { context, document };
@@ -155,7 +155,7 @@ assert(initial.schemaVersion === "my-questionnaire-vr.config.v1", "Default schem
 assert(initial.questionnaireId === "viscereality-maia2", "Default questionnaire id mismatch.");
 assert(initial.blocks.some(block => block.id === "maia2"), "Default config should include MAIA-2.");
 assert(initial.blocks.some(block => block.id === "pictographic"), "Default config should include pictographic scales.");
-assert(initial.chainDefaults.finishBehavior === "staySaved", "Default chain finish behavior mismatch.");
+assert(initial.chainDefaults.finishBehavior === "resumeCaller", "Default chain finish behavior mismatch.");
 assert(initial.experimentBlockRegistry.schemaVersion === "viscereality.chainlink.block-registry.v1", "Default block registry schema mismatch.");
 assert(initial.experimentBlockRegistry.blocks[0].number === "001", "Default registry should start at block 001.");
 assert(initial.experimentBlockRegistry.blocks.some(block => block.questionnaireMode === "baseline"), "Default registry should include a baseline questionnaire block.");
@@ -166,8 +166,8 @@ assert(initial.experimentBlockRegistry.blocks.some(block => block.type === "apk"
 const initialChainPlan = context.__api.buildChainPlan(initial);
 assert(initialChainPlan.schemaVersion === "viscereality.chainlink.plan.v1", "ChainLink plan schema mismatch.");
 assert(initialChainPlan.blockRegistry.blocks.length === initial.experimentBlockRegistry.blocks.length, "ChainLink plan should embed the full registered block list.");
-assert(initialQuality.status === "pass", "Default questionnaire should pass quality report.");
-assert(initialQuality.issueCounts.warning >= 1, "Default source-backed questionnaire should warn about moderate headset burden.");
+assert(initialQuality.status === "fail", "Default questionnaire should be blocked until a trigger catalog is loaded.");
+assert(initialQuality.issues.some(issue => issue.text.includes("Load an APK trigger catalog")), "Default quality report should explain the APK-first gate.");
 assert(document.getElementById("generatorCommand").textContent.includes("generate-questionnaire-apk.ps1"), "Generator command was not rendered.");
 assert(document.getElementById("downloadQualityButton"), "Quality report download button was not rendered.");
 assert(document.getElementById("downloadBlockRegistryButton"), "Block registry download button was not rendered.");
@@ -176,6 +176,29 @@ assert(document.getElementById("pipelineCommands").textContent.includes("quest-v
 assert(document.getElementById("pipelineCommands").textContent.includes("render-questionnaire-visuals.ps1"), "Foreground render command was not rendered.");
 assert(document.getElementById("pipelineCommands").textContent.includes("quest-chain-validate.ps1"), "Quest chain validation command was not rendered.");
 assert(document.getElementById("pipelineCommands").textContent.includes("quest-broker-chain-validate.ps1"), "Quest broker chain validation command was not rendered.");
+
+context.__api.applyTriggerCatalog({
+  schemaVersion: "mq.quest_questionnaire_trigger_catalog.v1",
+  catalogVersion: "1.0.0",
+  scenarioId: "demo-scenario",
+  package: "com.example.scenario",
+  activity: "com.example.scenario.MainActivity",
+  label: "Demo scenario",
+  triggers: [
+    { triggerId: "after_intro", label: "After intro", recommendedMode: "pictographic" },
+    { triggerId: "after_task", label: "After task", recommendedMode: "slider" }
+  ]
+}, "demo-scenario.apk");
+
+const triggered = context.__api.buildConfig();
+const triggeredQuality = context.__api.qualityReport(triggered);
+assert(triggered.chainDefaults.callerPackage === "com.example.scenario", "Catalog package should become the caller package.");
+assert(triggered.triggerQuestionnaireMapping.triggers.length === 2, "Trigger catalog should produce two trigger mappings.");
+assert(triggered.experimentBlockRegistry.blocks.length === 2, "Trigger catalog should produce one registry block per enabled trigger.");
+assert(triggered.experimentBlockRegistry.blocks.every(block => block.type === "questionnaire"), "Manifest registry should contain questionnaire blocks.");
+assert(triggered.experimentBlockRegistry.blocks.every(block => block.trigger.type === "apkManifestTrigger"), "Manifest blocks should use APK trigger events.");
+assert(triggeredQuality.status === "pass", "Catalog-backed questionnaire should pass quality report.");
+assert(triggeredQuality.issueCounts.warning >= 1, "Catalog-backed source questionnaire should warn about moderate headset burden.");
 document.getElementById("downloadQualityButton").click();
 document.getElementById("downloadBlockRegistryButton").click();
 document.getElementById("downloadChainPlanButton").click();

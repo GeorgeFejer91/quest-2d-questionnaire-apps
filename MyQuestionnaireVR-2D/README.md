@@ -96,8 +96,11 @@ trigger catalogs, maps trigger event IDs to questionnaire blocks, shows
 participant-experience counts, and prints the matching APK generator command.
 The builder UI is APK-first: downstream block-building, questionnaire editing,
 validation, local dependency, export, and APK-generation controls remain
-disabled until an existing scenario APK, trigger catalog JSON, or saved config
-with trigger mappings is loaded.
+disabled until an existing scenario APK, trigger catalog JSON, or the repository
+example APK catalog is loaded. The public example folder lives at
+`../example-scenario-apk/`; place the finished example APK under
+`../example-scenario-apk/apk/` and the matching Unity project or build folder
+under `../example-scenario-apk/unity-project/`.
 
 Generate a named APK from any config:
 

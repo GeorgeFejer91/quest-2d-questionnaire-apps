@@ -172,6 +172,11 @@
       padding: 7px 8px;
     }
 
+    .plain-link {
+      color: var(--accent);
+      overflow-wrap: anywhere;
+    }
+
     .stage {
       scroll-margin-top: 20px;
       padding: 0 0 28px;
@@ -639,7 +644,7 @@
 
         <div class="panel">
           <div class="section-title">
-            <h3>APK trigger scan</h3>
+            <h3>Load your APK</h3>
             <div class="file-row">
               <input id="loadScenarioApkInput" type="file" accept=".apk,application/vnd.android.package-archive,application/json,.json">
             </div>
@@ -649,12 +654,14 @@
 
         <div class="panel">
           <div class="section-title">
-            <h3>Existing builder config</h3>
-            <div class="file-row">
-              <input id="loadFileInput" type="file" accept="application/json,.json">
-            </div>
+            <h3>Load example APK</h3>
+            <button id="loadExampleApkButton" type="button">Use repository example</button>
           </div>
-          <p class="subtle">A saved config only unlocks the workflow when it already contains trigger mappings.</p>
+          <div id="exampleApkStatus" class="issue">Example not loaded.</div>
+          <p class="subtle">
+            Example folder:
+            <a id="exampleApkFolderLink" class="plain-link" href="https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/tree/main/example-scenario-apk" target="_blank" rel="noreferrer">https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/tree/main/example-scenario-apk</a>
+          </p>
         </div>
       </section>
 
@@ -1047,6 +1054,12 @@
     let blocks = structuredClone(blockDefaults);
     let triggerCatalog = null;
     let triggerMappings = [];
+    const exampleApkFolderUrl = "https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/tree/main/example-scenario-apk";
+    const exampleTriggerCatalogUrlCandidates = [
+      "../example-scenario-apk/questionnaire-trigger-catalog.json",
+      "../../../example-scenario-apk/questionnaire-trigger-catalog.json",
+      "https://raw.githubusercontent.com/GeorgeFejer91/quest-2d-questionnaire-apps/main/example-scenario-apk/questionnaire-trigger-catalog.json"
+    ];
 
     const triggerCatalogPaths = [
       "assets/mq/questionnaire-trigger-catalog.json",
@@ -1456,6 +1469,41 @@
       const status = byId("triggerCatalogStatus");
       status.className = `issue ${level}`;
       status.textContent = text;
+    }
+
+    function setExampleApkStatus(text, level = "") {
+      const status = byId("exampleApkStatus");
+      status.className = `issue ${level}`;
+      status.textContent = text;
+    }
+
+    async function loadExampleTriggerCatalog() {
+      let lastError = null;
+      setExampleApkStatus("Loading repository example...", "");
+      for (const candidate of exampleTriggerCatalogUrlCandidates) {
+        let url = candidate;
+        try {
+          const baseHref = window.location && window.location.href ? window.location.href : null;
+          if (baseHref && !candidate.startsWith("http")) {
+            url = new URL(candidate, baseHref).href;
+          }
+        } catch (error) {
+          url = candidate;
+        }
+        try {
+          const response = await fetch(url, { cache: "no-store" });
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          const catalog = await response.json();
+          applyTriggerCatalog(catalog, "repository example APK");
+          setExampleApkStatus("Repository example loaded.", "ok");
+          return;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      setExampleApkStatus(`Could not load the repository example. Open the folder URL and download it manually. ${lastError?.message || ""}`.trim(), "error");
     }
 
     function findEndOfCentralDirectory(bytes) {
@@ -3078,6 +3126,8 @@
 
     initializeAppBackendControls();
     initializeQuestionnairePalette();
+    byId("exampleApkFolderLink").href = exampleApkFolderUrl;
+    byId("exampleApkFolderLink").textContent = exampleApkFolderUrl;
 
     byId("downloadButton").addEventListener("click", downloadConfig);
     byId("downloadBlockRegistryButton").addEventListener("click", downloadBlockRegistry);
@@ -3107,17 +3157,7 @@
       makeExperimentBlockRegistryList();
       refresh();
     });
-    byId("loadFileInput").addEventListener("change", event => {
-      const file = event.target.files[0];
-      if (!file) {
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        loadConfig(JSON.parse(String(reader.result)));
-      };
-      reader.readAsText(file);
-    });
+    byId("loadExampleApkButton").addEventListener("click", loadExampleTriggerCatalog);
     byId("loadScenarioApkInput").addEventListener("change", event => {
       loadTriggerCatalogFile(event.target.files[0]);
     });

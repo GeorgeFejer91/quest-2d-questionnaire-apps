@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "mq.quest_questionnaire_trigger_catalog.v1",
+  "catalogVersion": "0.1.0",
+  "scenarioId": "example-scenario-apk",
+  "package": "com.viscereality.example.scenario",
+  "activity": "com.unity3d.player.UnityPlayerGameActivity",
+  "label": "Example questionnaire trigger scenario",
+  "triggers": [
+    {
+      "triggerId": "after_intro",
+      "label": "After intro",
+      "description": "Example trigger emitted after the intro scene.",
+      "recommendedMode": "baseline"
+    },
+    {
+      "triggerId": "after_task",
+      "label": "After task",
+      "description": "Example trigger emitted after the main task.",
+      "recommendedMode": "pictographic"
+    },
+    {
+      "triggerId": "after_break",
+      "label": "After break",
+      "description": "Example trigger emitted after a rest break.",
+      "recommendedMode": "slider"
+    }
+  ]
+}

@@ -75,8 +75,8 @@ fresh build should be loading an existing scenario APK or trigger catalog with a
 questionnaire trigger manifest. Downstream block building, questionnaire
 editing, validation, export, dependency, and APK-generation controls may remain
 visible for orientation, but they should be disabled until a trigger manifest or
-a saved config with trigger mappings is loaded. Each enabled manifest trigger
-maps to a questionnaire block, and questionnaire completion should default to
+the repository example APK catalog is loaded. Each enabled manifest trigger maps
+to a questionnaire block, and questionnaire completion should default to
 returning to the calling scenario APK.
 
 The questionnaire builder layout should behave like a one-page website: a fixed
@@ -86,6 +86,9 @@ groups stacked vertically. Do not reintroduce side-by-side dashboard columns for
 the builder workflow. The left rail should include an always-visible Downloads
 group for the accompanying local companion software and launchers, because the
 hosted static GUI depends on that local companion for trusted PC actions.
+Section 1 should also include a user-friendly "Load example APK" fallback that
+loads `example-scenario-apk/questionnaire-trigger-catalog.json` from the repo
+and displays the GitHub folder URL where the example APK and Unity project live.
 
 The hosted GitHub Pages page is an interface only. It cannot directly install
 packages, read arbitrary local files, run build tools, access hardware, or hold

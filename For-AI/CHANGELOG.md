@@ -19,3 +19,5 @@ Use absolute dates.
 - Constrained the questionnaire builder UI to a vertically stacked one-page
   website with a fixed left navigation rail, including always-visible downloads
   for the local companion software and launchers.
+- Added the `example-scenario-apk/` folder and a "Load example APK" builder
+  fallback for users who do not yet have their own trigger-enabled APK.

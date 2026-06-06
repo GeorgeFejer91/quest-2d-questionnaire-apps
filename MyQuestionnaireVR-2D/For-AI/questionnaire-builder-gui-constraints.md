@@ -29,8 +29,8 @@ Workflow constraint:
   declares questionnaire triggers.
 - The block builder, questionnaire content editor, project settings, validation,
   local dependency, and export controls should be visibly present but disabled
-  until a trigger manifest is loaded. A saved config with trigger mappings may
-  also unlock the workflow.
+  until a trigger manifest is loaded from the user's APK or the repository
+  example catalog.
 - Trigger mappings are the source of block-builder structure: each enabled
   manifest trigger should become one questionnaire block, with completion
   returning to the calling scenario APK by default.
@@ -40,6 +40,8 @@ Workflow constraint:
 - Keep an always-visible Downloads group in the left rail for the companion
   software package and Windows launchers, because the hosted GUI needs that
   local companion for trusted PC actions.
+- Section 1 should include a user-friendly "Load example APK" fallback with the
+  GitHub folder URL for `example-scenario-apk/`.
 
 Security and portability constraints:
 

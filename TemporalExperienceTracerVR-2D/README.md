@@ -16,13 +16,24 @@ Launch extras mirror the questionnaire chain style: `mq.sessionId`, `mq.particip
 
 The trace canvas enforces a left-to-right completion rule:
 
-- drawing must begin inside the configured left start gate,
+- drawing must begin in the blue start area just outside the 0 vertical axis,
+- pre-axis movement after the first anchor point is ignored,
 - x backtracking is ignored,
 - saving is disabled until the trace reaches the configured right end gate,
 - exported data is resampled to the configured `targetSampleCount`,
 - the saved vector is anchored to exact `u=0` and `u=1`.
 
-The primary export is SVG with `viewBox` equal to the configured axis dimensions. JSON and CSV companions include participant/session metadata, timestamps, axis config, raw points, and resampled points.
+The screen trace is drawn as a smoothed Android path. The primary export is a
+resolution-independent SVG with `viewBox` equal to the configured axis
+dimensions. Its visible `trace-smooth-vector` path is built from raw captured
+points, while hidden raw and normalized vector point polylines keep the capture
+auditable. JSON and CSV companions include participant/session metadata,
+timestamps, axis config, raw points, and resampled analysis points.
+
+Kokoro-generated dimension audio lives under
+`app\src\main\assets\tracer\audio\English\`. The app plays the resolved audio
+asset when each dimension starts and records the audio file path in JSON
+metadata.
 
 ## Config
 
@@ -74,4 +85,3 @@ adb -s <serial> shell am start -n org.mesmerprism.viscereality.temporaltracer2d/
   --es mq.language English `
   --es mq.sessionId temporal-smoke
 ```
-

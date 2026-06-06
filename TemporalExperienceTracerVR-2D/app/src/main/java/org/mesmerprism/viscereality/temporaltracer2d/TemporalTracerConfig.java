@@ -355,6 +355,21 @@ final class TemporalTracerConfig {
             }
             return new TraceItem(json.optString("label", "trace"), json.optString("message", ""), json.optString("audioFile", ""));
         }
+
+        String resolvedAudioFile(String language, int index) {
+            if (!audioFile.isEmpty()) {
+                return audioFile;
+            }
+            String folder = language == null || language.trim().isEmpty() ? "English" : language.trim();
+            return "tracer/audio/" + folder + "/" +
+                String.format(Locale.US, "%02d_%s.wav", index + 1, safeAssetName(label));
+        }
+
+        private static String safeAssetName(String value) {
+            String clean = value == null ? "trace" : value.trim().toLowerCase(Locale.US);
+            clean = clean.replaceAll("[^a-z0-9]+", "_").replaceAll("^_+|_+$", "");
+            return clean.isEmpty() ? "trace" : clean;
+        }
     }
 
     private static String opt(JSONObject json, String key, String fallback) {
@@ -417,7 +432,13 @@ final class TemporalTracerConfig {
 
     private static int parseColor(String color) {
         try {
-            return Color.parseColor(color);
+            String value = color == null ? "" : color.trim();
+            if (value.matches("^#[0-9A-Fa-f]{6}$")) {
+                int rgb = Integer.parseInt(value.substring(1), 16);
+                return Color.argb(255, (rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+            }
+            int parsed = Color.parseColor(value);
+            return Color.alpha(parsed) == 0 ? (parsed | 0xFF000000) : parsed;
         } catch (Exception ignored) {
             return Color.WHITE;
         }

@@ -13,7 +13,6 @@ import android.view.View;
 import android.widget.Toast;
 
 import java.util.List;
-import java.util.Locale;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "TemporalTracer2D";
@@ -243,12 +242,23 @@ public final class MainActivity extends Activity {
 
     private void playDimensionAudio(TemporalTracerConfig.TraceItem item, int index) {
         stopAudio();
-        String assetPath = item.audioFile;
-        if (TextUtils.isEmpty(assetPath)) {
-            assetPath = "tracer/audio/" + config.normalizeLanguage(language) + "/" +
-                String.format(Locale.US, "%02d_%s.wav", index + 1, safeAssetName(item.label));
+        String assetPath = item.resolvedAudioFile(config.normalizeLanguage(language), index);
+        if (tryPlayAudio(assetPath, index)) {
+            return;
         }
 
+        if (!"English".equals(config.normalizeLanguage(language))) {
+            List<TemporalTracerConfig.TraceItem> englishItems = config.items("English");
+            if (index >= 0 && index < englishItems.size()) {
+                String fallbackPath = englishItems.get(index).resolvedAudioFile("English", index);
+                if (tryPlayAudio(fallbackPath, index)) {
+                    Log.i(TAG, "TEMPORAL_TRACER_AUDIO_FALLBACK index=" + index + " language=" + language + " asset=" + fallbackPath);
+                }
+            }
+        }
+    }
+
+    private boolean tryPlayAudio(String assetPath, int index) {
         try {
             AssetFileDescriptor fd = getAssets().openFd(assetPath);
             audioPlayer = new MediaPlayer();
@@ -258,9 +268,11 @@ public final class MainActivity extends Activity {
             audioPlayer.prepare();
             audioPlayer.start();
             Log.i(TAG, "TEMPORAL_TRACER_AUDIO_START index=" + index + " asset=" + assetPath);
+            return true;
         } catch (Exception ex) {
             Log.w(TAG, "TEMPORAL_TRACER_AUDIO_MISSING_OR_FAILED index=" + index + " asset=" + assetPath + " error=" + ex.getMessage());
             stopAudio();
+            return false;
         }
     }
 
@@ -279,11 +291,5 @@ public final class MainActivity extends Activity {
         } catch (Exception ignored) {
         }
         audioPlayer = null;
-    }
-
-    private static String safeAssetName(String value) {
-        String clean = value == null ? "trace" : value.trim().toLowerCase(Locale.US);
-        clean = clean.replaceAll("[^a-z0-9]+", "_").replaceAll("^_+|_+$", "");
-        return clean.isEmpty() ? "trace" : clean;
     }
 }

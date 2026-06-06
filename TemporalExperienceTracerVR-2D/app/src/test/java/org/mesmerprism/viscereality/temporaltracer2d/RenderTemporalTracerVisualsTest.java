@@ -136,8 +136,8 @@ public final class RenderTemporalTracerVisualsTest {
     private static JSONObject checkImage(String stage, Bitmap image) throws Exception {
         int nonBlack = 0;
         int nonTransparent = 0;
-        for (int y = 0; y < image.getHeight(); y += Math.max(1, image.getHeight() / 80)) {
-            for (int x = 0; x < image.getWidth(); x += Math.max(1, image.getWidth() / 80)) {
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
                 int color = image.getPixel(x, y);
                 if (Color.alpha(color) > 0) {
                     nonTransparent++;

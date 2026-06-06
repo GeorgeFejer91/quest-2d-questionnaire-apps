@@ -20,14 +20,15 @@ public final class TraceCanvasView extends View {
         void onTraceCompletionChanged(boolean complete, String status);
     }
 
-    private static final int BACKGROUND = Color.rgb(17, 19, 24);
-    private static final int PANEL = Color.rgb(27, 31, 38);
-    private static final int TEXT = Color.rgb(244, 245, 247);
-    private static final int MUTED = Color.rgb(160, 168, 178);
+    private static final int BACKGROUND = Color.argb(255, 17, 19, 24);
+    private static final int PANEL = Color.argb(255, 27, 31, 38);
+    private static final int TEXT = Color.argb(255, 244, 245, 247);
+    private static final int MUTED = Color.argb(255, 160, 168, 178);
     private static final int START_GATE = Color.argb(92, 70, 130, 210);
     private static final int END_GATE = Color.argb(70, 210, 110, 90);
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint tracePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF plotRect = new RectF();
     private final RectF startZoneRect = new RectF();
     private final List<TracePoint> rawPoints = new ArrayList<>();
@@ -49,6 +50,7 @@ public final class TraceCanvasView extends View {
     }
 
     private void init() {
+        setWillNotDraw(false);
         setMinimumHeight(dp(360));
         setFocusable(true);
         setClickable(true);
@@ -158,6 +160,9 @@ public final class TraceCanvasView extends View {
     }
 
     private void addPoint(float x, float y, boolean first) {
+        if (!first && x < plotRect.left) {
+            return;
+        }
         double u = toU(x);
         double v = toV(y);
         if (first) {
@@ -330,11 +335,14 @@ public final class TraceCanvasView extends View {
         if (rawPoints.size() < 2) {
             return;
         }
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeCap(Paint.Cap.ROUND);
-        paint.setStrokeJoin(Paint.Join.ROUND);
-        paint.setStrokeWidth(dp(3));
-        paint.setColor(traceColor());
+        tracePaint.reset();
+        tracePaint.setAntiAlias(true);
+        tracePaint.setDither(true);
+        tracePaint.setStyle(Paint.Style.STROKE);
+        tracePaint.setStrokeCap(Paint.Cap.ROUND);
+        tracePaint.setStrokeJoin(Paint.Join.ROUND);
+        tracePaint.setStrokeWidth(Math.max(dp(4), 4f));
+        tracePaint.setColor(traceColor());
         TracePoint first = rawPoints.get(0);
         TracePoint last = rawPoints.get(rawPoints.size() - 1);
 
@@ -350,23 +358,21 @@ public final class TraceCanvasView extends View {
             smooth.quadTo(ax, ay, (ax + bx) * 0.5f, (ay + by) * 0.5f);
         }
         smooth.lineTo(xForU(last.u), yForV(last.v));
-        canvas.save();
-        canvas.clipRect(plotRect);
-        canvas.drawPath(smooth, paint);
+        canvas.drawPath(smooth, tracePaint);
 
         // Small filled samples make local Android render previews see the trace
         // even on renderers that under-report stroked paths.
-        paint.setStyle(Paint.Style.FILL);
-        float pointRadius = Math.max(1f, dp(1));
-        for (int i = 0; i < rawPoints.size(); i += 3) {
+        tracePaint.setStyle(Paint.Style.FILL);
+        float pointRadius = Math.max(2f, dp(1));
+        for (int i = 0; i < rawPoints.size(); i++) {
             TracePoint point = rawPoints.get(i);
             float cx = xForU(point.u);
             float cy = yForV(point.v);
-            canvas.drawCircle(cx, cy, pointRadius, paint);
+            canvas.drawCircle(cx, cy, pointRadius, tracePaint);
+            canvas.drawRect(cx - pointRadius, cy - pointRadius, cx + pointRadius, cy + pointRadius, tracePaint);
         }
-        canvas.drawCircle(xForU(first.u), yForV(first.v), dp(4), paint);
-        canvas.drawCircle(xForU(last.u), yForV(last.v), dp(4), paint);
-        canvas.restore();
+        canvas.drawCircle(xForU(first.u), yForV(first.v), Math.max(dp(4), 4f), tracePaint);
+        canvas.drawCircle(xForU(last.u), yForV(last.v), Math.max(dp(4), 4f), tracePaint);
     }
 
     private void drawLabels(Canvas canvas) {
@@ -381,7 +387,7 @@ public final class TraceCanvasView extends View {
     }
 
     private int traceColor() {
-        return axis == null ? Color.rgb(40, 209, 124) : axis.traceColor;
+        return axis == null ? Color.argb(255, 40, 209, 124) : axis.traceColor;
     }
 
     private int axisColor() {

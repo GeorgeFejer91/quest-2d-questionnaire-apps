@@ -9,6 +9,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
@@ -116,7 +117,7 @@ final class TemporalTraceExporter {
 
         String exportedAt = TimeUtil.utcIsoNowMillis();
         JSONObject json = buildJson(launch, config, language, participantId, participantName, traceIndex, item, rawPoints, resampledPoints, exportedAt);
-        writeAtomic(svgFile, buildSvg(launch, config, language, traceIndex, item, resampledPoints, json));
+        writeAtomic(svgFile, buildSvg(launch, config, language, traceIndex, item, rawPoints, resampledPoints, json));
         writeAtomic(csvFile, buildCsv(launch, config, language, participantId, participantName, traceIndex, item, resampledPoints, exportedAt));
         json.put("exports", new JSONObject()
             .put("svgPath", svgFile.getAbsolutePath())
@@ -168,7 +169,7 @@ final class TemporalTraceExporter {
                 .put("index", traceIndex)
                 .put("label", item.label)
                 .put("message", item.message)
-                .put("audioFile", item.audioFile)
+                .put("audioFile", resolvedAudioFile(config, language, traceIndex, item))
                 .put("rawPointCount", rawPoints == null ? 0 : rawPoints.size())
                 .put("resampledPointCount", resampledPoints.size())
                 .put("startedAtUtc", firstTimestamp(rawPoints))
@@ -177,6 +178,36 @@ final class TemporalTraceExporter {
         json.put("points", pointsJson(config.axis, resampledPoints));
         json.put("rawPoints", pointsJson(config.axis, rawPoints));
         return json;
+    }
+
+    private String resolvedAudioFile(
+        TemporalTracerConfig config,
+        String language,
+        int traceIndex,
+        TemporalTracerConfig.TraceItem item) {
+        String normalizedLanguage = config.normalizeLanguage(language);
+        String primary = item.resolvedAudioFile(normalizedLanguage, traceIndex);
+        if (assetExists(primary)) {
+            return primary;
+        }
+        if (!"English".equals(normalizedLanguage)) {
+            List<TemporalTracerConfig.TraceItem> englishItems = config.items("English");
+            if (traceIndex >= 0 && traceIndex < englishItems.size()) {
+                String fallback = englishItems.get(traceIndex).resolvedAudioFile("English", traceIndex);
+                if (assetExists(fallback)) {
+                    return fallback;
+                }
+            }
+        }
+        return primary;
+    }
+
+    private boolean assetExists(String assetPath) {
+        try (InputStream ignored = context.getAssets().open(assetPath)) {
+            return true;
+        } catch (Exception ex) {
+            return false;
+        }
     }
 
     private JSONArray pointsJson(TemporalTracerConfig.AxisConfig axis, List<TracePoint> points) throws Exception {
@@ -246,18 +277,14 @@ final class TemporalTraceExporter {
         String language,
         int traceIndex,
         TemporalTracerConfig.TraceItem item,
+        List<TracePoint> rawPoints,
         List<TracePoint> points,
         JSONObject metadata) {
         TemporalTracerConfig.AxisConfig axis = config.axis;
-        StringBuilder pointString = new StringBuilder();
-        for (TracePoint point : points) {
-            double x = point.u * axis.viewBoxWidth;
-            double y = (1.0 - point.v) * axis.viewBoxHeight;
-            if (pointString.length() > 0) {
-                pointString.append(' ');
-            }
-            pointString.append(fmt(x)).append(',').append(fmt(y));
-        }
+        List<TracePoint> visualPoints = rawPoints != null && rawPoints.size() >= 2 ? rawPoints : points;
+        String rawPointString = pointString(axis, visualPoints);
+        String normalizedPointString = pointString(axis, points);
+        String smoothPath = smoothPath(axis, visualPoints);
 
         StringBuilder svg = new StringBuilder();
         svg.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
@@ -297,11 +324,58 @@ final class TemporalTraceExporter {
             .append(xml(colorHex(axis.axisColor))).append("\">").append(xml(axis.bottomLabel(language))).append("</text>\n");
         svg.append("  <rect x=\"0\" y=\"0\" width=\"").append(axis.viewBoxWidth).append("\" height=\"").append(axis.viewBoxHeight).append("\" fill=\"none\" stroke=\"")
             .append(xml(colorHex(axis.axisColor))).append("\" stroke-width=\"0.8\"/>\n");
-        svg.append("  <polyline points=\"").append(pointString).append("\" fill=\"none\" stroke=\"")
+        svg.append("  <path id=\"trace-smooth-vector\" d=\"").append(smoothPath).append("\" fill=\"none\" stroke=\"")
             .append(xml(colorHex(axis.traceColor))).append("\" stroke-width=\"")
             .append(fmt(axis.strokeWidth)).append("\" stroke-linecap=\"round\" stroke-linejoin=\"round\" vector-effect=\"non-scaling-stroke\"/>\n");
+        svg.append("  <polyline id=\"trace-raw-captured-points\" points=\"").append(rawPointString)
+            .append("\" fill=\"none\" stroke=\"none\" data-role=\"raw-captured-vector\"/>\n");
+        svg.append("  <polyline id=\"trace-normalized-analysis-points\" points=\"").append(normalizedPointString)
+            .append("\" fill=\"none\" stroke=\"none\" data-role=\"normalized-1000-analysis-vector\"/>\n");
         svg.append("</svg>\n");
         return svg.toString();
+    }
+
+    private String pointString(TemporalTracerConfig.AxisConfig axis, List<TracePoint> points) {
+        StringBuilder value = new StringBuilder();
+        if (points == null) {
+            return "";
+        }
+        for (TracePoint point : points) {
+            if (point == null) {
+                continue;
+            }
+            double x = TemporalTracerConfig.clamp(point.u, 0.0, 1.0) * axis.viewBoxWidth;
+            double y = (1.0 - TemporalTracerConfig.clamp(point.v, 0.0, 1.0)) * axis.viewBoxHeight;
+            if (value.length() > 0) {
+                value.append(' ');
+            }
+            value.append(fmt(x)).append(',').append(fmt(y));
+        }
+        return value.toString();
+    }
+
+    private String smoothPath(TemporalTracerConfig.AxisConfig axis, List<TracePoint> points) {
+        if (points == null || points.isEmpty()) {
+            return "";
+        }
+        TracePoint first = points.get(0);
+        StringBuilder path = new StringBuilder()
+            .append("M ").append(fmt(TemporalTracerConfig.clamp(first.u, 0.0, 1.0) * axis.viewBoxWidth))
+            .append(' ').append(fmt((1.0 - TemporalTracerConfig.clamp(first.v, 0.0, 1.0)) * axis.viewBoxHeight));
+        for (int i = 1; i < points.size(); i++) {
+            TracePoint a = points.get(i - 1);
+            TracePoint b = points.get(i);
+            double ax = TemporalTracerConfig.clamp(a.u, 0.0, 1.0) * axis.viewBoxWidth;
+            double ay = (1.0 - TemporalTracerConfig.clamp(a.v, 0.0, 1.0)) * axis.viewBoxHeight;
+            double bx = TemporalTracerConfig.clamp(b.u, 0.0, 1.0) * axis.viewBoxWidth;
+            double by = (1.0 - TemporalTracerConfig.clamp(b.v, 0.0, 1.0)) * axis.viewBoxHeight;
+            path.append(" Q ").append(fmt(ax)).append(' ').append(fmt(ay)).append(' ')
+                .append(fmt((ax + bx) * 0.5)).append(' ').append(fmt((ay + by) * 0.5));
+        }
+        TracePoint last = points.get(points.size() - 1);
+        path.append(" L ").append(fmt(TemporalTracerConfig.clamp(last.u, 0.0, 1.0) * axis.viewBoxWidth))
+            .append(' ').append(fmt((1.0 - TemporalTracerConfig.clamp(last.v, 0.0, 1.0)) * axis.viewBoxHeight));
+        return path.toString();
     }
 
     private void appendIndex(

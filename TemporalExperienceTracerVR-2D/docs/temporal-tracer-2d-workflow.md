@@ -35,7 +35,18 @@ Use `TemporalTracerConfig.json` or the static editor to change:
 - start/end gate strictness,
 - resampled point count.
 
-The saved SVG contains the configured grid, axis labels, metadata, and polyline. JSON/CSV store numeric values using normalized `u_0to1`, `v_0to1`, plus axis-scaled `x_axis` and `y_axis`.
+The saved SVG contains the configured grid, axis labels, metadata, and a
+visible `trace-smooth-vector` path. That path is true SVG vector geometry built
+from the raw captured pointer samples, so it remains resolution-independent
+when scaled or imported into later analysis/figure tools. The SVG also embeds
+hidden raw and normalized point polylines for auditability. JSON stores both
+raw and normalized points. CSV stores numeric values using normalized
+`u_0to1`, `v_0to1`, plus axis-scaled `x_axis` and `y_axis`.
+
+To avoid a vertical artifact at the 0 axis, the participant starts in the blue
+area just outside the axis. Movement before crossing into the plot is ignored
+after the first anchored point, and the exported x coordinates are clamped to
+the final axis range.
 
 ## ChainLink Use
 

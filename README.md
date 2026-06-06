@@ -56,11 +56,12 @@ ignored by git. Copy intentional release artifacts into `apks\` and update
 
 ## Workflow Notes
 
-Start at `workflow\README.md` for the durable lessons:
+Start at `workflow\START_HERE.md` for the linear walkthrough from blank app to
+validated Quest study APK. Then use `workflow\README.md` for the durable lesson
+index:
 
 - how Quest 2D panel apps differ from Unity/OpenXR apps,
 - how to structure manifests, launch extras, and exports,
 - how to validate with render previews, command replay, and ADB,
 - how ChainLink/orchestrator/source-hook/wrapper chaining fits together,
 - what to check before treating an APK as ready for an experiment.
-

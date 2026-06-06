@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="false"
+        android:appCategory="productivity"
+        android:label="Viscereality Chain Hook"
+        android:resizeableActivity="true"
+        android:theme="@style/AppTheme">
+        <activity
+            android:name=".ChainHookActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:finishOnTaskLaunch="true"
+            android:launchMode="singleTop"
+            android:noHistory="false"
+            android:resizeableActivity="true">
+            <intent-filter>
+                <action android:name="org.mesmerprism.viscereality.CHAIN_COMMAND" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <layout
+                android:defaultWidth="480dp"
+                android:defaultHeight="240dp"
+                android:minWidth="320dp"
+                android:minHeight="180dp" />
+        </activity>
+    </application>
+</manifest>

@@ -1,0 +1,22 @@
+# Android and Gradle generated state
+**/.gradle/
+**/build/
+**/local.properties
+**/*.log
+
+# Quest validation and generated app evidence
+**/artifacts/
+**/Builds/
+
+# Python and editor state
+**/__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Keep the curated release APK drop folder in git.
+!apks/
+!apks/**
+

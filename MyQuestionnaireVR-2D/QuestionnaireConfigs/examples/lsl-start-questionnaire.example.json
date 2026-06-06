@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "my-questionnaire-2d.lsl-chain-command.v1",
+  "command": "startPlan",
+  "sessionId": "participant-001-session-a",
+  "chainId": "participant-001-chain-a",
+  "experimentId": "viscereality-study",
+  "scenarioId": "scenario-01",
+  "trialId": "trial-03",
+  "participantId": "P001",
+  "participantName": "P001",
+  "language": "English",
+  "commandReplayLanguage": "English",
+  "commandReplayPlan": {
+    "ParticipantName": "P001"
+  },
+  "chainPlan": {
+    "schemaVersion": "my-questionnaire-2d.chain-plan.v1",
+    "chainId": "participant-001-chain-a",
+    "steps": [
+      {
+        "id": "scenario-01",
+        "type": "scenario",
+        "package": "org.example.scenario01",
+        "activity": "org.example.scenario01.MainActivity"
+      },
+      {
+        "id": "questionnaire-after-scenario-01",
+        "type": "questionnaire",
+        "package": "org.mesmerprism.viscereality.questionnaires2d",
+        "activity": ".MainActivity",
+        "extras": {
+          "mq.sessionId": "participant-001-session-a",
+          "mq.experimentId": "viscereality-study",
+          "mq.scenarioId": "scenario-01",
+          "mq.trialId": "trial-03",
+          "mq.participantId": "P001",
+          "mq.participantName": "P001",
+          "mq.language": "English",
+          "mq.autoCloseDelayMs": 2000
+        }
+      },
+      {
+        "id": "scenario-02",
+        "type": "scenario",
+        "package": "org.example.scenario02",
+        "activity": "org.example.scenario02.MainActivity"
+      }
+    ]
+  }
+}

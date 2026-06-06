@@ -1,0 +1,44 @@
+Deutsch:
+Bitte geben Sie ihren Namen an
+Bitte geben Sie ihr Alter an
+Geschlecht
+Bitte wählen Sie ihr Geschlecht
+Einwilligung
+Ich stimme zu, an diesem Experiment teilzunehmen, und verstehe, dass meine Daten aufgezeichnet werden.
+Absenden
+Bitte wählen Sie die Version der Experience, die Sie ausprobieren möchten
+Lange Version (~30 min)
+Kurze Version (~15 min)
+Bitte beantworten Sie die folgenden Fragen
+NEIN, nicht mehr als gewöhnlich
+JA, sehr viel mehr als gewöhnlich
+Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.
+Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.
+Vielen Dank für Ihre Teilnahme!
+Weiblich
+Männlich
+Divers
+Keine Angabe
+
+
+English:
+Please input your name
+Please input your age
+Gender
+Please select your gender
+Consent
+I consent to participate in this experiment and understand that my data will be recorded.
+Submit
+Please select the version of the experience you want to try
+Long Version (~30 min)
+Short Version (~15 min)
+Please answer the following questions
+NO, not more than usual
+YES, much more than usual
+Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.
+Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.
+Thank you for your participation!
+Female
+Male
+Other
+Prefer not to say

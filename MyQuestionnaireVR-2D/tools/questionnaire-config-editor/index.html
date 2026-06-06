@@ -1,0 +1,1869 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quest 2D Panel Questionnaire Builder</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f7f5;
+      --panel: #ffffff;
+      --panel-soft: #f1f1ee;
+      --line: #d8d8d2;
+      --text: #20211f;
+      --muted: #6b6d66;
+      --accent: #0f766e;
+      --accent-strong: #115e59;
+      --danger: #b42318;
+      --ok: #166534;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Aptos, "Helvetica Neue", sans-serif;
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    main {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 650;
+    }
+
+    h2 {
+      font-size: 17px;
+      font-weight: 650;
+    }
+
+    h3 {
+      font-size: 15px;
+      font-weight: 650;
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-end;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 18px;
+    }
+
+    .subtle {
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 460px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .column {
+      display: grid;
+      gap: 14px;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 9px 10px;
+      background: #ffffff;
+      color: var(--text);
+      font: inherit;
+    }
+
+    textarea {
+      min-height: 180px;
+      resize: vertical;
+      white-space: pre;
+      overflow-wrap: normal;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: 2px solid rgba(15, 118, 110, 0.28);
+      border-color: var(--accent);
+    }
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--text);
+      font: inherit;
+      font-weight: 650;
+      padding: 8px 11px;
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    button.primary:hover {
+      background: var(--accent-strong);
+      border-color: var(--accent-strong);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .block-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .block-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+      background: var(--panel-soft);
+    }
+
+    .block-label {
+      font-weight: 650;
+    }
+
+    .registry-row {
+      grid-template-columns: 72px minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .registry-number {
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .issues {
+      display: grid;
+      gap: 8px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel-soft);
+      padding: 10px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .command {
+      display: block;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #101211;
+      color: #eff4ef;
+      padding: 10px;
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 12px;
+      white-space: pre;
+    }
+
+    .issue {
+      border-left: 3px solid var(--line);
+      background: var(--panel-soft);
+      padding: 8px 10px;
+      color: var(--muted);
+    }
+
+    .issue.error {
+      border-left-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .issue.ok {
+      border-left-color: var(--ok);
+      color: var(--ok);
+    }
+
+    .issue.warn {
+      border-left-color: #b7791f;
+      color: #92400e;
+    }
+
+    pre {
+      margin: 0;
+      min-height: 520px;
+      max-height: 720px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 12px;
+      background: #101211;
+      color: #eff4ef;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre;
+    }
+
+    .file-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .file-row input {
+      width: auto;
+    }
+
+    .toggle-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 8px 0;
+      font-weight: 600;
+    }
+
+    .toggle-row input {
+      width: auto;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 980px) {
+      main {
+        padding: 16px;
+      }
+
+      .layout,
+      .grid,
+      .grid.two {
+        grid-template-columns: 1fr;
+      }
+
+      .top {
+        align-items: stretch;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="top">
+      <div>
+        <h1>Quest 2D Panel Questionnaire Builder</h1>
+        <p class="subtle">Create a v1 questionnaire config for an Android 2D panel app for Meta Horizon OS.</p>
+      </div>
+      <div class="button-row">
+        <button id="loadCurrentButton" type="button">Load current defaults</button>
+        <button id="copyButton" type="button">Copy JSON</button>
+        <button id="downloadBlockRegistryButton" type="button">Download block registry</button>
+        <button id="downloadChainPlanButton" type="button">Download chain plan</button>
+        <button id="downloadQualityButton" type="button">Download quality report</button>
+        <button id="downloadButton" class="primary" type="button">Download config</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="column">
+        <section>
+          <div class="section-title">
+            <h2>Project</h2>
+            <div class="file-row">
+              <input id="loadFileInput" type="file" accept="application/json,.json">
+            </div>
+          </div>
+          <div class="grid">
+            <label>
+              Questionnaire id
+              <input id="questionnaireId" value="viscereality-maia2">
+            </label>
+            <label>
+              Questionnaire version
+              <input id="questionnaireVersion" value="1.0.0">
+            </label>
+            <label>
+              App version
+              <input id="appVersion" value="1.0.0">
+            </label>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <h2>Experiment Chaining</h2>
+            <p class="subtle">Launch extras can override these defaults for each experiment step.</p>
+          </div>
+          <div class="grid">
+            <label>
+              Finish behavior
+              <input id="chainFinishBehavior" value="staySaved" placeholder="staySaved, resumeCaller, or openNext">
+            </label>
+            <label>
+              Auto close delay ms
+              <input id="chainAutoCloseDelayMs" type="number" min="0" step="100" value="2000">
+            </label>
+            <label>
+              Caller package
+              <input id="chainCallerPackage" placeholder="org.example.scenario">
+            </label>
+          </div>
+          <div class="grid">
+            <label>
+              Caller activity
+              <input id="chainCallerActivity" placeholder="org.example.scenario.MainActivity">
+            </label>
+            <label>
+              Next package
+              <input id="chainNextPackage" placeholder="org.example.nextscenario">
+            </label>
+            <label>
+              Next activity
+              <input id="chainNextActivity" placeholder="org.example.nextscenario.MainActivity">
+            </label>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <h2>Experiment Block Registry</h2>
+            <p class="subtle">Numbered blocks become the ChainLink execution map for APK switches and repeated questionnaire calls.</p>
+          </div>
+          <div class="grid">
+            <label>
+              Experiment id
+              <input id="experimentId" value="peripersonal-space-right-orbit">
+            </label>
+            <label>
+              ChainLink plan id
+              <input id="chainlinkPlanId" value="peripersonal-space-right-maia2-pictographic">
+            </label>
+            <label>
+              Trigger button
+              <input id="chainlinkTriggerButton" value="auto-unused-non-breath-tracking" placeholder="auto-unused-non-breath-tracking">
+            </label>
+          </div>
+          <div class="grid">
+            <label>
+              Target APK package
+              <input id="chainlinkScenarioPackage" value="com.Viscereality.ViscerealityPeriPersonalSpaceRight">
+            </label>
+            <label>
+              Target APK activity
+              <input id="chainlinkScenarioActivity" value="com.unity3d.player.UnityPlayerGameActivity">
+            </label>
+            <label>
+              Pictographic repeats
+              <input id="chainlinkPictographicRepeats" type="number" min="1" max="50" step="1" value="2">
+            </label>
+          </div>
+          <label>
+            Target APK label
+            <input id="chainlinkScenarioLabel" value="Peripersonal Space Right orbital scenario">
+          </label>
+          <div class="button-row" style="margin: 10px 0;">
+            <button id="refreshRegistryButton" type="button">Refresh registered blocks</button>
+          </div>
+          <div id="experimentBlockRegistryList" class="block-list"></div>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <h2>CSV Import</h2>
+            <div class="file-row">
+              <input id="loadCsvInput" type="file" accept=".csv,text/csv">
+            </div>
+          </div>
+          <p class="subtle" style="margin-bottom: 10px;">Accepted headers include questionnaireId, questionnaireVersion, appVersion, block, language, order, text, min, max, leftAnchor, and rightAnchor.</p>
+          <div id="csvStatus" class="issue">No CSV loaded.</div>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <h2>Block Order</h2>
+            <p class="subtle">Demographics, custom slider items, and the final black screen are required. MAIA-2 and pictographic screens are optional.</p>
+          </div>
+          <label class="toggle-row">
+            <input id="includeMaia" type="checkbox" checked>
+            <span>Include MAIA-2 interoception block</span>
+          </label>
+          <label class="toggle-row">
+            <input id="includePictographic" type="checkbox" checked>
+            <span>Include pictographic embodiment scales</span>
+          </label>
+          <div id="blockList" class="block-list"></div>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <h2>MAIA-2</h2>
+            <p class="subtle">Use a source file, or paste a JSON array to inline items.</p>
+          </div>
+          <div class="grid two">
+            <label>
+              Source path
+              <input id="maiaSource" value="Assets/StreamingAssets/MAIA2_Questions.json">
+            </label>
+            <label>
+              Expected item count
+              <input id="maiaExpectedCount" type="number" min="1" step="1" value="37">
+            </label>
+          </div>
+          <label style="margin-top: 12px;">
+            Inline MAIA-2 JSON items
+            <textarea id="maiaInline" placeholder='[{"id":"maia_01","text":"..."}]'></textarea>
+          </label>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <h2>Viscereality Slider Items</h2>
+            <p class="subtle">Leave text empty to keep the existing source files. One item per line when pasted.</p>
+          </div>
+          <div class="grid">
+            <label>
+              Expected item count
+              <input id="sliderExpectedCount" type="number" min="1" step="1" value="42">
+            </label>
+            <label>
+              Minimum
+              <input id="sliderMin" type="number" step="1" value="0">
+            </label>
+            <label>
+              Maximum
+              <input id="sliderMax" type="number" step="1" value="100">
+            </label>
+          </div>
+          <div class="grid two" style="margin-top: 12px;">
+            <label>
+              Left anchor
+              <input id="sliderLeftAnchor" value="NO, not more than usual">
+            </label>
+            <label>
+              Right anchor
+              <input id="sliderRightAnchor" value="YES, much more than usual">
+            </label>
+          </div>
+          <div class="grid two" style="margin-top: 12px;">
+            <label>
+              English items
+              <textarea id="englishItems"></textarea>
+            </label>
+            <label>
+              German items
+              <textarea id="germanItems"></textarea>
+            </label>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <h2>Pictographic Scales</h2>
+            <p class="subtle">Keep three image prompts unless the Unity runtime is extended.</p>
+          </div>
+          <div id="pictographicFields" class="column"></div>
+        </section>
+      </div>
+
+      <div class="column">
+        <section>
+          <div class="section-title">
+            <h2>Participant Experience</h2>
+          </div>
+          <div id="experienceMetrics" class="metric-grid"></div>
+          <div id="experienceIssues" class="issues" style="margin-top: 10px;"></div>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <h2>APK Generator</h2>
+          </div>
+          <p class="subtle">Download the config, place it in `QuestionnaireConfigs`, then run this command from the project folder.</p>
+          <code id="generatorCommand" class="command"></code>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <h2>Validation Pipeline</h2>
+          </div>
+          <p class="subtle">Use these commands as the web-to-APK-to-Quest handoff for this questionnaire.</p>
+          <div id="pipelineCommands" class="column" style="margin-top: 10px;"></div>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <h2>Validation</h2>
+          </div>
+          <div id="issues" class="issues"></div>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <h2>Config JSON</h2>
+          </div>
+          <pre id="preview"></pre>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const blockDefaults = [
+      { id: "demographics", type: "demographics", label: "Demographics" },
+      { id: "maia2", type: "likert", label: "MAIA-2" },
+      { id: "pictographic", type: "pictographic", label: "Pictographic" },
+      { id: "viscereality", type: "slider", label: "Viscereality slider" },
+      { id: "end", type: "blackScreen", label: "Black screen end" }
+    ];
+
+    const pictographicDefaults = [
+      {
+        id: "perceived_body_boundaries",
+        imageFileName: "1.PerceivedBodyBoundariesScale.png",
+        source: "Assets/StreamingAssets/PictographicScales/1.PerceivedBodyBoundariesScale.png"
+      },
+      {
+        id: "self_extension",
+        imageFileName: "2.SpatialFrameReferenceContinuum.png",
+        source: "Assets/StreamingAssets/PictographicScales/2.SpatialFrameReferenceContinuum.png"
+      },
+      {
+        id: "small_self",
+        imageFileName: "3.SmallSelf.png",
+        source: "Assets/StreamingAssets/PictographicScales/3.SmallSelf.png"
+      }
+    ];
+
+    const scoreGroups = [
+      { id: "noticing", label: "Noticing", items: [1, 2, 3, 4] },
+      { id: "not_distracting", label: "Not-Distracting", items: [5, 6, 7, 8, 9, 10] },
+      { id: "not_worrying", label: "Not-Worrying", items: [11, 12, 13, 14, 15] },
+      { id: "attention_regulation", label: "Attention Regulation", items: [16, 17, 18, 19, 20, 21, 22] },
+      { id: "emotional_awareness", label: "Emotional Awareness", items: [23, 24, 25, 26, 27] },
+      { id: "self_regulation", label: "Self-Regulation", items: [28, 29, 30, 31] },
+      { id: "body_listening", label: "Body Listening", items: [32, 33, 34] },
+      { id: "trusting", label: "Trusting", items: [35, 36, 37] }
+    ];
+
+    let blocks = structuredClone(blockDefaults);
+
+    function byId(id) {
+      return document.getElementById(id);
+    }
+
+    function activeBlockDefaults() {
+      return blockDefaults.filter(block =>
+        block.id === "demographics" ||
+        block.id === "viscereality" ||
+        block.id === "end" ||
+        (block.id === "maia2" && byId("includeMaia").checked) ||
+        (block.id === "pictographic" && byId("includePictographic").checked));
+    }
+
+    function normalizeBlocks(currentBlocks = blocks) {
+      const active = activeBlockDefaults();
+      const activeIds = new Set(active.map(block => block.id));
+      const normalized = currentBlocks.filter(block => activeIds.has(block.id));
+      active.forEach(block => {
+        if (!normalized.some(candidate => candidate.id === block.id)) {
+          if (block.id === "demographics") {
+            normalized.unshift(structuredClone(block));
+          } else if (block.id === "end") {
+            normalized.push(structuredClone(block));
+          } else {
+            const endIndex = normalized.findIndex(candidate => candidate.id === "end");
+            if (endIndex >= 0) {
+              normalized.splice(endIndex, 0, structuredClone(block));
+            } else {
+              normalized.push(structuredClone(block));
+            }
+          }
+        }
+      });
+      const demographics = normalized.find(block => block.id === "demographics");
+      const end = normalized.find(block => block.id === "end");
+      const middle = normalized.filter(block => block.id !== "demographics" && block.id !== "end");
+      return [
+        demographics || structuredClone(blockDefaults.find(block => block.id === "demographics")),
+        ...middle,
+        end || structuredClone(blockDefaults.find(block => block.id === "end"))
+      ];
+    }
+
+    function lineItems(id) {
+      return byId(id).value
+        .split(/\r?\n/)
+        .map(value => value.trim())
+        .filter(Boolean);
+    }
+
+    function numberValue(id, fallback) {
+      const value = Number(byId(id).value);
+      return Number.isFinite(value) ? value : fallback;
+    }
+
+    function chainDefaults() {
+      return {
+        finishBehavior: byId("chainFinishBehavior").value.trim() || "staySaved",
+        callerPackage: byId("chainCallerPackage").value.trim(),
+        callerActivity: byId("chainCallerActivity").value.trim(),
+        nextPackage: byId("chainNextPackage").value.trim(),
+        nextActivity: byId("chainNextActivity").value.trim(),
+        autoCloseDelayMs: numberValue("chainAutoCloseDelayMs", 2000)
+      };
+    }
+
+    function currentExperimentStub() {
+      return {
+        questionnaireId: byId("questionnaireId").value.trim(),
+        questionnaireVersion: byId("questionnaireVersion").value.trim(),
+        chainDefaults: chainDefaults()
+      };
+    }
+
+    function clampedInteger(id, fallback, min, max) {
+      const value = Math.round(numberValue(id, fallback));
+      return Math.min(max, Math.max(min, Number.isFinite(value) ? value : fallback));
+    }
+
+    function blockNumber(index) {
+      return String(index + 1).padStart(3, "0");
+    }
+
+    function registeredBlock(index, raw) {
+      const number = blockNumber(index);
+      const idStem = safeFileStem(raw.id || raw.label || `block-${number}`, `block-${number}`);
+      return {
+        number,
+        id: `${number}_${idStem}`,
+        type: raw.type,
+        label: raw.label,
+        trigger: raw.trigger,
+        package: raw.package || "",
+        activity: raw.activity || "",
+        action: raw.action || "",
+        questionnaireMode: raw.questionnaireMode || "",
+        scenarioMode: raw.scenarioMode || "",
+        targetMode: raw.targetMode || raw.scenarioMode || "",
+        saveNamespace: raw.saveNamespace || `${number}_${idStem}`,
+        expectedOutputs: raw.expectedOutputs || {},
+        extras: raw.extras || {}
+      };
+    }
+
+    function buildExperimentBlockRegistry(config = currentExperimentStub()) {
+      const defaults = config.chainDefaults || chainDefaults();
+      const questionnaireId = config.questionnaireId || byId("questionnaireId").value.trim() || "questionnaire";
+      const questionnaireVersion = config.questionnaireVersion || byId("questionnaireVersion").value.trim() || "1.0.0";
+      const experimentId = byId("experimentId").value.trim() || safeFileStem(questionnaireId, "experiment");
+      const planId = byId("chainlinkPlanId").value.trim() || `${safeFileStem(experimentId)}-chainlink`;
+      const scenarioPackage = byId("chainlinkScenarioPackage").value.trim();
+      const scenarioActivity = byId("chainlinkScenarioActivity").value.trim();
+      const scenarioLabel = byId("chainlinkScenarioLabel").value.trim() || "Scenario APK";
+      const triggerButton = byId("chainlinkTriggerButton").value.trim() || "auto-unused-non-breath-tracking";
+      const repeats = clampedInteger("chainlinkPictographicRepeats", 2, 1, 50);
+      const questionnairePackage = "org.mesmerprism.viscereality.questionnaires2d";
+      const questionnaireActivity = "org.mesmerprism.viscereality.questionnaires2d.MainActivity";
+      const questionnaireAction = "org.mesmerprism.viscereality.questionnaires2d.RUN";
+
+      const rawBlocks = [
+        {
+          id: "baseline_questionnaire",
+          type: "questionnaire",
+          label: "Language, demographics, MAIA-2",
+          trigger: { type: "onPlanStart" },
+          package: questionnairePackage,
+          activity: questionnaireActivity,
+          action: questionnaireAction,
+          questionnaireMode: "baseline",
+          saveNamespace: "baseline_maia2",
+          expectedOutputs: { demographics: true, maia2Answers: 37, maia2Scores: 8 },
+          extras: {
+            "mq.questionnaireMode": "baseline",
+            "mq.flowMode": "baseline",
+            "mq.finishBehavior": "resumeCaller",
+            "mq.autoCloseDelayMs": defaults.autoCloseDelayMs
+          }
+        },
+        {
+          id: "target_apk_start",
+          type: "apk",
+          label: scenarioLabel,
+          trigger: { type: "afterBlock", blockNumber: "001" },
+          package: scenarioPackage,
+          activity: scenarioActivity,
+          action: "android.intent.action.MAIN",
+          scenarioMode: "startOrResume",
+          targetMode: "startOrResume",
+          saveNamespace: "target_apk",
+          expectedOutputs: { targetForeground: true },
+          extras: {
+            "mq.targetRole": "experiment-apk",
+            "mq.controllerButton": triggerButton,
+            "mq.controllerButtonPolicy": "unused-non-breath-tracking"
+          }
+        }
+      ];
+
+      for (let repeat = 1; repeat <= repeats; repeat += 1) {
+        rawBlocks.push({
+          id: `pictographic_${String(repeat).padStart(2, "0")}`,
+          type: "questionnaire",
+          label: `Pictographic scales ${repeat}`,
+          trigger: {
+            type: "controllerButton",
+            button: triggerButton,
+            foregroundPackage: scenarioPackage
+          },
+          package: questionnairePackage,
+          activity: questionnaireActivity,
+          action: questionnaireAction,
+          questionnaireMode: "pictographic",
+          saveNamespace: `pictographic_${String(repeat).padStart(2, "0")}`,
+          expectedOutputs: { pictographicSelections: 3 },
+          extras: {
+            "mq.questionnaireMode": "pictographic",
+            "mq.flowMode": "pictographic",
+            "mq.blockInstance": repeat,
+            "mq.finishBehavior": "resumeCaller",
+            "mq.autoCloseDelayMs": defaults.autoCloseDelayMs
+          }
+        });
+        rawBlocks.push({
+          id: `resume_target_apk_${String(repeat).padStart(2, "0")}`,
+          type: "apk",
+          label: `${scenarioLabel} resume ${repeat}`,
+          trigger: { type: "afterBlock", blockRole: "pictographic", instance: repeat },
+          package: scenarioPackage,
+          activity: scenarioActivity,
+          action: "android.intent.action.MAIN",
+          scenarioMode: "resume",
+          targetMode: "resume",
+          saveNamespace: `target_resume_${String(repeat).padStart(2, "0")}`,
+          expectedOutputs: { targetForeground: true },
+          extras: {
+            "mq.targetRole": "experiment-apk",
+            "mq.resumeAfterPictographic": repeat,
+            "mq.controllerButton": triggerButton,
+            "mq.controllerButtonPolicy": "unused-non-breath-tracking"
+          }
+        });
+      }
+
+      return {
+        schemaVersion: "viscereality.chainlink.block-registry.v1",
+        experimentId,
+        planId,
+        questionnaireId,
+        questionnaireVersion,
+        controllerTriggerButton: triggerButton,
+        scenario: {
+          label: scenarioLabel,
+          package: scenarioPackage,
+          activity: scenarioActivity
+        },
+        targetApp: {
+          label: scenarioLabel,
+          package: scenarioPackage,
+          activity: scenarioActivity
+        },
+        dataPolicy: {
+          uniqueRunPerBlock: true,
+          perResponseTimestampUtc: true,
+          appendOnlyExports: true,
+          noOverwrite: true
+        },
+        blocks: rawBlocks.map((block, index) => registeredBlock(index, block))
+      };
+    }
+
+    function makeExperimentBlockRegistryList() {
+      const host = byId("experimentBlockRegistryList");
+      const registry = buildExperimentBlockRegistry(currentExperimentStub());
+      host.innerHTML = "";
+      registry.blocks.forEach(block => {
+        const row = document.createElement("div");
+        row.className = "block-row registry-row";
+        row.innerHTML = `
+          <div class="registry-number">${block.number}</div>
+          <div>
+            <div class="block-label">${block.label}</div>
+            <div class="subtle">${block.id}</div>
+          </div>
+          <div>
+            <div>${block.type}</div>
+            <div class="subtle">${block.questionnaireMode || block.scenarioMode || "launch"}</div>
+          </div>
+          <div>
+            <div>${block.trigger?.type || "manual"}</div>
+            <div class="subtle">${block.trigger?.button || block.trigger?.blockNumber || block.package || ""}</div>
+          </div>
+        `;
+        host.appendChild(row);
+      });
+    }
+
+    function makeBlockList() {
+      blocks = normalizeBlocks(blocks);
+      const host = byId("blockList");
+      host.innerHTML = "";
+      blocks.forEach((block, index) => {
+        const row = document.createElement("div");
+        row.className = "block-row";
+        row.innerHTML = `
+          <div>
+            <div class="block-label">${block.label}</div>
+            <div class="subtle">${block.id} / ${block.type}</div>
+          </div>
+        `;
+
+        const up = document.createElement("button");
+        up.type = "button";
+        up.textContent = "Up";
+        up.disabled = index === 0;
+        up.addEventListener("click", () => {
+          [blocks[index - 1], blocks[index]] = [blocks[index], blocks[index - 1]];
+          makeBlockList();
+          refresh();
+        });
+
+        const down = document.createElement("button");
+        down.type = "button";
+        down.textContent = "Down";
+        down.disabled = index === blocks.length - 1;
+        down.addEventListener("click", () => {
+          [blocks[index + 1], blocks[index]] = [blocks[index], blocks[index + 1]];
+          makeBlockList();
+          refresh();
+        });
+
+        row.appendChild(up);
+        row.appendChild(down);
+        host.appendChild(row);
+      });
+    }
+
+    function makePictographicFields() {
+      const host = byId("pictographicFields");
+      host.innerHTML = "";
+      pictographicDefaults.forEach((prompt, index) => {
+        const section = document.createElement("div");
+        section.className = "grid";
+        section.innerHTML = `
+          <label>
+            Prompt id
+            <input id="picId${index}" value="${prompt.id}">
+          </label>
+          <label>
+            Image file name
+            <input id="picFile${index}" value="${prompt.imageFileName}">
+          </label>
+          <label>
+            Source path
+            <input id="picSource${index}" value="${prompt.source}">
+          </label>
+        `;
+        host.appendChild(section);
+      });
+    }
+
+    function maiaBlock() {
+      const block = {
+        id: "maia2",
+        type: "likert",
+        expectedItemCount: numberValue("maiaExpectedCount", 37),
+        min: 0,
+        max: 5,
+        wholeNumbers: true,
+        anchors: { left: "Never", right: "Always" },
+        scoreGroups
+      };
+
+      const inline = byId("maiaInline").value.trim();
+      if (inline.length > 0) {
+        try {
+          block.items = JSON.parse(inline);
+        } catch {
+          block.items = [];
+        }
+        block.target = "Assets/StreamingAssets/MAIA2_Questions.json";
+      } else {
+        block.source = byId("maiaSource").value.trim();
+        block.target = "Assets/StreamingAssets/MAIA2_Questions.json";
+      }
+
+      return block;
+    }
+
+    function pictographicBlock() {
+      return {
+        id: "pictographic",
+        type: "pictographic",
+        choices: ["A", "B", "C", "D", "E", "F", "G", "H"],
+        prompts: [0, 1, 2].map(index => ({
+          id: byId(`picId${index}`).value.trim(),
+          imageFileName: byId(`picFile${index}`).value.trim(),
+          source: byId(`picSource${index}`).value.trim(),
+          choices: index === 1
+            ? ["A", "B", "C", "D", "E", "F", "G", "H"]
+            : ["A", "B", "C", "D", "E", "F", "G"]
+        }))
+      };
+    }
+
+    function sliderBlock() {
+      const english = lineItems("englishItems");
+      const german = lineItems("germanItems");
+      const block = {
+        id: "viscereality",
+        type: "slider",
+        expectedItemCount: numberValue("sliderExpectedCount", 42),
+        min: numberValue("sliderMin", 0),
+        max: numberValue("sliderMax", 100),
+        wholeNumbers: true,
+        anchors: {
+          left: byId("sliderLeftAnchor").value.trim(),
+          right: byId("sliderRightAnchor").value.trim()
+        },
+        languages: {
+          English: {
+            source: "Assets/StreamingAssets/Questions_English.txt",
+            target: "Assets/StreamingAssets/Questions_English.txt"
+          },
+          Deutsch: {
+            source: "Assets/StreamingAssets/Questions_Deutsch.txt",
+            target: "Assets/StreamingAssets/Questions_Deutsch.txt"
+          }
+        }
+      };
+
+      if (english.length > 0) {
+        block.languages.English = {
+          items: english,
+          target: "Assets/StreamingAssets/Questions_English.txt"
+        };
+      }
+
+      if (german.length > 0) {
+        block.languages.Deutsch = {
+          items: german,
+          target: "Assets/StreamingAssets/Questions_Deutsch.txt"
+        };
+      }
+
+      return block;
+    }
+
+    function buildConfig() {
+      blocks = normalizeBlocks(blocks);
+      const blockBuilders = {
+        demographics: () => ({ id: "demographics", type: "demographics" }),
+        maia2: maiaBlock,
+        pictographic: pictographicBlock,
+        viscereality: sliderBlock,
+        end: () => ({ id: "end", type: "blackScreen" })
+      };
+
+      const stub = currentExperimentStub();
+      const registry = buildExperimentBlockRegistry(stub);
+      return {
+        schemaVersion: "my-questionnaire-vr.config.v1",
+        questionnaireId: byId("questionnaireId").value.trim(),
+        questionnaireVersion: byId("questionnaireVersion").value.trim(),
+        appVersion: byId("appVersion").value.trim(),
+        uiTextSource: "Assets/StreamingAssets/UIText.txt",
+        languages: ["English", "Deutsch"],
+        participantFields: [
+          { id: "name", type: "text", required: true },
+          { id: "age", type: "integer", required: true },
+          { id: "gender", type: "singleChoice", required: true },
+          { id: "consent", type: "checkbox", required: true }
+        ],
+        blocks: blocks.map(block => blockBuilders[block.id]()),
+        exports: {
+          destination: "Application.persistentDataPath/QuestionnaireExports",
+          formats: ["json", "csv"]
+        },
+        chainDefaults: stub.chainDefaults,
+        experimentBlockRegistry: registry
+      };
+    }
+
+    function validate(config) {
+      const issues = [];
+      const requiredIds = ["demographics", "viscereality", "end"];
+      if (!config.questionnaireId) {
+        issues.push({ level: "error", text: "Questionnaire id is required." });
+      }
+      if (!config.questionnaireVersion) {
+        issues.push({ level: "error", text: "Questionnaire version is required." });
+      }
+      const allowedFinishBehaviors = ["staySaved", "resumeCaller", "openNext"];
+      const finishBehavior = config.chainDefaults?.finishBehavior || "staySaved";
+      if (!allowedFinishBehaviors.includes(finishBehavior)) {
+        issues.push({ level: "error", text: "Finish behavior must be staySaved, resumeCaller, or openNext." });
+      }
+      if (finishBehavior === "openNext" && !config.chainDefaults?.nextPackage) {
+        issues.push({ level: "warn", text: "openNext needs a next package at launch time or in chain defaults." });
+      }
+      if (finishBehavior === "resumeCaller" && !config.chainDefaults?.callerPackage) {
+        issues.push({ level: "warn", text: "resumeCaller needs a caller package at launch time or in chain defaults." });
+      }
+      const registry = config.experimentBlockRegistry;
+      if (!registry || !Array.isArray(registry.blocks) || registry.blocks.length === 0) {
+        issues.push({ level: "error", text: "Experiment block registry must contain numbered blocks." });
+      } else {
+        const seenNumbers = new Set();
+        registry.blocks.forEach(block => {
+          if (!/^\d{3}$/.test(block.number || "")) {
+            issues.push({ level: "error", text: `Registered block ${block.id || "unknown"} needs a three-digit block number.` });
+          }
+          if (seenNumbers.has(block.number)) {
+            issues.push({ level: "error", text: `Registered block number ${block.number} is duplicated.` });
+          }
+          seenNumbers.add(block.number);
+          if (block.type === "apk" && !block.package) {
+            issues.push({ level: "error", text: `Registered APK block ${block.number} is missing a package.` });
+          }
+          if (block.type === "questionnaire" && !block.questionnaireMode) {
+            issues.push({ level: "error", text: `Registered questionnaire block ${block.number} is missing questionnaireMode.` });
+          }
+        });
+      }
+      requiredIds.forEach(id => {
+        if (!config.blocks.some(block => block.id === id)) {
+          issues.push({ level: "error", text: `Missing required block: ${id}.` });
+        }
+      });
+
+      const maia = config.blocks.find(block => block.id === "maia2");
+      if (maia && Array.isArray(maia.items) && maia.items.length !== maia.expectedItemCount) {
+        issues.push({ level: "error", text: `MAIA-2 inline count is ${maia.items.length}; expected ${maia.expectedItemCount}.` });
+      }
+
+      const slider = config.blocks.find(block => block.id === "viscereality");
+      if (slider) {
+        if (!slider.anchors.left || !slider.anchors.right) {
+          issues.push({ level: "error", text: "Slider left and right anchors are required." });
+        }
+
+        ["English", "Deutsch"].forEach(language => {
+          const languageBlock = slider.languages[language];
+          if (languageBlock && Array.isArray(languageBlock.items) && languageBlock.items.length !== slider.expectedItemCount) {
+            issues.push({ level: "error", text: `${language} slider count is ${languageBlock.items.length}; expected ${slider.expectedItemCount}.` });
+          }
+        });
+      }
+
+      wordingGuardrails(config)
+        .filter(issue => issue.level === "error")
+        .forEach(issue => issues.push(issue));
+
+      const pictographic = config.blocks.find(block => block.id === "pictographic");
+      if (pictographic && pictographic.prompts.length !== 3) {
+        issues.push({ level: "error", text: "The pictographic block should have exactly 3 prompts when included." });
+      }
+
+      if (issues.length === 0) {
+        issues.push({ level: "ok", text: "Local editor checks pass. Run the PowerShell validator before building." });
+      }
+
+      return issues;
+    }
+
+    function sliderItemsFor(config, language) {
+      const slider = config.blocks.find(block => block.id === "viscereality");
+      const languageBlock = slider?.languages?.[language];
+      if (languageBlock && Array.isArray(languageBlock.items)) {
+        return languageBlock.items;
+      }
+      return [];
+    }
+
+    function allSliderItems(config) {
+      return [
+        ...sliderItemsFor(config, "English").map(text => ({ language: "English", text })),
+        ...sliderItemsFor(config, "Deutsch").map(text => ({ language: "Deutsch", text }))
+      ];
+    }
+
+    function itemCounts(config) {
+      const maia = config.blocks.find(block => block.id === "maia2");
+      const pictographic = config.blocks.find(block => block.id === "pictographic");
+      const english = sliderItemsFor(config, "English");
+      const deutsch = sliderItemsFor(config, "Deutsch");
+      const slider = config.blocks.find(block => block.id === "viscereality");
+      const sliderCount = Math.max(english.length, deutsch.length, Number(slider?.expectedItemCount || 0));
+      return {
+        maia: Number(maia?.expectedItemCount || 0),
+        pictographic: Array.isArray(pictographic?.prompts) ? pictographic.prompts.length : 0,
+        slider: sliderCount,
+        english: english.length,
+        deutsch: deutsch.length
+      };
+    }
+
+    function longestItemLength(config) {
+      const texts = allSliderItems(config).map(item => item.text);
+      const pictographic = config.blocks.find(block => block.id === "pictographic");
+      (pictographic?.prompts || []).forEach(prompt => {
+        if (prompt.promptEnglish) texts.push(prompt.promptEnglish);
+        if (prompt.promptDeutsch) texts.push(prompt.promptDeutsch);
+      });
+      return texts.reduce((longest, value) => Math.max(longest, value.length), 0);
+    }
+
+    function wordingGuardrails(config) {
+      const issues = [];
+      const items = allSliderItems(config);
+      const seen = new Set();
+
+      items.forEach((item, index) => {
+        const text = item.text.trim();
+        const key = `${item.language}:${text.toLowerCase()}`;
+        if (seen.has(key)) {
+          issues.push({ level: "error", text: `${item.language} item ${index + 1} duplicates another item.` });
+        }
+        seen.add(key);
+
+        if (text.length > 180) {
+          issues.push({ level: "error", text: `${item.language} item ${index + 1} is too long for comfortable headset reading.` });
+        } else if (text.length > 120) {
+          issues.push({ level: "warn", text: `${item.language} item ${index + 1} is long; confirm wrapping in the Android render preview.` });
+        }
+
+        const lower = text.toLowerCase();
+        const negations = (lower.match(/\b(no|not|never|nicht|kein|keine|nie)\b/g) || []).length;
+        if (negations > 1) {
+          issues.push({ level: "warn", text: `${item.language} item ${index + 1} has multiple negations; double-check participant interpretation.` });
+        }
+
+        const conjunctions = (lower.match(/\b(and|or|und|oder)\b/g) || []).length;
+        if (conjunctions > 1 && text.length > 70) {
+          issues.push({ level: "warn", text: `${item.language} item ${index + 1} may be double-barreled; consider splitting it.` });
+        }
+
+        if (/[!?]{2,}/.test(text)) {
+          issues.push({ level: "warn", text: `${item.language} item ${index + 1} uses repeated punctuation; questionnaire wording should stay neutral.` });
+        }
+      });
+
+      return issues;
+    }
+
+    function experienceGuardrails(config) {
+      const counts = itemCounts(config);
+      const totalAnswerScreens = counts.maia + counts.pictographic + counts.slider;
+      const longest = longestItemLength(config);
+      const experienceIssues = [];
+      if (counts.english > 0 && counts.deutsch > 0 && counts.english !== counts.deutsch) {
+        experienceIssues.push({ level: "error", text: "English and Deutsch custom slider item counts differ." });
+      }
+      if (totalAnswerScreens > 90) {
+        experienceIssues.push({ level: "error", text: "Participant burden is high for a headset panel. Consider splitting the session." });
+      } else if (totalAnswerScreens > 65) {
+        experienceIssues.push({ level: "warn", text: "Participant burden is moderate. Keep wording short and allow breaks between blocks." });
+      }
+      if (longest > 180) {
+        experienceIssues.push({ level: "error", text: "At least one custom item is long for Quest panel reading. Shorten or split it." });
+      } else if (longest > 120) {
+        experienceIssues.push({ level: "warn", text: "A custom item is fairly long. Check the render preview for wrapping." });
+      }
+      experienceIssues.push(...wordingGuardrails(config).slice(0, 6));
+      if (experienceIssues.length === 0) {
+        experienceIssues.push({ level: "ok", text: "Usability guardrails look reasonable for headset panel input." });
+      }
+      return experienceIssues;
+    }
+
+    function qualityReport(config) {
+      const counts = itemCounts(config);
+      const totalAnswerScreens = counts.maia + counts.pictographic + counts.slider;
+      const estimatedMinutes = Math.max(1, Math.ceil((totalAnswerScreens * 8 + 55) / 60));
+      const validationIssues = validate(config).filter(issue => issue.level !== "ok");
+      const experienceIssues = experienceGuardrails(config).filter(issue => issue.level !== "ok");
+      const issues = [...validationIssues, ...experienceIssues];
+      const errorCount = issues.filter(issue => issue.level === "error").length;
+      const warningCount = issues.filter(issue => issue.level === "warn" || issue.level === "").length;
+      return {
+        schemaVersion: "my-questionnaire-2d.builder-quality-report.v1",
+        status: errorCount === 0 ? "pass" : "fail",
+        counts,
+        totalAnswerScreens,
+        estimatedMinutes,
+        longestCustomItemCharacters: longestItemLength(config),
+        issueCounts: {
+          error: errorCount,
+          warning: warningCount,
+          total: issues.length
+        },
+        principlesChecked: [
+          "required runtime blocks",
+          "language item-count parity",
+          "participant burden",
+          "headset-readable item length",
+          "duplicate item detection",
+          "multiple-negation warning",
+          "double-barreled wording warning",
+          "neutral punctuation warning",
+          "render-preview command availability",
+          "APK chaining defaults"
+        ],
+        issues
+      };
+    }
+
+    function renderExperience(config) {
+      const report = qualityReport(config);
+      const metrics = [
+        { label: "Answer screens", value: report.totalAnswerScreens },
+        { label: "Estimated minutes", value: report.estimatedMinutes },
+        { label: "Slider items", value: report.counts.slider },
+        { label: "Longest custom item", value: report.longestCustomItemCharacters || "source" }
+      ];
+
+      byId("experienceMetrics").innerHTML = metrics.map(metric => `
+        <div class="metric">
+          <strong>${metric.value}</strong>
+          <span>${metric.label}</span>
+        </div>
+      `).join("");
+
+      const host = byId("experienceIssues");
+      host.innerHTML = "";
+      const experienceIssues = experienceGuardrails(config);
+      experienceIssues.forEach(issue => {
+        const row = document.createElement("div");
+        row.className = `issue ${issue.level}`;
+        row.textContent = issue.text;
+        host.appendChild(row);
+      });
+    }
+
+    function renderGeneratorCommand(config) {
+      const configPath = `.\\QuestionnaireConfigs\\${configFileName(config)}`;
+      byId("generatorCommand").textContent = `powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\generate-questionnaire-apk.ps1 -ConfigPath ${configPath} -RenderPreview`;
+    }
+
+    function safeFileStem(value, fallback = "questionnaire") {
+      const safe = String(value || "").toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+      return safe || fallback;
+    }
+
+    function configFileName(config) {
+      return `${safeFileStem(config.questionnaireId)}.config.json`;
+    }
+
+    function apkFileName(config) {
+      return `${safeFileStem(config.questionnaireId)}-${safeFileStem(config.questionnaireVersion, "0.0.0")}.apk`;
+    }
+
+    function renderPipelineCommands(config) {
+      const configPath = `.\\QuestionnaireConfigs\\${configFileName(config)}`;
+      const apkPath = `.\\Builds\\${apkFileName(config)}`;
+      const commands = [
+        {
+          label: "1. Validate config",
+          command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\validate-questionnaire-config.ps1 -ConfigPath ${configPath}`
+        },
+        {
+          label: "2. Generate APK and local render pack",
+          command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\generate-questionnaire-apk.ps1 -ConfigPath ${configPath} -RenderPreview`
+        },
+        {
+          label: "3. Quest command replay/export",
+          command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\quest-validate.ps1 -Serial <quest-serial> -Apk ${apkPath} -SkipBuild -StopLegacyUnityApp -LeaveForeground`
+        },
+        {
+          label: "4. Foreground-linked Android render pack",
+          command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\render-questionnaire-visuals.ps1 -ConfigPath ${configPath} -Serial <quest-serial> -CheckQuestForeground -RequireQuestForeground -LaunchBeforeForegroundCheck`
+        },
+        {
+          label: "5. Quest chained launch/export",
+          command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\quest-chain-validate.ps1 -Serial <quest-serial> -Apk ${apkPath} -ConfigPath ${configPath} -SkipBuild`
+        },
+        {
+          label: "6. Quest brokered chain/export",
+          command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\quest-broker-chain-validate.ps1 -Serial <quest-serial> -Apk ${apkPath} -ConfigPath ${configPath} -SkipBuild`
+        }
+      ];
+
+      const host = byId("pipelineCommands");
+      host.innerHTML = "";
+      commands.forEach(item => {
+        const row = document.createElement("div");
+        const label = document.createElement("h3");
+        const command = document.createElement("code");
+        command.className = "command";
+        label.textContent = item.label;
+        command.textContent = item.command;
+        row.appendChild(label);
+        row.appendChild(command);
+        host.appendChild(row);
+      });
+    }
+
+    function renderIssues(issues) {
+      const host = byId("issues");
+      host.innerHTML = "";
+      issues.forEach(issue => {
+        const row = document.createElement("div");
+        row.className = `issue ${issue.level}`;
+        row.textContent = issue.text;
+        host.appendChild(row);
+      });
+    }
+
+    function refresh() {
+      const config = buildConfig();
+      byId("preview").textContent = JSON.stringify(config, null, 2);
+      makeExperimentBlockRegistryList();
+      renderExperience(config);
+      renderGeneratorCommand(config);
+      renderPipelineCommands(config);
+      renderIssues(validate(config));
+    }
+
+    function loadConfig(config) {
+      byId("questionnaireId").value = config.questionnaireId || "";
+      byId("questionnaireVersion").value = config.questionnaireVersion || "";
+      byId("appVersion").value = config.appVersion || "";
+      byId("chainFinishBehavior").value = config.chainDefaults?.finishBehavior || "staySaved";
+      byId("chainCallerPackage").value = config.chainDefaults?.callerPackage || "";
+      byId("chainCallerActivity").value = config.chainDefaults?.callerActivity || "";
+      byId("chainNextPackage").value = config.chainDefaults?.nextPackage || "";
+      byId("chainNextActivity").value = config.chainDefaults?.nextActivity || "";
+      byId("chainAutoCloseDelayMs").value = config.chainDefaults?.autoCloseDelayMs ?? 2000;
+      const registry = config.experimentBlockRegistry || {};
+      byId("experimentId").value = registry.experimentId || byId("experimentId").value || "peripersonal-space-right-orbit";
+      byId("chainlinkPlanId").value = registry.planId || byId("chainlinkPlanId").value || "peripersonal-space-right-maia2-pictographic";
+      byId("chainlinkTriggerButton").value = registry.controllerTriggerButton || byId("chainlinkTriggerButton").value || "auto-unused-non-breath-tracking";
+      const targetApp = registry.targetApp || registry.scenario || {};
+      byId("chainlinkScenarioPackage").value = targetApp.package || byId("chainlinkScenarioPackage").value || "com.Viscereality.ViscerealityPeriPersonalSpaceRight";
+      byId("chainlinkScenarioActivity").value = targetApp.activity || byId("chainlinkScenarioActivity").value || "com.unity3d.player.UnityPlayerGameActivity";
+      byId("chainlinkScenarioLabel").value = targetApp.label || byId("chainlinkScenarioLabel").value || "Peripersonal Space Right orbital scenario";
+      const pictographicRepeats = Array.isArray(registry.blocks)
+        ? registry.blocks.filter(block => block.questionnaireMode === "pictographic").length
+        : Number(byId("chainlinkPictographicRepeats").value || 2);
+      byId("chainlinkPictographicRepeats").value = Math.max(1, pictographicRepeats || 2);
+
+      const byBlockId = new Map((config.blocks || []).map(block => [block.id, block]));
+      byId("includeMaia").checked = byBlockId.has("maia2");
+      byId("includePictographic").checked = byBlockId.has("pictographic");
+      blocks = blockDefaults
+        .filter(block => byBlockId.has(block.id))
+        .sort((left, right) => {
+          const ids = (config.blocks || []).map(block => block.id);
+          return ids.indexOf(left.id) - ids.indexOf(right.id);
+        });
+      blocks = normalizeBlocks(blocks);
+
+      const maia = byBlockId.get("maia2");
+      if (maia) {
+        byId("maiaSource").value = maia.source || "Assets/StreamingAssets/MAIA2_Questions.json";
+        byId("maiaExpectedCount").value = maia.expectedItemCount || 37;
+        byId("maiaInline").value = Array.isArray(maia.items) ? JSON.stringify(maia.items, null, 2) : "";
+      }
+
+      const slider = byBlockId.get("viscereality");
+      if (slider) {
+        byId("sliderExpectedCount").value = slider.expectedItemCount || 42;
+        byId("sliderMin").value = slider.min ?? 0;
+        byId("sliderMax").value = slider.max ?? 100;
+        byId("sliderLeftAnchor").value = slider.anchors?.left || "NO, not more than usual";
+        byId("sliderRightAnchor").value = slider.anchors?.right || "YES, much more than usual";
+        byId("englishItems").value = Array.isArray(slider.languages?.English?.items) ? slider.languages.English.items.join("\n") : "";
+        byId("germanItems").value = Array.isArray(slider.languages?.Deutsch?.items) ? slider.languages.Deutsch.items.join("\n") : "";
+      }
+
+      const pictographic = byBlockId.get("pictographic");
+      if (pictographic && Array.isArray(pictographic.prompts)) {
+        pictographic.prompts.slice(0, 3).forEach((prompt, index) => {
+          byId(`picId${index}`).value = prompt.id || "";
+          byId(`picFile${index}`).value = prompt.imageFileName || "";
+          byId(`picSource${index}`).value = prompt.source || "";
+        });
+      }
+
+      makeBlockList();
+      refresh();
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let cell = "";
+      let quoted = false;
+
+      function pushRow() {
+        row.push(cell);
+        cell = "";
+        if (row.some(value => value.trim().length > 0)) {
+          rows.push(row);
+        }
+        row = [];
+      }
+
+      for (let index = 0; index < text.length; index += 1) {
+        const char = text[index];
+
+        if (quoted) {
+          if (char === "\"") {
+            if (text[index + 1] === "\"") {
+              cell += "\"";
+              index += 1;
+            } else {
+              quoted = false;
+            }
+          } else {
+            cell += char;
+          }
+          continue;
+        }
+
+        if (char === "\"") {
+          quoted = true;
+        } else if (char === ",") {
+          row.push(cell);
+          cell = "";
+        } else if (char === "\n") {
+          pushRow();
+        } else if (char !== "\r") {
+          cell += char;
+        }
+      }
+
+      if (quoted) {
+        throw new Error("CSV has an unterminated quoted field.");
+      }
+
+      if (cell.length > 0 || row.length > 0) {
+        pushRow();
+      }
+
+      return rows;
+    }
+
+    function csvHeaderKey(value) {
+      return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    }
+
+    function csvObjects(rows) {
+      if (rows.length < 2) {
+        return [];
+      }
+
+      const headers = rows[0].map(csvHeaderKey);
+      return rows.slice(1).map((cells, index) => {
+        const record = { __index: index, __rowNumber: index + 2 };
+        headers.forEach((header, columnIndex) => {
+          record[header] = cells[columnIndex] || "";
+        });
+        return record;
+      });
+    }
+
+    function csvValue(record, names) {
+      for (const name of names) {
+        const key = csvHeaderKey(name);
+        if (Object.prototype.hasOwnProperty.call(record, key)) {
+          return String(record[key] || "").trim();
+        }
+      }
+      return "";
+    }
+
+    function csvNumber(record, names) {
+      const raw = csvValue(record, names);
+      if (!raw) {
+        return null;
+      }
+
+      const value = Number(raw);
+      return Number.isFinite(value) ? value : null;
+    }
+
+    function normalizeBlock(value) {
+      const key = csvHeaderKey(value);
+      if (["slider", "viscereality", "viscerealityslider"].includes(key)) {
+        return "viscereality";
+      }
+      if (["maia", "maia2"].includes(key)) {
+        return "maia2";
+      }
+      return key;
+    }
+
+    function normalizeLanguage(value) {
+      const key = csvHeaderKey(value);
+      if (["english", "en", "eng"].includes(key)) {
+        return "English";
+      }
+      if (["deutsch", "german", "de", "ger"].includes(key)) {
+        return "Deutsch";
+      }
+      return value.trim();
+    }
+
+    function csvOrder(record) {
+      const raw = Number(csvValue(record, ["order", "index", "position"]));
+      return Number.isFinite(raw) ? raw : Number.MAX_SAFE_INTEGER;
+    }
+
+    function sortedCsvText(records) {
+      return records
+        .slice()
+        .sort((left, right) => csvOrder(left) - csvOrder(right) || left.__index - right.__index)
+        .map(record => csvValue(record, ["text", "itemText", "question", "prompt"]))
+        .filter(Boolean);
+    }
+
+    function setCsvStatus(text, level = "") {
+      const status = byId("csvStatus");
+      status.className = `issue ${level}`;
+      status.textContent = text;
+    }
+
+    function applyCsvText(text, fileName) {
+      const records = csvObjects(parseCsv(text));
+      if (records.length === 0) {
+        throw new Error("CSV has no data rows.");
+      }
+
+      const projectId = records
+        .map(record => csvValue(record, ["questionnaireId", "questionnaire_id", "configId"]))
+        .find(Boolean);
+      const projectVersion = records
+        .map(record => csvValue(record, ["questionnaireVersion", "questionnaire_version", "version"]))
+        .find(Boolean);
+      const appVersion = records
+        .map(record => csvValue(record, ["appVersion", "app_version"]))
+        .find(Boolean);
+
+      if (projectId) {
+        byId("questionnaireId").value = projectId.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-|-$/g, "");
+      } else if (fileName) {
+        byId("questionnaireId").value = fileName.replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-|-$/g, "");
+      }
+
+      if (projectVersion) {
+        byId("questionnaireVersion").value = projectVersion;
+      }
+
+      if (appVersion) {
+        byId("appVersion").value = appVersion;
+      }
+
+      const englishRows = [];
+      const germanRows = [];
+      const maiaRows = [];
+      const unsupported = [];
+
+      records.forEach(record => {
+        const textValue = csvValue(record, ["text", "itemText", "question", "prompt"]);
+        if (!textValue) {
+          return;
+        }
+
+        const block = normalizeBlock(csvValue(record, ["block", "blockId", "questionnaire", "questionnaireBlock"]));
+        if (block === "viscereality") {
+          const language = normalizeLanguage(csvValue(record, ["language", "lang", "locale"]));
+          if (language === "English") {
+            englishRows.push(record);
+          } else if (language === "Deutsch") {
+            germanRows.push(record);
+          } else {
+            unsupported.push(`row ${record.__rowNumber}: unsupported language`);
+          }
+          return;
+        }
+
+        if (block === "maia2") {
+          maiaRows.push(record);
+          return;
+        }
+
+        unsupported.push(`row ${record.__rowNumber}: unsupported block`);
+      });
+
+      if (unsupported.length > 0) {
+        throw new Error(unsupported.slice(0, 3).join("; "));
+      }
+
+      const englishItems = sortedCsvText(englishRows);
+      const germanItems = sortedCsvText(germanRows);
+      const maiaItems = sortedCsvText(maiaRows);
+
+      if (englishItems.length > 0) {
+        byId("englishItems").value = englishItems.join("\n");
+      }
+
+      if (germanItems.length > 0) {
+        byId("germanItems").value = germanItems.join("\n");
+      }
+
+      if (englishItems.length > 0 && germanItems.length > 0) {
+        byId("sliderExpectedCount").value = Math.max(englishItems.length, germanItems.length);
+      } else if (englishItems.length > 0 || germanItems.length > 0) {
+        byId("sliderExpectedCount").value = englishItems.length || germanItems.length;
+      }
+
+      const firstSlider = englishRows[0] || germanRows[0];
+      if (firstSlider) {
+        const min = csvNumber(firstSlider, ["min", "minimum"]);
+        const max = csvNumber(firstSlider, ["max", "maximum"]);
+        const left = csvValue(firstSlider, ["leftAnchor", "anchorLeft", "left"]);
+        const right = csvValue(firstSlider, ["rightAnchor", "anchorRight", "right"]);
+
+        if (min !== null) {
+          byId("sliderMin").value = min;
+        }
+        if (max !== null) {
+          byId("sliderMax").value = max;
+        }
+        if (left) {
+          byId("sliderLeftAnchor").value = left;
+        }
+        if (right) {
+          byId("sliderRightAnchor").value = right;
+        }
+      }
+
+      if (maiaItems.length > 0) {
+        byId("includeMaia").checked = true;
+        byId("maiaExpectedCount").value = maiaItems.length;
+        byId("maiaInline").value = JSON.stringify(maiaItems, null, 2);
+      }
+
+      if ((englishItems.length > 0 || germanItems.length > 0) && maiaItems.length === 0) {
+        byId("includeMaia").checked = false;
+        byId("includePictographic").checked = false;
+      }
+
+      blocks = normalizeBlocks(blocks);
+
+      const warnings = [];
+      if (englishItems.length > 0 && germanItems.length > 0 && englishItems.length !== germanItems.length) {
+        warnings.push("English and Deutsch slider counts differ.");
+      }
+      if ((englishItems.length > 0 && germanItems.length === 0) || (germanItems.length > 0 && englishItems.length === 0)) {
+        warnings.push("Only one slider language was imported.");
+      }
+      if (maiaItems.length > 0 && maiaItems.length !== 37) {
+        warnings.push("MAIA-2 scoring in v1 expects 37 items.");
+      }
+
+      refresh();
+      const loaded = `${englishItems.length} English slider, ${germanItems.length} Deutsch slider, ${maiaItems.length} MAIA-2`;
+      setCsvStatus(warnings.length > 0 ? `${loaded}. ${warnings.join(" ")}` : `${loaded}.`, warnings.length > 0 ? "error" : "ok");
+    }
+
+    function downloadJsonFile(fileName, value) {
+      const content = JSON.stringify(value, null, 2);
+      const blob = new Blob([content], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function downloadConfig() {
+      const config = buildConfig();
+      const id = config.questionnaireId || "questionnaire";
+      downloadJsonFile(`${id}.config.json`, config);
+    }
+
+    function downloadQualityReport() {
+      const config = buildConfig();
+      const id = config.questionnaireId || "questionnaire";
+      downloadJsonFile(`${id}.quality-report.json`, qualityReport(config));
+    }
+
+    function buildChainPlan(config) {
+      const registry = config.experimentBlockRegistry || buildExperimentBlockRegistry(config);
+      return {
+        schemaVersion: "viscereality.chainlink.plan.v1",
+        legacySchemaVersion: "my-questionnaire-2d.chain-plan.v1",
+        planKind: "registered-block-sequence",
+        experimentId: registry.experimentId,
+        planId: registry.planId,
+        questionnaireId: config.questionnaireId,
+        questionnaireVersion: config.questionnaireVersion,
+        chainId: `${safeFileStem(registry.planId || config.questionnaireId)}-chain`,
+        defaultFinishBehavior: "resumeCaller",
+        dataPolicy: registry.dataPolicy,
+        blockRegistry: registry,
+        steps: registry.blocks.map(block => ({
+          id: block.id,
+          blockNumber: block.number,
+          type: block.type === "apk" ? "scenario" : block.type,
+          package: block.package,
+          activity: block.activity,
+          action: block.action,
+          trigger: block.trigger,
+          saveNamespace: block.saveNamespace,
+          expectedOutputs: block.expectedOutputs,
+          extras: {
+            ...(block.extras || {}),
+            "mq.experimentId": registry.experimentId,
+            "mq.chainPlanId": registry.planId,
+            "mq.blockNumber": block.number,
+            "mq.blockId": block.id,
+            "mq.saveNamespace": block.saveNamespace
+          }
+        }))
+      };
+    }
+
+    function downloadBlockRegistry() {
+      const config = buildConfig();
+      const registry = config.experimentBlockRegistry || buildExperimentBlockRegistry(config);
+      downloadJsonFile(`${safeFileStem(registry.planId || config.questionnaireId)}.block-registry.json`, registry);
+    }
+
+    function downloadChainPlan() {
+      const config = buildConfig();
+      const id = config.experimentBlockRegistry?.planId || config.questionnaireId || "questionnaire";
+      downloadJsonFile(`${id}.chain-plan.json`, buildChainPlan(config));
+    }
+
+    byId("downloadButton").addEventListener("click", downloadConfig);
+    byId("downloadBlockRegistryButton").addEventListener("click", downloadBlockRegistry);
+    byId("downloadChainPlanButton").addEventListener("click", downloadChainPlan);
+    byId("downloadQualityButton").addEventListener("click", downloadQualityReport);
+    byId("includeMaia").addEventListener("change", () => {
+      blocks = normalizeBlocks(blocks);
+      makeBlockList();
+      refresh();
+    });
+    byId("includePictographic").addEventListener("change", () => {
+      blocks = normalizeBlocks(blocks);
+      makeBlockList();
+      refresh();
+    });
+    byId("copyButton").addEventListener("click", async () => {
+      await navigator.clipboard.writeText(byId("preview").textContent);
+    });
+    byId("loadCurrentButton").addEventListener("click", () => loadConfig(buildConfig()));
+    byId("refreshRegistryButton").addEventListener("click", () => {
+      makeExperimentBlockRegistryList();
+      refresh();
+    });
+    byId("loadFileInput").addEventListener("change", event => {
+      const file = event.target.files[0];
+      if (!file) {
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        loadConfig(JSON.parse(String(reader.result)));
+      };
+      reader.readAsText(file);
+    });
+    byId("loadCsvInput").addEventListener("change", event => {
+      const file = event.target.files[0];
+      if (!file) {
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          applyCsvText(String(reader.result), file.name);
+        } catch (error) {
+          setCsvStatus(error.message || String(error), "error");
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    document.addEventListener("input", refresh);
+    makePictographicFields();
+    makeBlockList();
+    refresh();
+  </script>
+</body>
+</html>

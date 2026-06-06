@@ -1,0 +1,41 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'org.mesmerprism.viscereality.temporaltracer2d'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'org.mesmerprism.viscereality.temporaltracer2d'
+        minSdk 29
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    androidResources {
+        noCompress 'wav'
+    }
+
+    testOptions {
+        unitTests.includeAndroidResources = true
+        unitTests.all {
+            systemProperty 'temporalTracer.render.enabled', System.getProperty('temporalTracer.render.enabled', 'false')
+            systemProperty 'temporalTracer.render.outputDir', System.getProperty('temporalTracer.render.outputDir', '')
+            systemProperty 'temporalTracer.render.sizes', System.getProperty('temporalTracer.render.sizes', '1280x800,900x800')
+            systemProperty 'temporalTracer.render.runId', System.getProperty('temporalTracer.render.runId', '')
+        }
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+}

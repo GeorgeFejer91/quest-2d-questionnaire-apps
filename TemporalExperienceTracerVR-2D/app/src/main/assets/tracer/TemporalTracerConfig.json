@@ -1,0 +1,169 @@
+{
+  "schema": "temporal-experience-tracer.config.v1",
+  "tracerId": "temporal-experience-tracer",
+  "tracerVersion": "2025-12-10-unity-port",
+  "appVersion": "0.1.0",
+  "axis": {
+    "viewBoxWidth": 1000,
+    "viewBoxHeight": 100,
+    "durationValue": 10,
+    "durationUnit": "min",
+    "yMin": 0,
+    "yMax": 100,
+    "startGatePercent": 5,
+    "endGatePercent": 95,
+    "targetSampleCount": 1000,
+    "strokeWidth": 2.5,
+    "traceColor": "#28D17C",
+    "axisColor": "#F4F5F7",
+    "gridColor": "#7F8794",
+    "topLabel": {
+      "English": "Yes, very much more than usual",
+      "Deutsch": "Ja, sehr viel mehr als gewoehnlich"
+    },
+    "bottomLabel": {
+      "English": "No, not more than usual",
+      "Deutsch": "Nein, nicht mehr als gewoehnlich"
+    },
+    "horizontalGridLabels": ["100", "90", "80", "70", "60", "50", "40", "30", "20", "10", "0"],
+    "verticalGridLabels": ["0min", "1min", "2min", "3min", "4min", "5min", "6min", "7min", "8min", "9min", "10min"]
+  },
+  "ui": {
+    "English": {
+      "appTitle": "Temporal Experience Tracer",
+      "languageTitle": "Choose language",
+      "participantTitle": "Participant",
+      "participantNameHint": "Participant name",
+      "participantIdHint": "Participant ID",
+      "continueLabel": "Continue",
+      "backLabel": "Back",
+      "clearLabel": "Clear trace",
+      "saveNextLabel": "Save trace",
+      "completeToSaveLabel": "Start at the left edge and draw to the right edge",
+      "completeLabel": "Trace complete",
+      "savedTitle": "Saved",
+      "finishedTitle": "Finished",
+      "finishedBody": "All traces were saved locally on the headset.",
+      "introButton": "Read, complete the practice trace, then continue"
+    },
+    "Deutsch": {
+      "appTitle": "Temporaler Erlebnis-Tracer",
+      "languageTitle": "Sprache waehlen",
+      "participantTitle": "Teilnehmer",
+      "participantNameHint": "Name der teilnehmenden Person",
+      "participantIdHint": "Teilnehmer-ID",
+      "continueLabel": "Weiter",
+      "backLabel": "Zurueck",
+      "clearLabel": "Linie loeschen",
+      "saveNextLabel": "Linie speichern",
+      "completeToSaveLabel": "Links beginnen und bis zum rechten Rand zeichnen",
+      "completeLabel": "Linie vollstaendig",
+      "savedTitle": "Gespeichert",
+      "finishedTitle": "Fertig",
+      "finishedBody": "Alle Linien wurden lokal auf dem Headset gespeichert.",
+      "introButton": "Text lesen, Uebungslinie vollstaendig zeichnen, dann fortfahren"
+    }
+  },
+  "items": {
+    "English": [
+      {
+        "label": "Intro",
+        "message": "This window shows descriptions of experiences. Draw a line from the far left to the far right of the canvas, indicating the intensity (0-100) of the described experience over the last breathing session. You can only continue after completing a full trace. Start again from the left edge to restart drawing."
+      },
+      {
+        "label": "Anxiety",
+        "message": "I was afraid without being able to say exactly why. I felt threatened and had the feeling something horrible would happen. Everything seemed terrifyingly distorted, my surroundings appeared strange and weird, and I was afraid that the state I was in would never end."
+      },
+      {
+        "label": "Audio-Visual Synesthesia",
+        "message": "Sounds seemed to influence what I saw. Visual shapes seemed to be changed by sounds or noises, and the colors of things seemed to be altered by sounds."
+      },
+      {
+        "label": "Blissful State",
+        "message": "I enjoyed boundless pleasure, experienced a profound peace in myself, and an all-embracing love."
+      },
+      {
+        "label": "Changed Meaning of Percepts",
+        "message": "I had the sense that things that feel familiar took on a new and special meaning. My surroundings seemed imbued with a strange significance and engaged me emotionally much more than usual."
+      },
+      {
+        "label": "Complex Imagery",
+        "message": "My imagination was extremely vivid, and I saw scenes rolling by and could see pictures from my past or fantasy extremely clearly."
+      },
+      {
+        "label": "Disembodiment",
+        "message": "It felt as though I did not have a body anymore. I had the feeling of being outside of my body, as though I were floating, or as if I was like a marionette."
+      },
+      {
+        "label": "Elementary Imagery",
+        "message": "I saw colors, regular patterns, and flashes of light appearing before me."
+      },
+      {
+        "label": "Experience of Unity",
+        "message": "I felt unified with my environment, conflicts and contradictions felt dissolved, the past, present, and future felt as one. I felt a touch of eternity and everything seemed to unify into a oneness."
+      },
+      {
+        "label": "Impaired Control and Cognition",
+        "message": "I felt paralyzed and isolated from everything and everyone. I had difficulty making even the smallest decision and distinguishing important from unimportant things. My thoughts repeatedly broke off, and I had the feeling that I no longer had a will of my own."
+      },
+      {
+        "label": "Insightfulness",
+        "message": "I felt very profound, gained clarity into connections that puzzled me before, and had very original thoughts."
+      },
+      {
+        "label": "Spiritual Experience",
+        "message": "I had the feeling of being connected to a superior power, experienced a kind of awe, and felt that my experience had religious aspects."
+      }
+    ],
+    "Deutsch": [
+      {
+        "label": "Intro",
+        "message": "Dieses Fenster zeigt Beschreibungen von Erlebnissen. Zeichne eine Linie von ganz links nach ganz rechts ueber die Flaeche und gib damit die Intensitaet (0-100) des beschriebenen Erlebnisses waehrend der letzten Atemsession an. Du kannst erst fortfahren, nachdem du eine vollstaendige Linie gezeichnet hast. Beginne erneut ganz links, um die Zeichnung neu zu starten."
+      },
+      {
+        "label": "Angst",
+        "message": "Ich hatte Angst, ohne genau sagen zu koennen weshalb. Ich fuehlte mich bedroht und hatte das Gefuehl, es wuerde Schreckliches geschehen. Alles erschien mir bedrohlich verzerrt, meine Umgebung kam mir fremd und unheimlich vor, und ich hatte Angst, aus meinem Zustand nicht mehr herauszukommen."
+      },
+      {
+        "label": "Audio-Visuelle Synaesthesie",
+        "message": "Toene schienen das, was ich sah, zu beeinflussen. Visuelle Formen schienen sich durch Toene oder Geraeusche zu veraendern, und die Farben der Dinge schienen sich durch Toene zu veraendern."
+      },
+      {
+        "label": "Glueckseliger Zustand",
+        "message": "Ich empfand grenzenlose Freude, tiefen Frieden in mir und eine allumfassende Liebe."
+      },
+      {
+        "label": "Veraenderte Bedeutung des Wahrgenommenen",
+        "message": "Ich hatte das Gefuehl, dass mir vertraute Dinge eine neue und besondere Bedeutung erhielten. Meine Umgebung schien von einer fremdartigen Bedeutsamkeit durchdrungen und sprach mich gefuehlsmaessig viel staerker an als gewoehnlich."
+      },
+      {
+        "label": "Komplexe Bildhaftigkeit",
+        "message": "Meine Fantasie war aeusserst lebhaft, und ich sah ganze Szenen vor mir ablaufen und konnte Bilder aus der Erinnerung oder aus der Fantasie ueberaus deutlich sehen."
+      },
+      {
+        "label": "Entkoerperlichung",
+        "message": "Es fuehlte sich an, als haette ich keinen Koerper mehr. Ich hatte das Gefuehl, ausserhalb meines Koerpers zu sein, als wuerde ich schweben oder wie eine Marionette bewegt werden."
+      },
+      {
+        "label": "Elementare Bildhaftigkeit",
+        "message": "Ich sah Farben, regelmaessige Muster und Lichtblitze, die vor mir auftauchten."
+      },
+      {
+        "label": "Einheitsgefuehl",
+        "message": "Ich fuehlte mich mit meiner Umgebung eins, Gegensaetze und Widersprueche schienen sich aufzuloesen, Vergangenheit, Gegenwart und Zukunft fuehlten sich wie eine Einheit an. Ich verspuertete einen Hauch von Ewigkeit, und alles schien sich zu einem einzigen Ganzen zu vereinen."
+      },
+      {
+        "label": "Beeintraechtigte Kontrolle und Kognition",
+        "message": "Ich fuehlte mich wie gelaehmt und isoliert von allem und jedem. Ich war unfaehig, auch nur die kleinste Entscheidung zu treffen, und es fiel mir schwer, Wichtiges von Unwichtigem zu unterscheiden. Meine Gedanken rissen immer wieder ab, und ich hatte das Gefuehl, keinen eigenen Willen mehr zu haben."
+      },
+      {
+        "label": "Einsicht",
+        "message": "Ich kam mir besonders tiefgruendig vor, gewann Einsichten in Zusammenhaenge, die mir vorher raetselhaft waren, und hatte besonders originelle Einfaelle."
+      },
+      {
+        "label": "Spirituelle Erfahrung",
+        "message": "Ich hatte das Gefuehl, mit einer hoeheren Macht verbunden zu sein, empfand ein Gefuehl der Ehrfurcht und hatte den Eindruck, dass mein Erleben religioesen Charakter hatte."
+      }
+    ]
+  }
+}

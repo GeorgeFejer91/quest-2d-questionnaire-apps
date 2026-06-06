@@ -1,0 +1,86 @@
+[
+  {
+    "index": 0,
+    "label": "Intro",
+    "file": "C:\\Users\\cogpsy-vrlab\\Documents\\GithubVR\\TemporalExperienceTracerVR-2D\\app\\src\\main\\assets\\tracer\\audio\\English\\01_intro.wav",
+    "samples": 516600,
+    "seconds": 21.525
+  },
+  {
+    "index": 1,
+    "label": "Anxiety",
+    "file": "C:\\Users\\cogpsy-vrlab\\Documents\\GithubVR\\TemporalExperienceTracerVR-2D\\app\\src\\main\\assets\\tracer\\audio\\English\\02_anxiety.wav",
+    "samples": 429600,
+    "seconds": 17.9
+  },
+  {
+    "index": 2,
+    "label": "Audio-Visual Synesthesia",
+    "file": "C:\\Users\\cogpsy-vrlab\\Documents\\GithubVR\\TemporalExperienceTracerVR-2D\\app\\src\\main\\assets\\tracer\\audio\\English\\03_audio_visual_synesthesia.wav",
+    "samples": 295200,
+    "seconds": 12.3
+  },
+  {
+    "index": 3,
+    "label": "Blissful State",
+    "file": "C:\\Users\\cogpsy-vrlab\\Documents\\GithubVR\\TemporalExperienceTracerVR-2D\\app\\src\\main\\assets\\tracer\\audio\\English\\04_blissful_state.wav",
+    "samples": 200400,
+    "seconds": 8.35
+  },
+  {
+    "index": 4,
+    "label": "Changed Meaning of Percepts",
+    "file": "C:\\Users\\cogpsy-vrlab\\Documents\\GithubVR\\TemporalExperienceTracerVR-2D\\app\\src\\main\\assets\\tracer\\audio\\English\\05_changed_meaning_of_percepts.wav",
+    "samples": 351000,
+    "seconds": 14.625
+  },
+  {
+    "index": 5,
+    "label": "Complex Imagery",
+    "file": "C:\\Users\\cogpsy-vrlab\\Documents\\GithubVR\\TemporalExperienceTracerVR-2D\\app\\src\\main\\assets\\tracer\\audio\\English\\06_complex_imagery.wav",
+    "samples": 275400,
+    "seconds": 11.475
+  },
+  {
+    "index": 6,
+    "label": "Disembodiment",
+    "file": "C:\\Users\\cogpsy-vrlab\\Documents\\GithubVR\\TemporalExperienceTracerVR-2D\\app\\src\\main\\assets\\tracer\\audio\\English\\07_disembodiment.wav",
+    "samples": 275400,
+    "seconds": 11.475
+  },
+  {
+    "index": 7,
+    "label": "Elementary Imagery",
+    "file": "C:\\Users\\cogpsy-vrlab\\Documents\\GithubVR\\TemporalExperienceTracerVR-2D\\app\\src\\main\\assets\\tracer\\audio\\English\\08_elementary_imagery.wav",
+    "samples": 174600,
+    "seconds": 7.275
+  },
+  {
+    "index": 8,
+    "label": "Experience of Unity",
+    "file": "C:\\Users\\cogpsy-vrlab\\Documents\\GithubVR\\TemporalExperienceTracerVR-2D\\app\\src\\main\\assets\\tracer\\audio\\English\\09_experience_of_unity.wav",
+    "samples": 374400,
+    "seconds": 15.6
+  },
+  {
+    "index": 9,
+    "label": "Impaired Control and Cognition",
+    "file": "C:\\Users\\cogpsy-vrlab\\Documents\\GithubVR\\TemporalExperienceTracerVR-2D\\app\\src\\main\\assets\\tracer\\audio\\English\\10_impaired_control_and_cognition.wav",
+    "samples": 465000,
+    "seconds": 19.375
+  },
+  {
+    "index": 10,
+    "label": "Insightfulness",
+    "file": "C:\\Users\\cogpsy-vrlab\\Documents\\GithubVR\\TemporalExperienceTracerVR-2D\\app\\src\\main\\assets\\tracer\\audio\\English\\11_insightfulness.wav",
+    "samples": 219000,
+    "seconds": 9.125
+  },
+  {
+    "index": 11,
+    "label": "Spiritual Experience",
+    "file": "C:\\Users\\cogpsy-vrlab\\Documents\\GithubVR\\TemporalExperienceTracerVR-2D\\app\\src\\main\\assets\\tracer\\audio\\English\\12_spiritual_experience.wav",
+    "samples": 272400,
+    "seconds": 11.35
+  }
+]

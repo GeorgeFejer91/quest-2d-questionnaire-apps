@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "my-questionnaire-2d.lsl-chain-command.v1",
+  "title": "MyQuestionnaireVR-2D LSL Chain Command",
+  "type": "object",
+  "required": ["command"],
+  "properties": {
+    "schemaVersion": {
+      "const": "my-questionnaire-2d.lsl-chain-command.v1"
+    },
+    "command": {
+      "enum": ["startPlan", "continuePlan", "clearPlan", "discoverHooks", "startQuestionnaire", "openApp", "goHome", "forceStopQuestionnaire", "ping"]
+    },
+    "sessionId": { "type": "string" },
+    "invocationId": { "type": "string" },
+    "experimentId": { "type": "string" },
+    "scenarioId": { "type": "string" },
+    "trialId": { "type": "string" },
+    "chainId": { "type": "string" },
+    "chainStepId": { "type": "string" },
+    "chainStepIndex": { "type": "integer", "minimum": 0 },
+    "chainPlan": { "$ref": "my-questionnaire-2d.chain-plan.v1" },
+    "chainPlanJson": { "type": "string" },
+    "chainPlanBase64": { "type": "string" },
+    "chainPlanPath": { "type": "string" },
+    "participantId": { "type": "string" },
+    "participantName": { "type": "string" },
+    "language": { "enum": ["English", "Deutsch"] },
+    "finishBehavior": { "enum": ["staySaved", "resumeCaller", "openNext"] },
+    "callerPackage": { "type": "string" },
+    "callerActivity": { "type": "string" },
+    "nextPackage": { "type": "string" },
+    "nextActivity": { "type": "string" },
+    "targetPackage": { "type": "string" },
+    "targetActivity": { "type": "string" },
+    "autoCloseDelayMs": { "type": "integer", "minimum": 0 },
+    "commandReplayLanguage": { "enum": ["English", "Deutsch"] },
+    "commandReplayPlan": { "type": "object" }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,116 @@
+{
+  "schemaVersion": "my-questionnaire-vr.config.v1",
+  "questionnaireId": "custom-presence-check",
+  "questionnaireVersion": "0.1.0",
+  "appVersion": "0.1.0",
+  "uiTextSource": "Assets/StreamingAssets/UIText.txt",
+  "languages": [
+    "English",
+    "Deutsch"
+  ],
+  "participantFields": [
+    { "id": "name", "type": "text", "required": true },
+    { "id": "age", "type": "integer", "required": true },
+    { "id": "gender", "type": "singleChoice", "required": true },
+    { "id": "consent", "type": "checkbox", "required": true }
+  ],
+  "blocks": [
+    {
+      "id": "demographics",
+      "type": "demographics"
+    },
+    {
+      "id": "maia2",
+      "type": "likert",
+      "source": "Assets/StreamingAssets/MAIA2_Questions.json",
+      "target": "Assets/StreamingAssets/MAIA2_Questions.json",
+      "expectedItemCount": 37,
+      "min": 0,
+      "max": 5,
+      "wholeNumbers": true,
+      "anchors": {
+        "left": "Never",
+        "right": "Always"
+      },
+      "scoreGroups": [
+        { "id": "noticing", "label": "Noticing", "items": [1, 2, 3, 4] },
+        { "id": "not_distracting", "label": "Not-Distracting", "items": [5, 6, 7, 8, 9, 10] },
+        { "id": "not_worrying", "label": "Not-Worrying", "items": [11, 12, 13, 14, 15] },
+        { "id": "attention_regulation", "label": "Attention Regulation", "items": [16, 17, 18, 19, 20, 21, 22] },
+        { "id": "emotional_awareness", "label": "Emotional Awareness", "items": [23, 24, 25, 26, 27] },
+        { "id": "self_regulation", "label": "Self-Regulation", "items": [28, 29, 30, 31] },
+        { "id": "body_listening", "label": "Body Listening", "items": [32, 33, 34] },
+        { "id": "trusting", "label": "Trusting", "items": [35, 36, 37] }
+      ]
+    },
+    {
+      "id": "pictographic",
+      "type": "pictographic",
+      "choices": ["A", "B", "C", "D", "E", "F", "G", "H"],
+      "prompts": [
+        {
+          "id": "perceived_body_boundaries",
+          "imageFileName": "1.PerceivedBodyBoundariesScale.png",
+          "source": "Assets/StreamingAssets/PictographicScales/1.PerceivedBodyBoundariesScale.png",
+          "choices": ["A", "B", "C", "D", "E", "F", "G"]
+        },
+        {
+          "id": "self_extension",
+          "imageFileName": "2.SpatialFrameReferenceContinuum.png",
+          "source": "Assets/StreamingAssets/PictographicScales/2.SpatialFrameReferenceContinuum.png",
+          "choices": ["A", "B", "C", "D", "E", "F", "G", "H"]
+        },
+        {
+          "id": "small_self",
+          "imageFileName": "3.SmallSelf.png",
+          "source": "Assets/StreamingAssets/PictographicScales/3.SmallSelf.png",
+          "choices": ["A", "B", "C", "D", "E", "F", "G"]
+        }
+      ]
+    },
+    {
+      "id": "viscereality",
+      "type": "slider",
+      "expectedItemCount": 6,
+      "min": 0,
+      "max": 100,
+      "wholeNumbers": true,
+      "anchors": {
+        "left": "Not at all",
+        "right": "Extremely"
+      },
+      "languages": {
+        "English": {
+          "target": "Assets/StreamingAssets/Questions_English.txt",
+          "items": [
+            "I felt oriented in the virtual environment.",
+            "I could tell where my body ended and the virtual space began.",
+            "I felt calm while answering the questionnaire.",
+            "The virtual scene felt stable around me.",
+            "I noticed changes in my breathing during the experience.",
+            "I would feel comfortable repeating this task."
+          ]
+        },
+        "Deutsch": {
+          "target": "Assets/StreamingAssets/Questions_Deutsch.txt",
+          "items": [
+            "Ich fuehlte mich in der virtuellen Umgebung orientiert.",
+            "Ich konnte erkennen, wo mein Koerper endete und der virtuelle Raum begann.",
+            "Ich fuehlte mich beim Beantworten des Fragebogens ruhig.",
+            "Die virtuelle Szene fuehlte sich um mich herum stabil an.",
+            "Ich bemerkte Veraenderungen meiner Atmung waehrend der Erfahrung.",
+            "Ich wuerde mich wohl fuehlen, diese Aufgabe zu wiederholen."
+          ]
+        }
+      }
+    },
+    {
+      "id": "end",
+      "type": "blackScreen"
+    }
+  ],
+  "exports": {
+    "destination": "Application.persistentDataPath/QuestionnaireExports",
+    "formats": ["json", "csv"]
+  }
+}

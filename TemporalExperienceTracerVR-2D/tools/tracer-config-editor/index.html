@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Temporal Tracer Config Editor</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Segoe UI, Arial, sans-serif;
+      background: #f5f7fa;
+      color: #151923;
+    }
+    body {
+      margin: 0;
+    }
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 28px;
+      margin: 0 0 18px;
+      letter-spacing: 0;
+    }
+    h2 {
+      font-size: 18px;
+      margin: 0 0 12px;
+    }
+    section {
+      margin: 0 0 18px;
+      padding: 18px;
+      background: #ffffff;
+      border: 1px solid #d8dee8;
+      border-radius: 8px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #3b4350;
+    }
+    input, textarea {
+      font: inherit;
+      font-weight: 400;
+      padding: 10px;
+      border: 1px solid #bcc5d2;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #151923;
+      min-width: 0;
+    }
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+    }
+    .wide {
+      grid-column: span 2;
+    }
+    .full {
+      grid-column: 1 / -1;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    button {
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid #8aa0b8;
+      border-radius: 6px;
+      background: #0f766e;
+      color: white;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: #ffffff;
+      color: #1f2937;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #111318;
+      color: #e8edf5;
+      border-radius: 8px;
+      padding: 14px;
+      max-height: 420px;
+      overflow: auto;
+    }
+    @media (max-width: 860px) {
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Temporal Tracer Config Editor</h1>
+
+    <section>
+      <h2>Axis</h2>
+      <div class="grid">
+        <label>Duration value<input id="durationValue" type="number" min="1" value="10"></label>
+        <label>Duration unit<input id="durationUnit" value="min"></label>
+        <label>Y min<input id="yMin" type="number" value="0"></label>
+        <label>Y max<input id="yMax" type="number" value="100"></label>
+        <label>SVG width<input id="viewBoxWidth" type="number" min="10" value="1000"></label>
+        <label>SVG height<input id="viewBoxHeight" type="number" min="10" value="100"></label>
+        <label>Start gate %<input id="startGatePercent" type="number" min="0" max="49" value="5"></label>
+        <label>End gate %<input id="endGatePercent" type="number" min="51" max="100" value="95"></label>
+        <label>Sample count<input id="targetSampleCount" type="number" min="2" value="1000"></label>
+        <label>Stroke width<input id="strokeWidth" type="number" min="0.1" step="0.1" value="2.5"></label>
+        <label>Trace color<input id="traceColor" value="#28D17C"></label>
+        <label>Grid color<input id="gridColor" value="#7F8794"></label>
+        <label class="wide">Top label English<input id="topLabelEnglish" value="Yes, very much more than usual"></label>
+        <label class="wide">Bottom label English<input id="bottomLabelEnglish" value="No, not more than usual"></label>
+        <label class="wide">Top label Deutsch<input id="topLabelDeutsch" value="Ja, sehr viel mehr als gewoehnlich"></label>
+        <label class="wide">Bottom label Deutsch<input id="bottomLabelDeutsch" value="Nein, nicht mehr als gewoehnlich"></label>
+        <label class="wide">Horizontal grid labels, top to bottom<textarea id="horizontalGridLabels">100
+90
+80
+70
+60
+50
+40
+30
+20
+10
+0</textarea></label>
+        <label class="wide">Vertical grid labels, left to right<textarea id="verticalGridLabels">0min
+1min
+2min
+3min
+4min
+5min
+6min
+7min
+8min
+9min
+10min</textarea></label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Trace Items</h2>
+      <div class="grid">
+        <label class="wide">English items, one label|message per line<textarea id="englishItems">Intro|This window shows descriptions of experiences. Draw a line from the far left to the far right of the canvas.
+Anxiety|I was afraid without being able to say exactly why.
+Audio-Visual Synesthesia|Sounds seemed to influence what I saw.</textarea></label>
+        <label class="wide">Deutsch items, one label|message per line<textarea id="germanItems">Intro|Dieses Fenster zeigt Beschreibungen von Erlebnissen.
+Angst|Ich hatte Angst, ohne genau sagen zu koennen weshalb.
+Audio-Visuelle Synaesthesie|Toene schienen das, was ich sah, zu beeinflussen.</textarea></label>
+      </div>
+    </section>
+
+    <section>
+      <div class="actions">
+        <button id="generate">Generate Config</button>
+        <button id="download" class="secondary">Download JSON</button>
+        <button id="copy" class="secondary">Copy JSON</button>
+      </div>
+      <pre id="output"></pre>
+    </section>
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const lines = value => value.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+    const items = value => lines(value).map(line => {
+      const sep = line.indexOf('|');
+      if (sep < 0) return { label: line, message: '' };
+      return { label: line.slice(0, sep).trim(), message: line.slice(sep + 1).trim() };
+    });
+    function num(id) { return Number($(id).value); }
+    function val(id) { return $(id).value.trim(); }
+    function config() {
+      return {
+        schema: 'temporal-experience-tracer.config.v1',
+        tracerId: 'temporal-experience-tracer',
+        tracerVersion: new Date().toISOString().slice(0, 10),
+        appVersion: '0.1.0',
+        axis: {
+          viewBoxWidth: num('viewBoxWidth'),
+          viewBoxHeight: num('viewBoxHeight'),
+          durationValue: num('durationValue'),
+          durationUnit: val('durationUnit'),
+          yMin: num('yMin'),
+          yMax: num('yMax'),
+          startGatePercent: num('startGatePercent'),
+          endGatePercent: num('endGatePercent'),
+          targetSampleCount: num('targetSampleCount'),
+          strokeWidth: num('strokeWidth'),
+          traceColor: val('traceColor'),
+          axisColor: '#F4F5F7',
+          gridColor: val('gridColor'),
+          topLabel: { English: val('topLabelEnglish'), Deutsch: val('topLabelDeutsch') },
+          bottomLabel: { English: val('bottomLabelEnglish'), Deutsch: val('bottomLabelDeutsch') },
+          horizontalGridLabels: lines($('horizontalGridLabels').value),
+          verticalGridLabels: lines($('verticalGridLabels').value)
+        },
+        ui: {},
+        items: {
+          English: items($('englishItems').value),
+          Deutsch: items($('germanItems').value)
+        }
+      };
+    }
+    function render() {
+      const text = JSON.stringify(config(), null, 2);
+      $('output').textContent = text;
+      return text;
+    }
+    $('generate').addEventListener('click', render);
+    $('copy').addEventListener('click', async () => navigator.clipboard.writeText(render()));
+    $('download').addEventListener('click', () => {
+      const blob = new Blob([render()], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'TemporalTracerConfig.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+    render();
+  </script>
+</body>
+</html>

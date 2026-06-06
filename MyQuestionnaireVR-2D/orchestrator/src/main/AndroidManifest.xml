@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <queries>
+        <intent>
+            <action android:name="org.mesmerprism.viscereality.CHAIN_COMMAND" />
+        </intent>
+        <intent>
+            <action android:name="org.mesmerprism.viscereality.questionnaires2d.RUN" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme">
+        <activity
+            android:name=".ExperimentOrchestratorActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:resizeableActivity="true">
+            <layout
+                android:defaultWidth="960dp"
+                android:defaultHeight="540dp"
+                android:minWidth="480dp"
+                android:minHeight="320dp" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="org.mesmerprism.viscereality.orchestrator.BROKER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

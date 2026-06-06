@@ -1,0 +1,37 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'org.mesmerprism.viscereality.questionnaires2d'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'org.mesmerprism.viscereality.questionnaires2d'
+        minSdk 29
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests.includeAndroidResources = true
+        unitTests.all {
+            systemProperty 'questionnaire.render.enabled', System.getProperty('questionnaire.render.enabled', 'false')
+            systemProperty 'questionnaire.render.outputDir', System.getProperty('questionnaire.render.outputDir', '')
+            systemProperty 'questionnaire.render.sizes', System.getProperty('questionnaire.render.sizes', '1280x800,900x800')
+            systemProperty 'questionnaire.render.runId', System.getProperty('questionnaire.render.runId', '')
+        }
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+}

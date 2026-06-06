@@ -1,0 +1,43 @@
+param(
+    [string]$ProjectPath = (Split-Path -Parent $PSScriptRoot),
+    [string]$OutputApk = ""
+)
+
+$ErrorActionPreference = 'Stop'
+$PSNativeCommandUseErrorActionPreference = $false
+
+if ([string]::IsNullOrWhiteSpace($OutputApk)) {
+    $OutputApk = Join-Path $ProjectPath 'Builds\ViscerealityExperimentOrchestrator.apk'
+}
+
+$gradle = Join-Path $ProjectPath 'gradlew.bat'
+if (-not (Test-Path -LiteralPath $gradle)) {
+    throw "Gradle wrapper not found: $gradle"
+}
+
+& $gradle --no-daemon --max-workers=1 :orchestrator:assembleDebug
+if ($LASTEXITCODE -ne 0) {
+    throw "orchestrator Gradle build failed with exit code $LASTEXITCODE"
+}
+
+$builtApk = Join-Path $ProjectPath 'orchestrator\build\outputs\apk\debug\orchestrator-debug.apk'
+if (-not (Test-Path -LiteralPath $builtApk)) {
+    throw "Built orchestrator APK not found: $builtApk"
+}
+
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $OutputApk) | Out-Null
+Copy-Item -LiteralPath $builtApk -Destination $OutputApk -Force
+
+$summary = [ordered]@{
+    schemaVersion = 'viscereality.orchestrator-build.v1'
+    status = 'pass'
+    apk = (Resolve-Path -LiteralPath $OutputApk).Path
+    bytes = (Get-Item -LiteralPath $OutputApk).Length
+    sha256 = (Get-FileHash -LiteralPath $OutputApk -Algorithm SHA256).Hash
+    completedAt = (Get-Date).ToString('o')
+}
+$summaryPath = [System.IO.Path]::ChangeExtension($OutputApk, '.build-summary.json')
+$summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
+
+Write-Host "Experiment orchestrator APK: $OutputApk"
+Write-Host "Build summary: $summaryPath"

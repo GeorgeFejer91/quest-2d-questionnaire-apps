@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "my-questionnaire-2d.chain-plan.v1",
+  "chainId": "questionnaire-then-peripersonal-space-right",
+  "questionnaireId": "viscereality-maia2",
+  "questionnaireVersion": "1.0.0",
+  "defaultFinishBehavior": "resumeCaller",
+  "steps": [
+    {
+      "id": "questionnaire-before-peripersonal-space-right",
+      "type": "questionnaire",
+      "package": "org.mesmerprism.viscereality.questionnaires2d",
+      "activity": ".MainActivity",
+      "extras": {
+        "mq.sessionId": "questionnaire-before-peripersonal-space-right-session",
+        "mq.experimentId": "viscereality-peripersonal",
+        "mq.scenarioId": "pre-peripersonal-questionnaire",
+        "mq.trialId": "trial-01",
+        "mq.participantId": "P001",
+        "mq.participantName": "P001",
+        "mq.language": "English",
+        "mq.autoCloseDelayMs": 2000
+      }
+    },
+    {
+      "id": "peripersonal-space-right-wrapper",
+      "type": "scenario",
+      "package": "org.mesmerprism.viscereality.chainhookwrapper",
+      "activity": ".ChainHookActivity",
+      "action": "org.mesmerprism.viscereality.CHAIN_COMMAND",
+      "command": "launchTarget",
+      "extras": {
+        "targetPackage": "com.Viscereality.ViscerealityPeriPersonalSpaceRight",
+        "targetActivity": "com.unity3d.player.UnityPlayerGameActivity",
+        "scenarioId": "peripersonal-space-right"
+      }
+    }
+  ]
+}

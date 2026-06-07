@@ -176,6 +176,7 @@ assert(document.getElementById("pipelineCommands").textContent.includes("quest-v
 assert(document.getElementById("pipelineCommands").textContent.includes("render-questionnaire-visuals.ps1"), "Foreground render command was not rendered.");
 assert(document.getElementById("pipelineCommands").textContent.includes("quest-chain-validate.ps1"), "Quest chain validation command was not rendered.");
 assert(document.getElementById("pipelineCommands").textContent.includes("quest-broker-chain-validate.ps1"), "Quest broker chain validation command was not rendered.");
+assert(document.getElementById("pipelineCommands").textContent.includes("validate-builder-to-quest-workflow.ps1"), "Full builder-to-Quest workflow command was not rendered.");
 
 context.__api.applyTriggerCatalog({
   schemaVersion: "mq.quest_questionnaire_trigger_catalog.v1",
@@ -274,7 +275,7 @@ const summary = {
   blockRegistryDownloadAction: "pass",
   chainPlanDownloadAction: "pass",
   defaultRegisteredBlocks: initial.experimentBlockRegistry.blocks.length,
-  pipelineCommands: 6
+  pipelineCommands: 7
 };
 
 if (outputDir) {

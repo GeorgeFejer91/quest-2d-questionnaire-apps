@@ -211,6 +211,24 @@ try {
         throw "Companion generator summary was not written: $($generate.summaryPath)"
     }
 
+    Write-Host "== Validate builder-to-Quest workflow through companion =="
+    $workflowBody = @{
+        config = $handoffConfig
+        skipBuild = $true
+        skipQuestionnaireRender = $false
+        skipTemporalRender = $false
+        runQuestReadiness = $false
+        runQuestDirectHandoff = $false
+    }
+    $workflow = Invoke-Json -Method POST -Uri "$baseUrl/api/validate-workflow" -Headers $headers -Body $workflowBody -TimeoutSec 1800
+    Add-Progress 'validate-workflow-complete'
+    if ($workflow.status -ne 'ok') {
+        throw "Companion validate-workflow failed."
+    }
+    if ($workflow.workflowStatus -eq 'fail' -or [string]::IsNullOrWhiteSpace([string]$workflow.summaryPath) -or -not (Test-Path -LiteralPath $workflow.summaryPath)) {
+        throw "Companion validate-workflow did not produce a usable workflow summary."
+    }
+
     $renderPreviewRequested = -not $SkipRenderPreview
     $summaryStatus = 'pass'
     $summary = [ordered]@{
@@ -237,6 +255,8 @@ try {
             apk = $generate.apk
             skipBuild = [bool]$SkipApkBuild
             renderPreview = $renderPreviewRequested
+            workflowStatus = $workflow.workflowStatus
+            workflowSummaryPath = $workflow.summaryPath
         }
         completedAt = (Get-Date).ToString('o')
     }

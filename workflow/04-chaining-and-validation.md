@@ -106,6 +106,18 @@ headset is asleep or Horizon is already focused on
 dialog before claiming a handoff result. Once Unity is launched, the validator
 only observes and pulls evidence.
 
+For a single evidence matrix from GUI config through local software, APKs,
+local renderers, Unity bridge static checks, APK handoff preflight, and Quest
+readiness, use:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\validate-builder-to-quest-workflow.ps1 -ConfigPath .\MyQuestionnaireVR-2D\QuestionnaireConfigs\generated\viscereality-maia2.config.json -RunQuestReadiness -Serial <quest-serial>
+```
+
+The builder GUI's `Validate workflow` button calls the same path through the
+local companion. Treat `pending` or `blocked` Quest trial rows as honest
+residual gates, not as local pipeline failures.
+
 ## ADB Baseline
 
 Start device-facing work with read-only discovery:

@@ -389,6 +389,7 @@ function New-StatusPayload {
             'save-config',
             'validate-config',
             'generate-apk',
+            'validate-workflow',
             'dependency-status',
             'install-dependencies'
         )
@@ -401,6 +402,7 @@ function New-StatusPayload {
         $payload.tools = [ordered]@{
             validateConfig = Join-Path $ProjectPath 'tools\validate-questionnaire-config.ps1'
             generateApk = Join-Path $ProjectPath 'tools\generate-questionnaire-apk.ps1'
+            validateWorkflow = Join-Path $ProjectPath 'tools\validate-builder-to-quest-workflow.ps1'
         }
     }
     return $payload
@@ -533,6 +535,73 @@ function Handle-Request {
             runId = $runId
             exitCode = $result.exitCode
             apk = $apk
+            summaryPath = $summaryPath
+            summary = $summary
+            output = $result.output
+        })
+        return
+    }
+
+    if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/validate-workflow') {
+        Assert-OriginAndToken -Request $request
+        $payload = Receive-JsonPayload -Request $request
+        $configPath = Save-ConfigPayload -Payload $payload
+        $runId = 'builder-workflow-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+        $script = Join-Path $ProjectPath 'tools\validate-builder-to-quest-workflow.ps1'
+        $arguments = @(
+            '-NoProfile',
+            '-ExecutionPolicy',
+            'Bypass',
+            '-File',
+            $script,
+            '-ConfigPath',
+            $configPath,
+            '-ProjectPath',
+            $ProjectPath,
+            '-ReferenceProjectPath',
+            $ReferenceProjectPath,
+            '-RunId',
+            $runId,
+            '-InvokedByCompanion'
+        )
+
+        if ($payload.PSObject.Properties.Name -contains 'skipBuild' -and [bool]$payload.skipBuild) {
+            $arguments += '-SkipApkBuild'
+        }
+        if ($payload.PSObject.Properties.Name -contains 'skipQuestionnaireRender' -and [bool]$payload.skipQuestionnaireRender) {
+            $arguments += '-SkipQuestionnaireRender'
+        }
+        if ($payload.PSObject.Properties.Name -contains 'skipTemporalRender' -and [bool]$payload.skipTemporalRender) {
+            $arguments += '-SkipTemporalRender'
+        }
+        if ($payload.PSObject.Properties.Name -contains 'runQuestReadiness' -and [bool]$payload.runQuestReadiness) {
+            $arguments += '-RunQuestReadiness'
+        }
+        if ($payload.PSObject.Properties.Name -contains 'runQuestDirectHandoff' -and [bool]$payload.runQuestDirectHandoff) {
+            $arguments += '-RunQuestDirectHandoff'
+        }
+        if ($payload.PSObject.Properties.Name -contains 'skipInstall' -and [bool]$payload.skipInstall) {
+            $arguments += '-SkipInstall'
+        }
+        if ($payload.PSObject.Properties.Name -contains 'questSerial' -and -not [string]::IsNullOrWhiteSpace([string]$payload.questSerial)) {
+            $arguments += @('-Serial', [string]$payload.questSerial)
+        }
+        if ($payload.PSObject.Properties.Name -contains 'questTrials' -and [int]$payload.questTrials -gt 0) {
+            $arguments += @('-QuestTrials', [string][int]$payload.questTrials)
+        }
+        if ($payload.PSObject.Properties.Name -contains 'waitForReadySeconds' -and [int]$payload.waitForReadySeconds -ge 0) {
+            $arguments += @('-WaitForReadySeconds', [string][int]$payload.waitForReadySeconds)
+        }
+
+        $result = Invoke-ProjectPowerShell -Arguments $arguments
+        $summaryPath = Join-Path $ProjectPath ("artifacts\builder-to-quest-workflow\$runId\builder-to-quest-workflow-summary.json")
+        $summary = Read-JsonFileIfExists -Path $summaryPath
+        Write-JsonResponse -Context $Context -StatusCode ($(if ($result.exitCode -eq 0) { 200 } else { 500 })) -Value ([ordered]@{
+            status = if ($result.exitCode -eq 0) { 'ok' } else { 'error' }
+            workflowStatus = if ($summary) { $summary.status } else { 'missing-summary' }
+            configPath = $configPath
+            runId = $runId
+            exitCode = $result.exitCode
             summaryPath = $summaryPath
             summary = $summary
             output = $result.output

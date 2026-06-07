@@ -959,12 +959,25 @@
                 <input id="appRenderPreview" type="checkbox">
                 <span>Render preview</span>
               </label>
+              <label class="toggle-row">
+                <input id="workflowQuestReadiness" type="checkbox">
+                <span>Check connected Quest readiness</span>
+              </label>
+              <label class="toggle-row">
+                <input id="workflowDirectHandoff" type="checkbox">
+                <span>Run direct PendingIntent headset trials</span>
+              </label>
+              <label>
+                Quest serial
+                <input id="workflowQuestSerial" placeholder="2G0YC1ZG1002QL" spellcheck="false">
+              </label>
             </div>
             <div class="button-row" style="margin-top: 10px;">
               <button id="checkBackendButton" type="button">Check backend</button>
               <button id="saveConfigAppButton" type="button">Save config</button>
               <button id="validateConfigAppButton" type="button">Validate config</button>
               <button id="generateApkAppButton" class="primary" type="button">Generate APK</button>
+              <button id="validateWorkflowAppButton" type="button">Validate workflow</button>
             </div>
             <pre id="appBackendLog" style="margin-top: 10px; max-height: 280px;"></pre>
           </div>
@@ -2407,6 +2420,10 @@
         {
           label: "6. Quest brokered chain/export",
           command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\quest-broker-chain-validate.ps1 -Serial <quest-serial> -Apk ${apkPath} -ConfigPath ${configPath} -SkipBuild`
+        },
+        {
+          label: "7. Full builder-to-Quest workflow evidence",
+          command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\validate-builder-to-quest-workflow.ps1 -ConfigPath ${configPath} -RunQuestReadiness -Serial <quest-serial>`
         }
       ];
 
@@ -3155,6 +3172,30 @@
       }
     }
 
+    async function validateWorkflowWithApp() {
+      try {
+        const runDirect = byId("workflowDirectHandoff").checked;
+        const runReadiness = byId("workflowQuestReadiness").checked || runDirect;
+        setAppBackendStatus("Running builder-to-Quest workflow validation...", "");
+        const data = await callAppBackend("/api/validate-workflow", {
+          config: buildConfig(),
+          skipBuild: false,
+          skipQuestionnaireRender: false,
+          skipTemporalRender: false,
+          runQuestReadiness: runReadiness,
+          runQuestDirectHandoff: runDirect,
+          questSerial: byId("workflowQuestSerial").value.trim(),
+          questTrials: runDirect ? 10 : 1,
+          waitForReadySeconds: runDirect ? 30 : 0
+        });
+        setAppBackendStatus(`Workflow validation ${data.workflowStatus}; summary: ${data.summaryPath}`, data.workflowStatus === "pass" ? "ok" : "warn");
+        setAppBackendLog(data);
+      } catch (error) {
+        setAppBackendStatus(error.message || String(error), "error");
+        setAppBackendLog(error.backendData || error.message || String(error));
+      }
+    }
+
     initializeAppBackendControls();
     initializeQuestionnairePalette();
     byId("exampleApkFolderLink").href = exampleApkFolderUrl;
@@ -3170,6 +3211,7 @@
     byId("saveConfigAppButton").addEventListener("click", saveConfigWithApp);
     byId("validateConfigAppButton").addEventListener("click", validateConfigWithApp);
     byId("generateApkAppButton").addEventListener("click", generateApkWithApp);
+    byId("validateWorkflowAppButton").addEventListener("click", validateWorkflowWithApp);
     byId("includeMaia").addEventListener("change", () => {
       blocks = normalizeBlocks(blocks);
       makeBlockList();

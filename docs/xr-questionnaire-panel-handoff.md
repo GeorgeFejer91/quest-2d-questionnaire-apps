@@ -165,3 +165,14 @@ The 2026-06-07 full companion pass wrote
 and generated
 `MyQuestionnaireVR-2D\Builds\viscereality-maia2-1.0.0.apk` through the local
 `/api/generate-apk` endpoint.
+
+The end-to-end builder-to-Quest evidence matrix is:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\validate-builder-to-quest-workflow.ps1 -ConfigPath .\MyQuestionnaireVR-2D\QuestionnaireConfigs\generated\viscereality-maia2.config.json -RunQuestReadiness -Serial <quest-serial>
+```
+
+The hosted/offline GUI exposes the same gate through the companion
+`/api/validate-workflow` endpoint. A `warn` status is expected when the
+physical 10/10 direct PendingIntent Quest trials are not requested or cannot
+start because the headset is asleep.

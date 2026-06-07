@@ -118,3 +118,18 @@ who can clear the system launch gate.
 
 Generalizable rule: for XR-to-panel handoff trials, prove the APK contract and
 headset readiness before interpreting missing panel exports as a handoff bug.
+
+## Evidence Matrices Beat Narrative Confidence
+
+Problem: GUI, companion, APK generation, local renderers, Unity bridge checks,
+APK preflight, and Quest handoff trials can each pass in isolation, but a
+summary like "the pipeline works" hides which gates were actually exercised.
+
+Solution: keep a single workflow validator that writes a requirement matrix.
+`validate-builder-to-quest-workflow.ps1` records each gate as `pass`, `warn`,
+`pending`, `blocked`, `skipped`, or `fail`, and the companion exposes the same
+path through `/api/validate-workflow` for the GUI's `Validate workflow` button.
+
+Generalizable rule: for multi-tool experiment builders, make the validation
+artifact line up with the user's promised workflow instead of relying on a
+collection of unrelated green checks.

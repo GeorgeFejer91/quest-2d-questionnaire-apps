@@ -179,7 +179,9 @@ foreground-linked Android render pack.
 Prove the hosted/offline GUI's local companion API path itself. This starts the
 companion, checks pairing-token enforcement, saves and validates the generated
 handoff config through HTTP, and drives `/api/generate-apk` so the PC software
-creates the APK and local render evidence:
+creates the APK and local render evidence. It also calls `/api/validate-workflow`
+so the companion proves the same builder-to-Quest evidence matrix that the GUI's
+`Validate workflow` button runs:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-builder-companion-workflow.ps1
@@ -187,6 +189,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-builder-com
 
 Use `-SkipApkBuild` only for faster diagnostics when APK assembly has already
 been covered by another gate.
+
+Run the full builder-to-Quest evidence spine for a saved GUI config:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-builder-to-quest-workflow.ps1 `
+  -ConfigPath .\QuestionnaireConfigs\generated\viscereality-maia2.config.json `
+  -RunQuestReadiness `
+  -Serial <quest-serial>
+```
+
+This validates the config, generates or locates the questionnaire APK, creates
+local questionnaire and tracer render evidence, checks the Unity
+`mq.returnPendingIntent` bridge contract, dry-runs APK package/activity/catalog
+preflight, and records which Quest gates remain pending or blocked.
 
 Run the full local ladder from builder smoke test through generated APK and
 Android render preview:

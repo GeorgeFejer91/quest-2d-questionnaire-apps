@@ -64,6 +64,14 @@ Use absolute dates.
   or Horizon is already focused on the controller-required launch dialog, the
   trial is `blocked` with `initialUnityLaunchAttempted=false` and Unity is not
   launched.
+- Added `MyQuestionnaireVR-2D/tools/validate-builder-to-quest-workflow.ps1`,
+  a builder-to-Quest requirement matrix covering GUI/companion invocation,
+  config validation, APK generation, local questionnaire/tracer render packs,
+  Unity PendingIntent bridge static checks, direct handoff APK preflight, and
+  explicit pending/blocked Quest trial gates.
+- Added companion endpoint `/api/validate-workflow` and a builder `Validate
+  workflow` button so the hosted/offline GUI can trigger that matrix through
+  trusted local PC software.
 - Rebuilt the local `AweGreatDictatorUnity` demo APK after fixing the custom
   Android manifest path; the earlier APK launched Unity's stock Activity even
   though the trigger catalog named the custom return Activity.

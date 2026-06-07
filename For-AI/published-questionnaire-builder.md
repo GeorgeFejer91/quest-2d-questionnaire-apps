@@ -80,6 +80,10 @@ without installing or launching on Quest.
 `Validate workflow` should use the same `Preflight only` toggle to include
 direct handoff preflight in the aggregate workflow matrix by sending
 `dryRunQuestDirectHandoff=true` and `skipInstall=true` to `/api/validate-workflow`.
+`Run headset sequence` should keep reusing the same companion endpoints as the
+individual controls, in order: save, validate, generate with tests and local
+render preview, readiness, install, replay/export, and direct handoff preflight
+or live trials. Do not let it become a separate hidden backend workflow.
 
 ## Important Files
 

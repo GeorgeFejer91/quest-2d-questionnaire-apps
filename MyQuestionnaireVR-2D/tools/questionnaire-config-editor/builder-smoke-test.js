@@ -142,7 +142,7 @@ function loadEditor() {
   };
   context.window = context;
   vm.createContext(context);
-  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, refresh, buildExperimentBlockRegistry, buildChainPlan, directHandoffWorkflowOptions, workflowValidationPayload };`, context, {
+  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, refresh, buildExperimentBlockRegistry, buildChainPlan, directHandoffWorkflowOptions, workflowValidationPayload, runHeadsetSequenceWithApp };`, context, {
     filename: htmlPath
   });
   return { context, document };
@@ -172,6 +172,8 @@ assert(document.getElementById("generatorCommand").textContent.includes("generat
 assert(document.getElementById("downloadQualityButton"), "Quality report download button was not rendered.");
 assert(document.getElementById("downloadBlockRegistryButton"), "Block registry download button was not rendered.");
 assert(document.getElementById("downloadChainPlanButton"), "Chain plan download button was not rendered.");
+assert(document.getElementById("headsetSequenceAppButton"), "Headset sequence button was not rendered.");
+assert(typeof context.__api.runHeadsetSequenceWithApp === "function", "Headset sequence runner should be exposed.");
 assert(document.getElementById("pipelineCommands").textContent.includes("quest-validate.ps1"), "Quest validation command was not rendered.");
 assert(document.getElementById("pipelineCommands").textContent.includes("render-questionnaire-visuals.ps1"), "Foreground render command was not rendered.");
 assert(document.getElementById("pipelineCommands").textContent.includes("quest-chain-validate.ps1"), "Quest chain validation command was not rendered.");
@@ -302,6 +304,7 @@ const summary = {
   qualityReportDownloadAction: "pass",
   blockRegistryDownloadAction: "pass",
   chainPlanDownloadAction: "pass",
+  headsetSequenceAction: "pass",
   workflowPreflightPayloadAction: "pass",
   defaultRegisteredBlocks: initial.experimentBlockRegistry.blocks.length,
   pipelineCommands: 7

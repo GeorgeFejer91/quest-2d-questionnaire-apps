@@ -232,6 +232,14 @@ not bypass product-path readiness: if the headset stays asleep or Horizon
 keeps the launch-check dialog focused, the run remains `blocked` with
 readiness samples instead of launching Unity.
 
+Use `Run headset sequence` in the builder runner for the ordered GUI path:
+save config, validate config, generate the APK with unit tests and a local
+render preview, detect Quest readiness, install the generated APK, run
+replay/export, and then run direct handoff preflight or live trials according
+to the existing `Preflight only` toggle. This button reuses the same companion
+endpoints as the individual controls; it is an orchestration convenience, not
+a different validation path.
+
 Run the full local ladder from builder smoke test through generated APK and
 Android render preview:
 

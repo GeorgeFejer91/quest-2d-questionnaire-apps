@@ -622,3 +622,41 @@ Generalizable rule: hosted dashboards should package local evidence through a
 typed, authenticated companion endpoint. Do not expose arbitrary local paths;
 bundle only known artifact-file types under known artifact roots, and include a
 manifest so the zip itself is auditable.
+
+## One-Button Runs Should Reuse Proven Jobs
+
+Problem: a dashboard can expose every required step as a separate button while
+still making the full product path feel unfinished. Reviewers and operators
+then have to remember the correct order: save, validate, generate APK, render,
+detect Quest, install, replay/export, and direct handoff.
+
+Solution: add a `Run headset sequence` button that calls the same companion
+endpoints as the individual controls in the same order. It always requests the
+local render preview during APK generation, keeps the existing `Preflight only`
+toggle for direct handoff safety, and reports readiness/product-path warnings
+without inventing a separate backend contract.
+
+Generalizable rule: make the happy path explicit in the GUI, but do not fork
+validation semantics. A sequence button should compose already-tested jobs so
+the one-click path and the step-by-step path produce comparable receipts.
+
+## Unity Must Own Panel-Focus Media Pause
+
+Problem: launching a 2D questionnaire or tracer over a Unity Quest app does not
+by itself guarantee clean media pause/resume. Quest foreground switching can
+pause, focus, or resume the Unity Activity in different orders, and Unity may
+keep the first returned Activity intent after it has already moved on to a
+second trigger. In live validation this looked like a frozen video after the
+first questionnaire return, and later like the trigger-2 tracer return being
+missed or confused with the stale trigger-1 result.
+
+Solution: source apps should explicitly enter a panel-focus mode before
+launching a questionnaire/tracer: pause `VideoPlayer`, remember whether playback
+should resume, actively poll for completion while waiting for a panel result,
+consume/clear handled result extras, and accept only the `mq.triggerId` that
+matches the current waiting phase. Unity bridge callbacks should create a
+distinct return `PendingIntent` per trigger or chain step.
+
+Generalizable rule: Android/Quest can move focus between APKs, but experiment
+continuity belongs to the source app. Treat panel launch as a source-app state
+transition, not as an OS-level media pause guarantee.

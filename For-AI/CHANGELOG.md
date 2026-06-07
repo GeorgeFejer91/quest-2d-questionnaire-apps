@@ -193,3 +193,14 @@ Use absolute dates.
   button. Bundles are built from artifact-root JSON summaries and referenced
   JSON/TXT/LOG/CSV/PNG evidence, include a manifest, and are now covered by the
   companion workflow validator.
+- Added a GUI `Run headset sequence` orchestration button that reuses the
+  companion save, validate, APK generation, Quest readiness, install,
+  replay/export, and direct handoff endpoints in order, with local render
+  preview forced for the evidence-oriented sequence.
+- Fixed Temporal Tracer launch parsing so Unity string extras such as
+  `mq.autoTrace="true"` activate command replay the same way ADB boolean extras
+  do.
+- Recorded that Unity source apps must explicitly own panel-focus media pause:
+  pause before launching panels, poll for matching trigger completions, clear
+  handled result intents, and use per-trigger return callbacks rather than
+  relying on Quest foreground switching as a video pause/resume contract.

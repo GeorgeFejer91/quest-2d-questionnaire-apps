@@ -304,12 +304,32 @@ final class TemporalTracerLaunchContext {
             return defaultValue;
         }
         if (intent.hasExtra(extraName)) {
-            return intent.getBooleanExtra(extraName, defaultValue);
+            return boolExtraValue(intent, extraName, defaultValue);
         }
         if (!TextUtils.isEmpty(legacyName) && intent.hasExtra(legacyName)) {
-            return intent.getBooleanExtra(legacyName, defaultValue);
+            return boolExtraValue(intent, legacyName, defaultValue);
         }
         return defaultValue;
+    }
+
+    private static boolean boolExtraValue(Intent intent, String extraName, boolean defaultValue) {
+        Bundle extras = intent.getExtras();
+        if (extras != null) {
+            Object value = extras.get(extraName);
+            if (value instanceof Boolean) {
+                return (Boolean) value;
+            }
+            if (value instanceof String) {
+                String clean = clean((String) value);
+                if (clean.equalsIgnoreCase("true") || clean.equals("1") || clean.equalsIgnoreCase("yes")) {
+                    return true;
+                }
+                if (clean.equalsIgnoreCase("false") || clean.equals("0") || clean.equalsIgnoreCase("no")) {
+                    return false;
+                }
+            }
+        }
+        return intent.getBooleanExtra(extraName, defaultValue);
     }
 
     private static PendingIntent pendingIntentExtra(Intent intent, String extraName) {

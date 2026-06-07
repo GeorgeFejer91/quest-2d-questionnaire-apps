@@ -89,6 +89,17 @@ The XR app should pause video or experiment progression when it loses focus or
 is paused. It may resume only after it receives `mq.resultStatus=complete` for
 the expected trigger.
 
+Do not rely on Quest foreground switching alone to freeze and resume media.
+Android/OpenXR focus and pause callbacks can arrive differently across headset
+states, and Unity can keep a stale return intent on the Activity after the
+first panel. A trigger-enabled Unity app should explicitly enter a panel-focus
+mode before launching a 2D APK: pause the `VideoPlayer`, remember whether the
+video should resume, poll for a completion result while waiting, consume the
+handled result, and require the returned `mq.triggerId` to match the trigger it
+is currently waiting for. The return `PendingIntent` should also be unique per
+trigger or chain step so later panel returns cannot collapse into an earlier
+callback.
+
 The 2D panel receives normal Quest panel input while focused. It does not own
 the foreground XR app's OpenXR session or raw controller state.
 
@@ -201,6 +212,12 @@ while preserving the dry-run versus physical evidence boundary.
 The `/api/generate-apk` endpoint returns a `generationReceipt` so the GUI's
 APK-generation step can immediately show the generated APK byte/hash evidence
 and local render-preview artifact gate.
+The builder's `Run headset sequence` control strings the trusted local actions
+together for the operator-facing path: save, validate, generate with tests and
+local render preview, detect Quest, install the APK, run replay/export, and
+then run direct handoff preflight or live trials according to the same
+`Preflight only` toggle. It reuses the existing companion endpoints so the
+one-button path and individual-button path share the same evidence semantics.
 The workflow polling endpoint returns a compact `workflowReceipt`, while the
 install, replay/export, and direct handoff polling endpoints return compact
 `jobReceipt` objects. The GUI displays these beside the job status so the

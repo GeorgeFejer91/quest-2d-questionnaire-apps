@@ -5,10 +5,13 @@ public static class QuestQuestionnaireChainBridge
 {
     public const string QuestionnairePackage = "org.viscereality.questionnaires2d";
     public const string QuestionnaireActivity = "org.viscereality.questionnaires2d.MainActivity";
+    public const string TemporalTracerPackage = "org.viscereality.temporaltracer2d";
+    public const string TemporalTracerActivity = "org.viscereality.temporaltracer2d.MainActivity";
     public const string BrokerActivity = "org.viscereality.questionnaires2d.QuestChainBrokerActivity";
     public const string ChainLinkPackage = "org.viscereality.chainlink";
     public const string ChainLinkActivity = "org.viscereality.chainlink.ChainLinkActivity";
     public const string RunAction = "org.viscereality.questionnaires2d.RUN";
+    public const string TemporalTracerRunAction = "org.viscereality.temporaltracer2d.RUN";
     public const string BrokerAction = "org.viscereality.questionnaires2d.BROKER";
     public const string ChainLinkCommandAction = "org.viscereality.chainlink.COMMAND";
     public const string BrokerActionExtra = "mq.brokerAction";
@@ -16,16 +19,36 @@ public static class QuestQuestionnaireChainBridge
     public const string BrokerActivityExtra = "mq.brokerActivity";
     public const string ChainLinkCommandExtra = "mq.command";
     public const string ChainLinkNextBlockCommand = "nextBlock";
+    public const string ChainLinkTriggerCommand = "trigger";
+    public const string HandoffSchemaExtra = "mq.handoffSchema";
+    public const string ReturnPendingIntentExtra = "mq.returnPendingIntent";
+    public const string HandoffSchemaV1 = "mq.handoff.v1";
+    private const int FlagActivityReorderToFront = 0x00020000;
+    private const int FlagActivityNewTask = 0x10000000;
+    private const int FlagActivitySingleTop = 0x20000000;
+    private const int PendingIntentFlagUpdateCurrent = 0x08000000;
+    private const int PendingIntentFlagMutable = 0x02000000;
 
     public static void LaunchQuestionnaire(Dictionary<string, string> extras)
+    {
+        LaunchPanel(QuestionnairePackage, QuestionnaireActivity, RunAction, extras);
+    }
+
+    public static void LaunchTemporalTracer(Dictionary<string, string> extras)
+    {
+        LaunchPanel(TemporalTracerPackage, TemporalTracerActivity, TemporalTracerRunAction, extras);
+    }
+
+    private static void LaunchPanel(string packageName, string activityName, string action, Dictionary<string, string> extras)
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
         using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
         using (var currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
-        using (var intent = new AndroidJavaObject("android.content.Intent", RunAction))
+        using (var intent = new AndroidJavaObject("android.content.Intent", action))
         {
-            intent.Call<AndroidJavaObject>("setClassName", QuestionnairePackage, QuestionnaireActivity);
-            intent.Call<AndroidJavaObject>("addFlags", 0x00020000 | 0x20000000);
+            intent.Call<AndroidJavaObject>("setClassName", packageName, activityName);
+            intent.Call<AndroidJavaObject>("addFlags", FlagActivityReorderToFront | FlagActivitySingleTop);
+            intent.Call<AndroidJavaObject>("putExtra", HandoffSchemaExtra, HandoffSchemaV1);
             if (extras != null)
             {
                 foreach (var pair in extras)
@@ -33,10 +56,14 @@ public static class QuestQuestionnaireChainBridge
                     intent.Call<AndroidJavaObject>("putExtra", pair.Key, pair.Value ?? "");
                 }
             }
+            using (var returnPendingIntent = CreateReturnPendingIntent(currentActivity, extras))
+            {
+                intent.Call<AndroidJavaObject>("putExtra", ReturnPendingIntentExtra, returnPendingIntent);
+            }
             currentActivity.Call("startActivity", intent);
         }
 #else
-        Debug.Log("QuestQuestionnaireChainBridge only launches on Android device builds.");
+        Debug.Log("QuestQuestionnaireChainBridge panel launches only run on Android device builds.");
 #endif
     }
 
@@ -75,7 +102,9 @@ public static class QuestQuestionnaireChainBridge
         using (var intent = new AndroidJavaObject("android.content.Intent", ChainLinkCommandAction))
         {
             intent.Call<AndroidJavaObject>("setClassName", ChainLinkPackage, ChainLinkActivity);
-            intent.Call<AndroidJavaObject>("addFlags", 0x00020000 | 0x20000000);
+            intent.Call<AndroidJavaObject>("addFlags", FlagActivityReorderToFront | FlagActivitySingleTop);
+            intent.Call<AndroidJavaObject>("putExtra", "mq.sourcePackage", currentActivity.Call<string>("getPackageName"));
+            intent.Call<AndroidJavaObject>("putExtra", "mq.sourceActivity", currentActivity.Call<AndroidJavaObject>("getClass").Call<string>("getName"));
             if (extras != null)
             {
                 foreach (var pair in extras)
@@ -94,6 +123,15 @@ public static class QuestQuestionnaireChainBridge
     public static void SendChainLinkNextBlock(Dictionary<string, string> extras = null)
     {
         SendChainLinkCommand(ChainLinkNextBlockCommand, extras);
+    }
+
+    public static void SendChainLinkTrigger(string triggerId, Dictionary<string, string> extras = null)
+    {
+        var allExtras = extras == null
+            ? new Dictionary<string, string>()
+            : new Dictionary<string, string>(extras);
+        allExtras["mq.triggerId"] = triggerId ?? "";
+        SendChainLinkCommand(ChainLinkTriggerCommand, allExtras);
     }
 
     public static void StartBrokerPlan(string chainPlanJson, Dictionary<string, string> extras = null)
@@ -129,6 +167,8 @@ public static class QuestQuestionnaireChainBridge
         using (var intent = currentActivity.Call<AndroidJavaObject>("getIntent"))
         {
             CopyStringExtra(intent, result, "mq.resultStatus");
+            CopyStringExtra(intent, result, "mq.handoffSchema");
+            CopyStringExtra(intent, result, "mq.triggerId");
             CopyStringExtra(intent, result, "mq.runId");
             CopyStringExtra(intent, result, "mq.sessionId");
             CopyStringExtra(intent, result, "mq.chainId");
@@ -137,7 +177,9 @@ public static class QuestQuestionnaireChainBridge
             CopyStringExtra(intent, result, "mq.timestampUtc");
             CopyStringExtra(intent, result, "mq.exportJsonPath");
             CopyStringExtra(intent, result, "mq.exportCsvPath");
+            CopyStringExtra(intent, result, "mq.exportSvgPath");
             CopyStringExtra(intent, result, "mq.questionnaireConfigId");
+            CopyStringExtra(intent, result, "mq.tracerConfigId");
         }
 #endif
         return result;
@@ -173,6 +215,27 @@ public static class QuestQuestionnaireChainBridge
     }
 
 #if UNITY_ANDROID && !UNITY_EDITOR
+    private static AndroidJavaObject CreateReturnPendingIntent(AndroidJavaObject currentActivity, Dictionary<string, string> extras)
+    {
+        string callerPackage = GetExtraOrDefault(extras, "mq.callerPackage", currentActivity.Call<string>("getPackageName"));
+        string callerActivity = GetExtraOrDefault(extras, "mq.callerActivity", currentActivity.Call<AndroidJavaObject>("getClass").Call<string>("getName"));
+        using (var returnIntent = new AndroidJavaObject("android.content.Intent"))
+        using (var pendingIntentClass = new AndroidJavaClass("android.app.PendingIntent"))
+        using (var buildVersion = new AndroidJavaClass("android.os.Build$VERSION"))
+        {
+            returnIntent.Call<AndroidJavaObject>("setClassName", callerPackage, NormalizeActivity(callerPackage, callerActivity));
+            returnIntent.Call<AndroidJavaObject>("addFlags", FlagActivityReorderToFront | FlagActivitySingleTop | FlagActivityNewTask);
+            returnIntent.Call<AndroidJavaObject>("putExtra", HandoffSchemaExtra, HandoffSchemaV1);
+            int flags = PendingIntentFlagUpdateCurrent;
+            if (buildVersion.GetStatic<int>("SDK_INT") >= 31)
+            {
+                flags |= PendingIntentFlagMutable;
+            }
+            int requestCode = Mathf.Abs((callerPackage + "/" + callerActivity).GetHashCode());
+            return pendingIntentClass.CallStatic<AndroidJavaObject>("getActivity", currentActivity, requestCode, returnIntent, flags);
+        }
+    }
+
     private static void CopyStringExtra(AndroidJavaObject intent, Dictionary<string, string> result, string key)
     {
         string value = intent.Call<string>("getStringExtra", key);

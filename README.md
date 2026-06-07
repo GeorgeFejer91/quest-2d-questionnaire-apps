@@ -11,10 +11,20 @@ Horizon OS questionnaire work:
   temporal experience tracer questionnaire.
 - `workflow`: the reusable Quest 2D questionnaire app workflow notes learned
   while building, chaining, validating, and packaging these apps.
+- `For-AI`: documentation-only project memory and first-read instructions for
+  AI agents working on this repository.
 
 The repo intentionally excludes generated Gradle state, build outputs, and
 large validation evidence folders. The requested installable questionnaire APKs
 are kept in `apks/`.
+
+## AI Agent Notes
+
+Before changing this repository, AI agents must read [AGENTS.md](AGENTS.md),
+then [For-AI/START_HERE.md](For-AI/START_HERE.md). The `For-AI` folder records
+evolving project constraints, repeated operating rules, GitHub hygiene, and the
+requirement that the questionnaire builder keep both online and offline GUI
+paths available.
 
 ## Online Questionnaire Builder
 
@@ -28,6 +38,20 @@ The online page is a static browser GUI. For local file writes, dependency
 checks, validation, and APK generation, start the local companion from
 `MyQuestionnaireVR-2D\Start-QuestionnaireBuilderOnlineConnector.cmd` and enter
 the printed pairing token in the page.
+
+## XR Handoff Contract
+
+The preferred product path is:
+
+```text
+foreground XR app -> 2D questionnaire/tracer panel -> same XR app
+```
+
+Use `mq.handoff.v1` trigger metadata plus a return `PendingIntent` for direct
+return to the same Unity/XR activity. ChainLink remains the trigger plan
+compiler, validator, and fallback router. See
+`docs\xr-questionnaire-panel-handoff.md` and
+`examples\session-recipe.xr-questionnaire-panel-handoff.json`.
 
 ## Current APKs
 

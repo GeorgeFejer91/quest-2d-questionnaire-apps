@@ -185,6 +185,21 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-questionnai
   -SkipQuest
 ```
 
+Run the universal Quest handoff local stress ladder for the Chaplin/Awe demo
+contract. This validates builder trigger mapping, generated handoff config,
+questionnaire local render, temporal tracer assets, and temporal tracer local
+render without requiring a headset:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-universal-handoff-workflow.ps1 `
+  -SkipApkBuild `
+  -SkipUnity
+```
+
+Add `-RunQuest -Serial <quest-serial>` only when a headset is attached and you
+are ready to collect the direct PendingIntent handoff evidence described in
+`..\examples\session-recipe.xr-questionnaire-panel-handoff.json`.
+
 Run the full device-linked ladder when a Quest is connected:
 
 ```powershell

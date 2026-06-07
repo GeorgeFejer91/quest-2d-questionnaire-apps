@@ -220,6 +220,19 @@ public final class MainActivity extends Activity {
     private void finishOrBlack() {
         stopAudio();
         if (launch.shouldResumeCaller() || launch.shouldOpenNext()) {
+            if (launch.hasReturnPendingIntent()) {
+                try {
+                    launch.sendReturnPendingIntent(this, lastExport, config);
+                    Log.i(TAG, "TEMPORAL_TRACER_RETURN_PENDING_INTENT runId=" + launch.runId
+                        + " triggerId=" + launch.triggerId
+                        + " finishBehavior=" + launch.finishBehavior);
+                    finish();
+                    return;
+                } catch (Exception ex) {
+                    Log.e(TAG, "TEMPORAL_TRACER_RETURN_PENDING_INTENT_FAILED", ex);
+                }
+            }
+
             Intent completion = launch.completionIntent(this, lastExport, config);
             if (completion != null) {
                 try {

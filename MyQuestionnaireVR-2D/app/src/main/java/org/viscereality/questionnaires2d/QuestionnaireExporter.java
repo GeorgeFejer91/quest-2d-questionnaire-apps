@@ -85,6 +85,7 @@ final class QuestionnaireExporter {
         root.put("chainId", record.chainId);
         root.put("chainStepId", record.chainStepId);
         root.put("chainStepIndex", record.chainStepIndex);
+        root.put("triggerId", record.triggerId);
         root.put("finishBehavior", record.finishBehavior);
         root.put("callerPackage", record.callerPackage);
         root.put("callerActivity", record.callerActivity);
@@ -134,6 +135,7 @@ final class QuestionnaireExporter {
         headers.add("chainId");
         headers.add("chainStepId");
         headers.add("chainStepIndex");
+        headers.add("triggerId");
         headers.add("finishBehavior");
         headers.add("callerPackage");
         headers.add("callerActivity");
@@ -197,6 +199,7 @@ final class QuestionnaireExporter {
         values.add(record.chainId);
         values.add(record.chainStepId);
         values.add(Integer.toString(record.chainStepIndex));
+        values.add(record.triggerId);
         values.add(record.finishBehavior);
         values.add(record.callerPackage);
         values.add(record.callerActivity);
@@ -526,7 +529,7 @@ final class QuestionnaireExporter {
             "appVersion", "unityVersion", "sourceRepository", "sourceCommit", "maia2SourcePath",
             "questionnaireConfigId", "questionnaireConfigVersion", "runId", "sessionId",
             "invocationId", "experimentId", "scenarioId", "trialId", "chainId", "chainStepId",
-            "chainStepIndex", "finishBehavior", "callerPackage", "callerActivity", "nextPackage",
+            "chainStepIndex", "triggerId", "finishBehavior", "callerPackage", "callerActivity", "nextPackage",
             "nextActivity", "questionnaireMode", "blockNumber", "blockId", "saveNamespace"
         }) {
             values.put(key, record.optString(key, ""));

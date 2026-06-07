@@ -681,6 +681,10 @@
                 Baseline
                 <span>Demographics and MAIA-2</span>
               </button>
+              <button class="palette-item" type="button" draggable="true" data-mode="demographics">
+                Demographics
+                <span>Participant details only</span>
+              </button>
               <button class="palette-item" type="button" draggable="true" data-mode="maia2">
                 MAIA-2
                 <span>Interoception only</span>
@@ -692,6 +696,10 @@
               <button class="palette-item" type="button" draggable="true" data-mode="slider">
                 Slider
                 <span>Custom Viscereality items</span>
+              </button>
+              <button class="palette-item" type="button" draggable="true" data-mode="temporalTracer">
+                Temporal tracer
+                <span>Experience trace panel</span>
               </button>
               <button class="palette-item" type="button" draggable="true" data-mode="full">
                 Full
@@ -1067,21 +1075,25 @@
       "assets/bin/Data/StreamingAssets/questionnaire-trigger-catalog.json"
     ];
 
-    const triggerQuestionnaireModes = ["none", "baseline", "maia2", "pictographic", "slider", "full"];
+    const triggerQuestionnaireModes = ["none", "demographics", "baseline", "maia2", "pictographic", "slider", "temporalTracer", "full"];
     const questionnaireModeLabels = {
       none: "Skip",
+      demographics: "Demographics",
       baseline: "Baseline",
       maia2: "MAIA-2",
       pictographic: "Pictographic",
       slider: "Slider",
+      temporalTracer: "Temporal tracer",
       full: "Full"
     };
     const questionnaireModeDetails = {
       none: "No questionnaire runs for this trigger.",
+      demographics: "Participant details only.",
       baseline: "Demographics and MAIA-2.",
       maia2: "MAIA-2 interoception block.",
       pictographic: "Three embodiment scales.",
       slider: "Custom Viscereality slider items.",
+      temporalTracer: "Temporal experience trace exported as SVG, CSV, and JSON.",
       full: "All included questionnaire screens."
     };
     let selectedQuestionnaireMode = "pictographic";
@@ -1601,6 +1613,9 @@
     }
 
     function expectedOutputsForQuestionnaireMode(mode) {
+      if (mode === "demographics") {
+        return { demographics: true };
+      }
       if (mode === "baseline") {
         return { demographics: true, maia2Answers: 37, maia2Scores: 8 };
       }
@@ -1612,6 +1627,9 @@
       }
       if (mode === "slider") {
         return { sliderAnswers: numberValue("sliderExpectedCount", 42) };
+      }
+      if (mode === "temporalTracer") {
+        return { temporalTraceSvg: true, temporalTraceCsv: true, temporalTraceJson: true };
       }
       if (mode === "full") {
         return {
@@ -1636,41 +1654,54 @@
       const scenarioLabel = byId("chainlinkScenarioLabel").value.trim() || "Scenario APK";
       const triggerButton = byId("chainlinkTriggerButton").value.trim() || "auto-unused-non-breath-tracking";
       const repeats = clampedInteger("chainlinkPictographicRepeats", 2, 1, 50);
-      const questionnairePackage = "org.mesmerprism.viscereality.questionnaires2d";
-      const questionnaireActivity = "org.mesmerprism.viscereality.questionnaires2d.MainActivity";
-      const questionnaireAction = "org.mesmerprism.viscereality.questionnaires2d.RUN";
+      const questionnairePackage = "org.viscereality.questionnaires2d";
+      const questionnaireActivity = "org.viscereality.questionnaires2d.MainActivity";
+      const questionnaireAction = "org.viscereality.questionnaires2d.RUN";
+      const temporalTracerPackage = "org.viscereality.temporaltracer2d";
+      const temporalTracerActivity = "org.viscereality.temporaltracer2d.MainActivity";
+      const temporalTracerAction = "org.viscereality.temporaltracer2d.RUN";
       const mappedTriggers = readTriggerMappingsFromDom()
         .filter(mapping => mapping.enabled && mapping.questionnaireMode !== "none");
 
       if (mappedTriggers.length > 0) {
-        const triggerBlocks = mappedTriggers.map((mapping, index) => ({
-          number: /^\d{3}$/.test(String(mapping.blockNumber || "")) ? mapping.blockNumber : blockNumber(index),
-          blockId: mapping.blockId,
-          id: mapping.blockId || `trigger_${safeFileStem(mapping.triggerId, `trigger-${index + 1}`)}`,
-          type: "questionnaire",
-          label: mapping.label || `Trigger ${mapping.triggerId}`,
-          trigger: {
-            type: "apkManifestTrigger",
-            triggerId: mapping.triggerId,
-            foregroundPackage: scenarioPackage
-          },
-          package: questionnairePackage,
-          activity: questionnaireActivity,
-          action: questionnaireAction,
-          questionnaireMode: mapping.questionnaireMode,
-          saveNamespace: mapping.saveNamespace || `trigger_${safeFileStem(mapping.triggerId, `trigger-${index + 1}`)}`,
-          expectedOutputs: expectedOutputsForQuestionnaireMode(mapping.questionnaireMode),
-          extras: {
+        const triggerBlocks = mappedTriggers.map((mapping, index) => {
+          const temporal = mapping.questionnaireMode === "temporalTracer";
+          const packageName = temporal ? temporalTracerPackage : questionnairePackage;
+          const activityName = temporal ? temporalTracerActivity : questionnaireActivity;
+          const actionName = temporal ? temporalTracerAction : questionnaireAction;
+          const modeExtras = temporal ? {} : {
             "mq.questionnaireMode": mapping.questionnaireMode,
-            "mq.flowMode": mapping.questionnaireMode,
-            "mq.triggerId": mapping.triggerId,
-            "mq.finishBehavior": defaults.finishBehavior || "resumeCaller",
-            "mq.callerPackage": scenarioPackage,
-            "mq.callerActivity": scenarioActivity,
-            "mq.autoCloseDelayMs": mapping.autoCloseDelayMs ?? defaults.autoCloseDelayMs,
-            ...(mapping.language ? { "mq.language": mapping.language } : {})
-          }
-        }));
+            "mq.flowMode": mapping.questionnaireMode
+          };
+          return {
+            number: /^\d{3}$/.test(String(mapping.blockNumber || "")) ? mapping.blockNumber : blockNumber(index),
+            blockId: mapping.blockId,
+            id: mapping.blockId || `trigger_${safeFileStem(mapping.triggerId, `trigger-${index + 1}`)}`,
+            type: temporal ? "temporalTracer" : "questionnaire",
+            label: mapping.label || `Trigger ${mapping.triggerId}`,
+            trigger: {
+              type: "apkManifestTrigger",
+              triggerId: mapping.triggerId,
+              foregroundPackage: scenarioPackage
+            },
+            package: packageName,
+            activity: activityName,
+            action: actionName,
+            questionnaireMode: mapping.questionnaireMode,
+            saveNamespace: mapping.saveNamespace || `trigger_${safeFileStem(mapping.triggerId, `trigger-${index + 1}`)}`,
+            expectedOutputs: expectedOutputsForQuestionnaireMode(mapping.questionnaireMode),
+            extras: {
+              ...modeExtras,
+              "mq.handoffSchema": "mq.handoff.v1",
+              "mq.triggerId": mapping.triggerId,
+              "mq.finishBehavior": defaults.finishBehavior || "resumeCaller",
+              "mq.callerPackage": scenarioPackage,
+              "mq.callerActivity": scenarioActivity,
+              "mq.autoCloseDelayMs": mapping.autoCloseDelayMs ?? defaults.autoCloseDelayMs,
+              ...(mapping.language ? { "mq.language": mapping.language } : {})
+            }
+          };
+        });
 
         return {
           schemaVersion: "viscereality.chainlink.block-registry.v1",

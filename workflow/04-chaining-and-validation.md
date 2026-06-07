@@ -2,6 +2,19 @@
 
 ## Chain Ownership
 
+For XR app to questionnaire/tracer handoff, prefer the direct app-owned
+contract first:
+
+```text
+XR app -> 2D panel -> same XR app via mq.returnPendingIntent
+```
+
+The XR app owns semantic triggers and launches the panel with
+`mq.handoffSchema=mq.handoff.v1`, `mq.triggerId`, block metadata, and a
+`PendingIntent` targeting the same XR activity with
+`REORDER_TO_FRONT | SINGLE_TOP | NEW_TASK`. The panel saves exports before it
+returns. See `../docs/xr-questionnaire-panel-handoff.md`.
+
 For multi-APK experiments, use the standalone orchestrator APK as the plan
 owner when possible:
 
@@ -29,7 +42,14 @@ startQuestionnaire
 openApp
 goHome
 ping
+trigger
+triggerComplete
 ```
+
+ChainLink is now the plan compiler, trigger-mapping validator, and fallback
+router. Use ChainLink-routed foreground handoff only if direct
+`PendingIntent` return fails on Quest but ChainLink passes the same evidence
+requirements.
 
 ## Scenario Link Modes
 
@@ -104,4 +124,3 @@ A 2D orchestrator cannot reliably listen for raw Meta Touch controller events
 while another immersive app owns focus. Real controller-button gates belong in
 the active Unity/OpenXR app, which should then emit the same ChainLink or broker
 intent already validated through synthetic commands.
-

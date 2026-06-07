@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <queries>
         <package android:name="org.viscereality.questionnaires2d" />
+        <package android:name="org.viscereality.temporaltracer2d" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
@@ -15,6 +16,9 @@
         </intent>
         <intent>
             <action android:name="org.viscereality.questionnaires2d.RUN" />
+        </intent>
+        <intent>
+            <action android:name="org.viscereality.temporaltracer2d.RUN" />
         </intent>
     </queries>
 

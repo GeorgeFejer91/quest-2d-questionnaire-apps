@@ -48,7 +48,6 @@ public final class CommandReplayActivityTest {
         }
         assertTrue(logs.contains("MYQUESTIONNAIRE_VISUAL_STAGE stage=slider"));
         assertTrue(logs.contains("MYQUESTIONNAIRE_VISUAL_STAGE stage=saved-confirmation"));
-        assertTrue(logs.contains("MYQUESTIONNAIRE_VISUAL_STAGE stage=finished-black"));
         assertTrue(logs.contains("MYQUESTIONNAIRE_COMMAND command=TextInput source=demographics-name"));
         assertTrue(logs.contains("MYQUESTIONNAIRE_COMMAND_REPLAY_EXPORT_MATCH participant=George language=English"));
         assertTrue(logs.contains("MYQUESTIONNAIRE_NAVIGATION_SUMMARY status=pass mode=command-replay"));

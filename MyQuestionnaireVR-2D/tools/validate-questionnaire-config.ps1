@@ -137,7 +137,7 @@ if ($config.PSObject.Properties.Name -contains 'triggerQuestionnaireMapping' -an
         Add-ConfigError "triggerQuestionnaireMapping.triggers is required when triggerQuestionnaireMapping is present."
     }
 
-    $allowedTriggerModes = @('none', 'baseline', 'maia2', 'pictographic', 'slider', 'full')
+    $allowedTriggerModes = @('none', 'demographics', 'baseline', 'maia2', 'pictographic', 'slider', 'temporalTracer', 'full')
     $seenTriggers = @{}
     foreach ($trigger in @($mapping.triggers)) {
         $triggerId = [string]$trigger.triggerId

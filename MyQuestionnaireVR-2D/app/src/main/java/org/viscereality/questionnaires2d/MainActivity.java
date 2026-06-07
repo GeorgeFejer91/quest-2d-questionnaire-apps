@@ -436,6 +436,10 @@ public final class MainActivity extends Activity {
             currentPictographicIndex = 0;
             currentQuestionIndex = 0;
             updateDraftQuietly("demographics-complete");
+            if (launchContext != null && launchContext.isDemographicsOnly()) {
+                saveSession();
+                return;
+            }
             showFirstAnswerScreen();
         });
         setContentView(screen.root);
@@ -715,6 +719,7 @@ public final class MainActivity extends Activity {
         record.chainId = launchContext != null ? launchContext.chainId : "";
         record.chainStepId = launchContext != null ? launchContext.chainStepId : "";
         record.chainStepIndex = launchContext != null ? launchContext.chainStepIndex : -1;
+        record.triggerId = launchContext != null ? launchContext.triggerId : "";
         record.finishBehavior = launchContext != null ? launchContext.finishBehavior : QuestionnaireLaunchContext.FINISH_STAY_SAVED;
         record.callerPackage = launchContext != null ? launchContext.callerPackage : "";
         record.callerActivity = launchContext != null ? launchContext.callerActivity : "";
@@ -740,7 +745,8 @@ public final class MainActivity extends Activity {
 
     private void handlePostExport(QuestionnaireExporter.ExportResult export, QuestionnaireData.SessionRecord record) {
         long delay = launchContext != null ? launchContext.autoCloseDelayMs : 2000L;
-        if (launchContext != null && (launchContext.shouldResumeCaller() || launchContext.shouldOpenNext())) {
+        if (launchContext != null && !launchContext.shouldStaySaved()
+                && (launchContext.hasReturnPendingIntent() || launchContext.shouldResumeCaller() || launchContext.shouldOpenNext())) {
             handler.postDelayed(() -> launchCompletionTarget(export, record), delay);
             return;
         }
@@ -754,6 +760,19 @@ public final class MainActivity extends Activity {
     }
 
     private void launchCompletionTarget(QuestionnaireExporter.ExportResult export, QuestionnaireData.SessionRecord record) {
+        if (launchContext.hasReturnPendingIntent()) {
+            try {
+                launchContext.sendReturnPendingIntent(this, export, record);
+                Log.i(AutoSessionRunner.TAG, "MYQUESTIONNAIRE_CHAIN_RETURN_PENDING_INTENT runId=" + record.runId
+                    + " triggerId=" + record.triggerId
+                    + " finishBehavior=" + launchContext.finishBehavior);
+                finish();
+                return;
+            } catch (Exception exception) {
+                Log.e(AutoSessionRunner.TAG, "MYQUESTIONNAIRE_CHAIN_RETURN_PENDING_INTENT_FAILED " + exception.getMessage(), exception);
+            }
+        }
+
         Intent intent = launchContext.completionIntent(this, export, record);
         if (intent == null) {
             Log.w(AutoSessionRunner.TAG, "MYQUESTIONNAIRE_CHAIN_TARGET_MISSING finishBehavior=" + launchContext.finishBehavior + " runId=" + record.runId);

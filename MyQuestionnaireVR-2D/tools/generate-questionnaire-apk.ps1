@@ -82,6 +82,9 @@ if (-not $SkipBuild) {
         $buildArgs += '-SkipTests'
     }
     powershell @buildArgs | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw "APK build failed with exit code $LASTEXITCODE"
+    }
     $sourceApk = Join-Path $ProjectPath 'Builds\MyQuestionnaireVR-2D.apk'
     if (-not (Test-Path -LiteralPath $sourceApk)) {
         throw "Expected APK not found after build: $sourceApk"
@@ -102,6 +105,9 @@ if ($RenderPreview) {
         -OutputRoot $renderOutputRoot `
         -RunId 'render' `
         -SkipAssetRefresh | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw "Questionnaire render preview failed with exit code $LASTEXITCODE"
+    }
     $renderSummary = Join-Path $renderOutputRoot 'render\render-summary.json'
 }
 

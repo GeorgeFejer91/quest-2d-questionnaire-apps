@@ -154,6 +154,7 @@ final class TemporalTraceExporter {
             .put("chainId", launch.chainId)
             .put("chainStepId", launch.chainStepId)
             .put("chainStepIndex", launch.chainStepIndex)
+            .put("triggerId", launch.triggerId)
             .put("blockId", launch.blockId)
             .put("blockNumber", launch.blockNumber)
             .put("finishBehavior", launch.finishBehavior)
@@ -241,7 +242,7 @@ final class TemporalTraceExporter {
         List<TracePoint> points,
         String exportedAt) {
         StringBuilder csv = new StringBuilder();
-        csv.append("runId,sessionId,participantId,participantName,language,experimentId,scenarioId,trialId,chainId,chainStepId,blockId,blockNumber,traceIndex,traceLabel,pointIndex,timestampUtc,timestampMillis,u_0to1,v_0to1,x_axis,x_axisUnit,y_axis,exportedAtUtc\n");
+        csv.append("runId,sessionId,participantId,participantName,language,experimentId,scenarioId,trialId,chainId,chainStepId,triggerId,blockId,blockNumber,traceIndex,traceLabel,pointIndex,timestampUtc,timestampMillis,u_0to1,v_0to1,x_axis,x_axisUnit,y_axis,exportedAtUtc\n");
         for (int i = 0; i < points.size(); i++) {
             TracePoint point = points.get(i);
             csv.append(esc(launch.runId)).append(',')
@@ -254,6 +255,7 @@ final class TemporalTraceExporter {
                 .append(esc(launch.trialId)).append(',')
                 .append(esc(launch.chainId)).append(',')
                 .append(esc(launch.chainStepId)).append(',')
+                .append(esc(launch.triggerId)).append(',')
                 .append(esc(launch.blockId)).append(',')
                 .append(esc(launch.blockNumber)).append(',')
                 .append(traceIndex).append(',')
@@ -399,6 +401,7 @@ final class TemporalTraceExporter {
             .put("participantName", clean(participantName))
             .put("language", clean(language))
             .put("tracerId", config.tracerId)
+            .put("triggerId", launch.triggerId)
             .put("traceIndex", traceIndex)
             .put("traceLabel", item.label)
             .put("pointCount", pointCount)
@@ -426,7 +429,7 @@ final class TemporalTraceExporter {
         boolean header = !combined.exists() || combined.length() == 0L;
         StringBuilder row = new StringBuilder();
         if (header) {
-            row.append("runId,sessionId,participantId,participantName,language,tracerId,experimentId,scenarioId,trialId,chainId,chainStepId,blockId,blockNumber,traceIndex,traceLabel,pointCount,timestampUtc,svgPath,csvPath,jsonPath\n");
+            row.append("runId,sessionId,participantId,participantName,language,tracerId,experimentId,scenarioId,trialId,chainId,chainStepId,triggerId,blockId,blockNumber,traceIndex,traceLabel,pointCount,timestampUtc,svgPath,csvPath,jsonPath\n");
         }
         row.append(esc(launch.runId)).append(',')
             .append(esc(launch.sessionId)).append(',')
@@ -439,6 +442,7 @@ final class TemporalTraceExporter {
             .append(esc(launch.trialId)).append(',')
             .append(esc(launch.chainId)).append(',')
             .append(esc(launch.chainStepId)).append(',')
+            .append(esc(launch.triggerId)).append(',')
             .append(esc(launch.blockId)).append(',')
             .append(esc(launch.blockNumber)).append(',')
             .append(traceIndex).append(',')

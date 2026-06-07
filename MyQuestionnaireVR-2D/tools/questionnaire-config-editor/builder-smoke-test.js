@@ -203,6 +203,29 @@ document.getElementById("downloadQualityButton").click();
 document.getElementById("downloadBlockRegistryButton").click();
 document.getElementById("downloadChainPlanButton").click();
 
+context.__api.applyTriggerCatalog({
+  schemaVersion: "mq.quest_questionnaire_trigger_catalog.v1",
+  catalogVersion: "1.0.0",
+  scenarioId: "awe-of-the-great-dictator",
+  package: "org.questionnairebuilder.stimulusdemo",
+  activity: "org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity",
+  label: "Questionnaire Stimulus Builder Demo",
+  triggers: [
+    { triggerId: "trigger_1_launch_questionnaire", label: "Trigger 1: before video", recommendedMode: "demographics" },
+    { triggerId: "trigger_2_video_complete", label: "Trigger 2: after video", recommendedMode: "temporalTracer" }
+  ]
+}, "awe-great-dictator.apk");
+
+const handoff = context.__api.buildConfig();
+const handoffQuality = context.__api.qualityReport(handoff);
+const handoffPlan = context.__api.buildChainPlan(handoff);
+assert(handoff.triggerQuestionnaireMapping.triggers.length === 2, "Handoff demo catalog should produce two trigger mappings.");
+assert(handoff.triggerQuestionnaireMapping.triggers[0].questionnaireMode === "demographics", "Trigger 1 should map to demographics.");
+assert(handoff.triggerQuestionnaireMapping.triggers[1].questionnaireMode === "temporalTracer", "Trigger 2 should map to the temporal tracer.");
+assert(handoff.experimentBlockRegistry.blocks.some(block => block.type === "temporalTracer"), "Handoff registry should include a temporal tracer block.");
+assert(handoffPlan.steps.some(step => step.type === "temporalTracer" && step.action === "org.viscereality.temporaltracer2d.RUN"), "Handoff chain plan should launch the temporal tracer action.");
+assert(handoffQuality.status === "pass", "Handoff demo config should pass quality report.");
+
 const csv = fs.readFileSync(csvPath, "utf8");
 context.__api.applyCsvText(csv, "two-item-slider-template.csv");
 const imported = JSON.parse(document.getElementById("preview").textContent);
@@ -236,6 +259,10 @@ const summary = {
   defaultQuestionnaireId: initial.questionnaireId,
   defaultQualityStatus: initialQuality.status,
   defaultQualityWarnings: initialQuality.issueCounts.warning,
+  handoffQuestionnaireId: handoff.questionnaireId,
+  handoffQualityStatus: handoffQuality.status,
+  handoffTriggerCount: handoff.triggerQuestionnaireMapping.triggers.length,
+  handoffRegisteredBlocks: handoff.experimentBlockRegistry.blocks.length,
   importedQuestionnaireId: imported.questionnaireId,
   importedMode: "slider-only",
   importedSliderItems: slider.expectedItemCount,
@@ -254,15 +281,24 @@ if (outputDir) {
   fs.mkdirSync(outputDir, { recursive: true });
   const initialConfigPath = path.join(outputDir, "viscereality-maia2.config.json");
   const importedConfigPath = path.join(outputDir, "demo-slider.config.json");
+  const handoffConfigPath = path.join(outputDir, "awe-great-dictator-handoff.config.json");
+  const handoffQualityPath = path.join(outputDir, "awe-great-dictator-handoff.quality-report.json");
+  const handoffChainPlanPath = path.join(outputDir, "awe-great-dictator-handoff.chainlink-plan.json");
   const summaryPath = path.join(outputDir, "builder-smoke-summary.json");
   const importedQualityPath = path.join(outputDir, "demo-slider.quality-report.json");
   const initialChainPlanPath = path.join(outputDir, "viscereality-maia2.chainlink-plan.json");
   fs.writeFileSync(initialConfigPath, `${JSON.stringify(initial, null, 2)}\n`, "utf8");
   fs.writeFileSync(initialChainPlanPath, `${JSON.stringify(initialChainPlan, null, 2)}\n`, "utf8");
+  fs.writeFileSync(handoffConfigPath, `${JSON.stringify(handoff, null, 2)}\n`, "utf8");
+  fs.writeFileSync(handoffQualityPath, `${JSON.stringify(handoffQuality, null, 2)}\n`, "utf8");
+  fs.writeFileSync(handoffChainPlanPath, `${JSON.stringify(handoffPlan, null, 2)}\n`, "utf8");
   fs.writeFileSync(importedConfigPath, `${JSON.stringify(imported, null, 2)}\n`, "utf8");
   fs.writeFileSync(importedQualityPath, `${JSON.stringify(importedQuality, null, 2)}\n`, "utf8");
   summary.initialConfig = initialConfigPath;
   summary.initialChainPlan = initialChainPlanPath;
+  summary.handoffConfig = handoffConfigPath;
+  summary.handoffQualityReport = handoffQualityPath;
+  summary.handoffChainPlan = handoffChainPlanPath;
   summary.importedConfig = importedConfigPath;
   summary.importedQualityReport = importedQualityPath;
   summary.summary = summaryPath;

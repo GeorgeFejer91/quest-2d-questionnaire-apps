@@ -2,6 +2,7 @@ package org.viscereality.chainlink;
 
 import android.content.ComponentName;
 import android.content.Intent;
+import android.app.PendingIntent;
 import android.view.KeyEvent;
 
 import org.json.JSONObject;
@@ -48,6 +49,8 @@ public final class ChainLinkActivityTest {
         assertEquals("001_baseline_questionnaire", launched.getStringExtra("mq.chainStepId"));
         assertEquals("resumeCaller", launched.getStringExtra("mq.finishBehavior"));
         assertEquals("org.viscereality.chainlink", launched.getStringExtra("mq.callerPackage"));
+        assertEquals("mq.handoff.v1", launched.getStringExtra("mq.handoffSchema"));
+        assertNotNull((PendingIntent) launched.getParcelableExtra("mq.returnPendingIntent"));
         assertEquals("session-test", launched.getStringExtra("mq.sessionId"));
         assertEquals("Participant One", launched.getStringExtra("mq.participantName"));
 
@@ -155,6 +158,60 @@ public final class ChainLinkActivityTest {
         assertFalse(stateFile().exists());
     }
 
+    @Test
+    public void triggerCommandRoutesMappedBlockAndWaitsAfterCompletion() throws Exception {
+        resetFiles();
+
+        Intent trigger = new Intent(ChainLinkActivity.ACTION_COMMAND);
+        trigger.setClassName("org.viscereality.chainlink", "org.viscereality.chainlink.ChainLinkActivity");
+        trigger.putExtra("mq.command", "trigger");
+        trigger.putExtra("mq.triggerId", "trigger_2_video_complete");
+        trigger.putExtra("mq.chainPlanJson", triggerPlanJson());
+        trigger.putExtra("mq.sessionId", "session-trigger");
+        trigger.putExtra("mq.sourcePackage", "org.example.xr");
+        trigger.putExtra("mq.sourceActivity", "org.example.xr.MainActivity");
+
+        ActivityController<ChainLinkActivity> controller = Robolectric.buildActivity(
+            ChainLinkActivity.class,
+            trigger);
+        ChainLinkActivity activity = controller.setup().get();
+
+        Intent launched = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(launched);
+        assertEquals(
+            new ComponentName(
+                "org.viscereality.temporaltracer2d",
+                "org.viscereality.temporaltracer2d.MainActivity"),
+            launched.getComponent());
+        assertEquals("org.viscereality.temporaltracer2d.RUN", launched.getAction());
+        assertEquals("trigger_2_video_complete", launched.getStringExtra("mq.triggerId"));
+        assertEquals("mq.handoff.v1", launched.getStringExtra("mq.handoffSchema"));
+        assertNotNull((PendingIntent) launched.getParcelableExtra("mq.returnPendingIntent"));
+
+        Intent complete = new Intent(ChainLinkActivity.ACTION_COMMAND);
+        complete.putExtra("mq.command", "triggerComplete");
+        complete.putExtra("mq.triggerId", "trigger_2_video_complete");
+        complete.putExtra("mq.resultStatus", "complete");
+        complete.putExtra("mq.runId", "run-trace");
+        complete.putExtra("mq.exportSvgPath", "/device/export/run-trace.svg");
+        activity.onNewIntent(complete);
+
+        Intent source = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(source);
+        assertEquals(new ComponentName("org.example.xr", "org.example.xr.MainActivity"), source.getComponent());
+        assertEquals("triggerSource", source.getStringExtra("mq.returnTarget"));
+
+        JSONObject state = readState();
+        assertEquals("waitingForTrigger", state.getString("status"));
+        assertEquals(1, state.getInt("currentStepIndex"));
+        assertEquals("run-trace", state.getJSONObject("lastResult").getString("mq.runId"));
+
+        String events = readEvents();
+        assertTrue(events.contains("\"event\":\"trigger-route\""));
+        assertTrue(events.contains("\"event\":\"trigger-complete\""));
+        assertTrue(events.contains("\"event\":\"trigger-return-source\""));
+    }
+
     private static Intent startPlanIntent(String planJson) {
         Intent intent = new Intent(ChainLinkActivity.ACTION_RUN);
         intent.setClassName("org.viscereality.chainlink", "org.viscereality.chainlink.ChainLinkActivity");
@@ -207,6 +264,35 @@ public final class ChainLinkActivityTest {
             + "\"activity\":\"org.viscereality.questionnaires2d.MainActivity\","
             + "\"action\":\"org.viscereality.questionnaires2d.RUN\","
             + "\"extras\":{\"mq.questionnaireMode\":\"pictographic\",\"mq.finishBehavior\":\"resumeCaller\",\"mq.blockInstance\":1,\"mq.autoCloseDelayMs\":0}"
+            + "}"
+            + "]"
+            + "}";
+    }
+
+    private static String triggerPlanJson() {
+        return "{"
+            + "\"schemaVersion\":\"viscereality.chainlink.plan.v1\","
+            + "\"chainId\":\"awe-demo\","
+            + "\"steps\":["
+            + "{"
+            + "\"id\":\"001_trigger_1_launch_questionnaire\","
+            + "\"blockNumber\":\"001\","
+            + "\"type\":\"questionnaire\","
+            + "\"package\":\"org.viscereality.questionnaires2d\","
+            + "\"activity\":\"org.viscereality.questionnaires2d.MainActivity\","
+            + "\"action\":\"org.viscereality.questionnaires2d.RUN\","
+            + "\"trigger\":{\"type\":\"apkManifestTrigger\",\"triggerId\":\"trigger_1_launch_questionnaire\"},"
+            + "\"extras\":{\"mq.questionnaireMode\":\"demographics\",\"mq.triggerId\":\"trigger_1_launch_questionnaire\",\"mq.finishBehavior\":\"resumeCaller\",\"mq.autoCloseDelayMs\":0}"
+            + "},"
+            + "{"
+            + "\"id\":\"002_trigger_2_video_complete\","
+            + "\"blockNumber\":\"002\","
+            + "\"type\":\"temporalTracer\","
+            + "\"package\":\"org.viscereality.temporaltracer2d\","
+            + "\"activity\":\"org.viscereality.temporaltracer2d.MainActivity\","
+            + "\"action\":\"org.viscereality.temporaltracer2d.RUN\","
+            + "\"trigger\":{\"type\":\"apkManifestTrigger\",\"triggerId\":\"trigger_2_video_complete\"},"
+            + "\"extras\":{\"mq.triggerId\":\"trigger_2_video_complete\",\"mq.finishBehavior\":\"resumeCaller\",\"mq.autoCloseDelayMs\":0}"
             + "}"
             + "]"
             + "}";

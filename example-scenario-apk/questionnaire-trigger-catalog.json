@@ -1,28 +1,22 @@
 {
   "schemaVersion": "mq.quest_questionnaire_trigger_catalog.v1",
-  "catalogVersion": "0.1.0",
-  "scenarioId": "example-scenario-apk",
-  "package": "com.viscereality.example.scenario",
-  "activity": "com.unity3d.player.UnityPlayerGameActivity",
-  "label": "Example questionnaire trigger scenario",
+  "catalogVersion": "1.0.0",
+  "scenarioId": "awe-of-the-great-dictator",
+  "package": "org.questionnairebuilder.stimulusdemo",
+  "activity": "org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity",
+  "label": "Questionnaire Stimulus Builder Demo",
   "triggers": [
     {
-      "triggerId": "after_intro",
-      "label": "After intro",
-      "description": "Example trigger emitted after the intro scene.",
-      "recommendedMode": "baseline"
+      "triggerId": "trigger_1_launch_questionnaire",
+      "label": "Trigger 1: before video",
+      "description": "Fired immediately after the Unity APK launches, before the participant watches the video.",
+      "recommendedMode": "demographics"
     },
     {
-      "triggerId": "after_task",
-      "label": "After task",
-      "description": "Example trigger emitted after the main task.",
-      "recommendedMode": "pictographic"
-    },
-    {
-      "triggerId": "after_break",
-      "label": "After break",
-      "description": "Example trigger emitted after a rest break.",
-      "recommendedMode": "slider"
+      "triggerId": "trigger_2_video_complete",
+      "label": "Trigger 2: after video",
+      "description": "Fired automatically when the Awe of the Great Dictator video reaches its end.",
+      "recommendedMode": "temporalTracer"
     }
   ]
 }

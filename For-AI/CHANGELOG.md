@@ -21,3 +21,29 @@ Use absolute dates.
   for the local companion software and launchers.
 - Added the `example-scenario-apk/` folder and a "Load example APK" builder
   fallback for users who do not yet have their own trigger-enabled APK.
+
+## 2026-06-07
+
+- Added Unity Quest video validation lessons covering real `VideoPlayer`
+  markers, APK-internal video diagnostics, Unity batchmode pitfalls, APK
+  manifest inspection, XR Simulation generated-file cleanup, and Horizon OS
+  controller-required launch gate classification.
+
+## 2026-06-07
+
+- Added the `mq.handoff.v1` Quest handoff contract: XR apps launch 2D
+  questionnaire/tracer panels with trigger metadata and a preferred
+  `mq.returnPendingIntent`, falling back to caller package/activity only for
+  compatibility.
+- Updated ChainLink's intended role: plan compiler, trigger-mapping validator,
+  and fallback router. Direct XR -> 2D panel -> same XR `PendingIntent`
+  handoff is the preferred strategy until headset trials disprove it.
+- Added the Chaplin/Awe demo stress target: trigger 1 launches a
+  demographics-only questionnaire before video playback, trigger 2 launches the
+  temporal experience tracer for awe after video completion.
+- Added local handoff evidence files:
+  `docs/xr-questionnaire-panel-handoff.md` and
+  `examples/session-recipe.xr-questionnaire-panel-handoff.json`.
+- Added `MyQuestionnaireVR-2D/tools/validate-universal-handoff-workflow.ps1`;
+  the local no-headset pass on 2026-06-07 was
+  `universal-handoff-20260607T010957Z`.

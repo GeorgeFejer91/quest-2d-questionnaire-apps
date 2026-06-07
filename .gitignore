@@ -8,6 +8,16 @@
 **/artifacts/
 **/Builds/
 
+# Unity generated state for the demo scenario project
+AweGreatDictatorUnity/Library/
+AweGreatDictatorUnity/Temp/
+AweGreatDictatorUnity/Logs/
+AweGreatDictatorUnity/UserSettings/
+AweGreatDictatorUnity/RenderValidation/
+AweGreatDictatorUnity/Assets/XR/Temp/
+AweGreatDictatorUnity/Assets/XR/UserSimulationSettings/
+AweGreatDictatorUnity/Assets/XR/Resources/XRSimulationRuntimeSettings.asset*
+
 # Python and editor state
 **/__pycache__/
 *.pyc
@@ -19,4 +29,3 @@ Thumbs.db
 # Keep the curated release APK drop folder in git.
 !apks/
 !apks/**
-

@@ -10,7 +10,15 @@ Native Android 2D panel app for Meta Horizon OS / Quest. This ports the Unity te
 - Debug APK output: `Builds\TemporalExperienceTracerVR-2D.apk`
 - Device exports: `/sdcard/Android/data/org.viscereality.temporaltracer2d/files/TemporalTraceExports`
 
-Launch extras mirror the questionnaire chain style: `mq.sessionId`, `mq.participantId`, `mq.participantName`, `mq.language`, `mq.experimentId`, `mq.scenarioId`, `mq.trialId`, `mq.finishBehavior`, `mq.callerPackage`, `mq.nextPackage`, plus `mq.autoTrace=true` for command-replay validation.
+Launch extras mirror the questionnaire chain style: `mq.handoffSchema`,
+`mq.sessionId`, `mq.triggerId`, `mq.blockId`, `mq.blockNumber`,
+`mq.participantId`, `mq.participantName`, `mq.language`, `mq.experimentId`,
+`mq.scenarioId`, `mq.trialId`, `mq.finishBehavior`, `mq.callerPackage`,
+`mq.callerActivity`, `mq.nextPackage`, plus `mq.autoTrace=true` for
+command-replay validation. For `mq.handoff.v1`, prefer
+`mq.returnPendingIntent`; on completion the tracer saves SVG/CSV/JSON exports
+first, then sends result extras through the return token before falling back to
+the caller package/activity path.
 
 ## Trace Rules
 

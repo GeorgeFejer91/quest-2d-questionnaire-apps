@@ -102,6 +102,40 @@ public final class ChainLaunchContractTest {
     }
 
     @Test
+    public void demographicsModeExportsAfterParticipantFormOnly() throws Exception {
+        File filesDir = RuntimeEnvironment.getApplication().getExternalFilesDir(null);
+        deleteRecursively(filesDir);
+        assertTrue(filesDir.mkdirs() || filesDir.exists());
+        File marker = new File(filesDir, "command-replay-english.json");
+        Files.write(marker.toPath(), "{\"ParticipantName\":\"Demo Participant\"}".getBytes(StandardCharsets.UTF_8));
+
+        Intent intent = new Intent(QuestionnaireLaunchContext.ACTION_RUN);
+        intent.setClassName("org.viscereality.questionnaires2d", "org.viscereality.questionnaires2d.MainActivity");
+        intent.putExtra(QuestionnaireLaunchContext.EXTRA_SESSION_ID, "session-demo");
+        intent.putExtra(QuestionnaireLaunchContext.EXTRA_TRIGGER_ID, "trigger_1_launch_questionnaire");
+        intent.putExtra(QuestionnaireLaunchContext.EXTRA_QUESTIONNAIRE_MODE, QuestionnaireLaunchContext.MODE_DEMOGRAPHICS);
+        intent.putExtra(QuestionnaireLaunchContext.EXTRA_FINISH_BEHAVIOR, QuestionnaireLaunchContext.FINISH_STAY_SAVED);
+        intent.putExtra(QuestionnaireLaunchContext.EXTRA_AUTO_CLOSE_DELAY_MS, 0L);
+
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class, intent).setup();
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(3, TimeUnit.SECONDS);
+
+        File index = new File(QuestionnaireExporter.exportFolder(RuntimeEnvironment.getApplication()), QuestionnaireExporter.SESSION_INDEX_NAME);
+        assertTrue(index.exists());
+        String indexText = new String(Files.readAllBytes(index.toPath()), StandardCharsets.UTF_8);
+        assertTrue(indexText.contains("\"questionnaireMode\":\"demographics\""));
+
+        String jsonPath = new JSONObject(indexText.trim()).getString("jsonPath");
+        JSONObject record = new JSONObject(new String(Files.readAllBytes(new File(jsonPath).toPath()), StandardCharsets.UTF_8));
+        assertEquals("trigger_1_launch_questionnaire", record.getString("triggerId"));
+        assertEquals("demographics", record.getString("questionnaireMode"));
+        assertEquals(0, record.getJSONArray("maia2Answers").length());
+        assertEquals(0, record.getJSONArray("pictographicSelections").length());
+        assertEquals(0, record.getJSONArray("questionnaireAnswers").length());
+        assertTrue(controller.get().getClass().getName().contains("MainActivity"));
+    }
+
+    @Test
     public void writesUniqueFinalExportsDraftAndSessionIndexForRepeatedSameName() throws Exception {
         File filesDir = RuntimeEnvironment.getApplication().getExternalFilesDir(null);
         deleteRecursively(filesDir);

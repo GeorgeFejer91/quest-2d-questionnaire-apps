@@ -1,8 +1,10 @@
 package org.viscereality.questionnaires2d;
 
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 
@@ -32,6 +34,9 @@ final class QuestionnaireLaunchContext {
     static final String EXTRA_EXPORT_CSV_PATH = "mq.exportCsvPath";
     static final String EXTRA_COMBINED_CSV_PATH = "mq.combinedCsvPath";
     static final String EXTRA_QUESTIONNAIRE_CONFIG_ID = "mq.questionnaireConfigId";
+    static final String EXTRA_HANDOFF_SCHEMA = "mq.handoffSchema";
+    static final String EXTRA_RETURN_PENDING_INTENT = "mq.returnPendingIntent";
+    static final String EXTRA_TRIGGER_ID = "mq.triggerId";
     static final String EXTRA_QUESTIONNAIRE_MODE = "mq.questionnaireMode";
     static final String EXTRA_FLOW_MODE = "mq.flowMode";
     static final String EXTRA_BLOCK_NUMBER = "mq.blockNumber";
@@ -44,7 +49,9 @@ final class QuestionnaireLaunchContext {
     static final String FINISH_RESUME_CALLER = "resumeCaller";
     static final String FINISH_OPEN_NEXT = "openNext";
     static final String FINISH_STAY_SAVED = "staySaved";
+    static final String HANDOFF_SCHEMA_V1 = "mq.handoff.v1";
     static final String MODE_FULL = "full";
+    static final String MODE_DEMOGRAPHICS = "demographics";
     static final String MODE_BASELINE = "baseline";
     static final String MODE_PICTOGRAPHIC = "pictographic";
 
@@ -66,6 +73,9 @@ final class QuestionnaireLaunchContext {
     final String nextPackage;
     final String nextActivity;
     final long autoCloseDelayMs;
+    final PendingIntent returnPendingIntent;
+    final String handoffSchema;
+    final String triggerId;
     final boolean chained;
     final String questionnaireMode;
     final String blockNumber;
@@ -91,6 +101,9 @@ final class QuestionnaireLaunchContext {
         String nextPackage,
         String nextActivity,
         long autoCloseDelayMs,
+        PendingIntent returnPendingIntent,
+        String handoffSchema,
+        String triggerId,
         boolean chained,
         String questionnaireMode,
         String blockNumber,
@@ -115,6 +128,9 @@ final class QuestionnaireLaunchContext {
         this.nextPackage = clean(nextPackage);
         this.nextActivity = clean(nextActivity);
         this.autoCloseDelayMs = Math.max(0L, autoCloseDelayMs);
+        this.returnPendingIntent = returnPendingIntent;
+        this.handoffSchema = clean(handoffSchema);
+        this.triggerId = clean(triggerId);
         this.chained = chained;
         this.questionnaireMode = normalizeQuestionnaireMode(questionnaireMode);
         this.blockNumber = clean(blockNumber);
@@ -150,6 +166,9 @@ final class QuestionnaireLaunchContext {
             firstNonEmpty(value(intent, EXTRA_NEXT_PACKAGE, "nextPackage"), defaults.nextPackage),
             firstNonEmpty(value(intent, EXTRA_NEXT_ACTIVITY, "nextActivity"), defaults.nextActivity),
             longValue(intent, EXTRA_AUTO_CLOSE_DELAY_MS, "autoCloseDelayMs", defaults.autoCloseDelayMs),
+            pendingIntentExtra(intent, EXTRA_RETURN_PENDING_INTENT),
+            firstNonEmpty(value(intent, EXTRA_HANDOFF_SCHEMA, "handoffSchema"), HANDOFF_SCHEMA_V1),
+            value(intent, EXTRA_TRIGGER_ID, "triggerId"),
             chained,
             firstNonEmpty(value(intent, EXTRA_QUESTIONNAIRE_MODE, "questionnaireMode"), value(intent, EXTRA_FLOW_MODE, "flowMode")),
             value(intent, EXTRA_BLOCK_NUMBER, "blockNumber"),
@@ -167,6 +186,14 @@ final class QuestionnaireLaunchContext {
 
     boolean shouldStaySaved() {
         return FINISH_STAY_SAVED.equals(finishBehavior);
+    }
+
+    boolean hasReturnPendingIntent() {
+        return returnPendingIntent != null;
+    }
+
+    boolean isDemographicsOnly() {
+        return MODE_DEMOGRAPHICS.equals(questionnaireMode);
     }
 
     boolean isBaselineOnly() {
@@ -205,7 +232,20 @@ final class QuestionnaireLaunchContext {
             target.putExtra("mq.command", CHAINLINK_NEXT_BLOCK);
             target.putExtra("mq.triggerSource", "questionnaire-complete");
         }
+        addCompletionExtras(target, export, record);
+        return target;
+    }
+
+    void sendReturnPendingIntent(Context context, QuestionnaireExporter.ExportResult export, QuestionnaireData.SessionRecord record) throws PendingIntent.CanceledException {
+        Intent fillIn = new Intent();
+        addCompletionExtras(fillIn, export, record);
+        returnPendingIntent.send(context, 0, fillIn);
+    }
+
+    private void addCompletionExtras(Intent target, QuestionnaireExporter.ExportResult export, QuestionnaireData.SessionRecord record) {
+        target.putExtra(EXTRA_HANDOFF_SCHEMA, HANDOFF_SCHEMA_V1);
         target.putExtra(EXTRA_RESULT_STATUS, "complete");
+        target.putExtra(EXTRA_TRIGGER_ID, triggerId);
         target.putExtra(EXTRA_RUN_ID, record.runId);
         target.putExtra(EXTRA_SESSION_ID, record.sessionId);
         target.putExtra(EXTRA_CHAIN_ID, record.chainId);
@@ -223,7 +263,6 @@ final class QuestionnaireLaunchContext {
             target.putExtra(EXTRA_PARTICIPANT_NAME, record.participant.name);
             target.putExtra(EXTRA_LANGUAGE, record.participant.language);
         }
-        return target;
     }
 
     private static boolean isChainIntent(Intent intent) {
@@ -260,6 +299,16 @@ final class QuestionnaireLaunchContext {
         }
         Uri data = intent.getData();
         return data != null ? clean(data.getQueryParameter(queryName)) : "";
+    }
+
+    private static PendingIntent pendingIntentExtra(Intent intent, String extraName) {
+        if (intent == null || !intent.hasExtra(extraName)) {
+            return null;
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            return intent.getParcelableExtra(extraName, PendingIntent.class);
+        }
+        return intent.getParcelableExtra(extraName);
     }
 
     private static long longValue(Intent intent, String extraName, String queryName, long fallback) {
@@ -339,7 +388,7 @@ final class QuestionnaireLaunchContext {
 
     private static String normalizeQuestionnaireMode(String value) {
         String cleaned = clean(value);
-        if (MODE_BASELINE.equals(cleaned) || MODE_PICTOGRAPHIC.equals(cleaned) || MODE_FULL.equals(cleaned)) {
+        if (MODE_DEMOGRAPHICS.equals(cleaned) || MODE_BASELINE.equals(cleaned) || MODE_PICTOGRAPHIC.equals(cleaned) || MODE_FULL.equals(cleaned)) {
             return cleaned;
         }
         return MODE_FULL;

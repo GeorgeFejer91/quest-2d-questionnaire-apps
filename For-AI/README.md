@@ -1,12 +1,25 @@
 # For AI Agents
 
-Read this folder before changing the repository. It records project decisions
-that are easy to lose between sessions.
+This folder is the canonical AI-agent documentation hub for the repository.
+Read it before changing code, docs, APK packaging, the questionnaire builder,
+or Quest validation workflows.
 
-Start here:
+Start with:
 
-1. `published-questionnaire-builder.md`
-2. `../MyQuestionnaireVR-2D/For-AI/README.md`
+1. `START_HERE.md`
+2. `PROJECT_CONSTRAINTS.md`
+3. `AGENT_OPERATING_RULES.md`
+
+Related handoffs:
+
+- `published-questionnaire-builder.md`: GitHub Pages and online/offline builder
+  publication notes.
+- `handoff-implementation-lessons.md`: PendingIntent-first Quest handoff,
+  ChainLink fallback, and local validation lessons.
+- `unity-quest-video-validation-lessons.md`: Unity Quest video stimulus build,
+  validation, manifest, and protected launch-dialog lessons.
+- `../MyQuestionnaireVR-2D/For-AI/README.md`: app-specific notes for the
+  questionnaire project.
 
 Current repository state:
 
@@ -23,3 +36,6 @@ Do not treat `questionnaire-builder/index.html` as the primary source of truth.
 It is the staged static Pages copy. Update the source GUI in
 `MyQuestionnaireVR-2D/tools/questionnaire-config-editor/index.html`, then run
 the publish script documented in `published-questionnaire-builder.md`.
+
+Keep this folder documentation-only. Do not store generated outputs, APKs,
+experiment exports, logs, screenshots, or private participant data here.

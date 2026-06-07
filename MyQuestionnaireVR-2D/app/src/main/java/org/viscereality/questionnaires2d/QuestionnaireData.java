@@ -291,6 +291,7 @@ final class QuestionnaireData {
         String chainId;
         String chainStepId;
         int chainStepIndex = -1;
+        String triggerId;
         String finishBehavior;
         String callerPackage;
         String callerActivity;

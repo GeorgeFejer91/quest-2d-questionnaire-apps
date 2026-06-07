@@ -1,8 +1,10 @@
 package org.viscereality.chainlink;
 
 import android.app.Activity;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.BaseBundle;
 import android.os.Bundle;
 import android.util.Base64;
@@ -35,13 +37,21 @@ public final class ChainLinkActivity extends Activity {
     public static final String ACTION_RUN = "org.viscereality.chainlink.RUN";
     public static final String ACTION_COMMAND = "org.viscereality.chainlink.COMMAND";
     private static final String QUESTIONNAIRE_ACTION = "org.viscereality.questionnaires2d.RUN";
+    private static final String TEMPORAL_TRACER_PACKAGE = "org.viscereality.temporaltracer2d";
+    private static final String TEMPORAL_TRACER_ACTIVITY = "org.viscereality.temporaltracer2d.MainActivity";
+    private static final String TEMPORAL_TRACER_ACTION = "org.viscereality.temporaltracer2d.RUN";
     private static final String EXTRA_COMMAND = "mq.command";
+    private static final String EXTRA_TRIGGER_ID = "mq.triggerId";
+    private static final String EXTRA_RETURN_PENDING_INTENT = "mq.returnPendingIntent";
+    private static final String EXTRA_HANDOFF_SCHEMA = "mq.handoffSchema";
     private static final String EXTRA_PLAN_JSON = "mq.chainPlanJson";
     private static final String EXTRA_PLAN_BASE64 = "mq.chainPlanBase64";
     private static final String EXTRA_PLAN_PATH = "mq.chainPlanPath";
     private static final String EXTRA_RESULT_STATUS = "mq.resultStatus";
     private static final String COMMAND_START_PLAN = "startPlan";
     private static final String COMMAND_NEXT_BLOCK = "nextBlock";
+    private static final String COMMAND_TRIGGER = "trigger";
+    private static final String COMMAND_TRIGGER_COMPLETE = "triggerComplete";
     private static final String COMMAND_LAUNCH_APP = "launchApp";
     private static final String COMMAND_CLEAR = "clear";
     private static final String COMMAND_STATUS = "status";
@@ -148,6 +158,10 @@ public final class ChainLinkActivity extends Activity {
                 startPlan(intent);
             } else if (COMMAND_NEXT_BLOCK.equals(command)) {
                 continuePlan(intent);
+            } else if (COMMAND_TRIGGER.equals(command)) {
+                routeTrigger(intent);
+            } else if (COMMAND_TRIGGER_COMPLETE.equals(command)) {
+                completeTriggerBlock(intent);
             } else if (COMMAND_LAUNCH_APP.equals(command)) {
                 launchDirect(intent);
             } else if (COMMAND_CLEAR.equals(command)) {
@@ -213,6 +227,65 @@ public final class ChainLinkActivity extends Activity {
         startActivity(launch);
     }
 
+    private void completeTriggerBlock(Intent intent) throws IOException, JSONException {
+        loadStateIfPresent();
+        writeState("waitingForTrigger", resultJson(intent));
+        appendEvent("trigger-complete", extra(intent, EXTRA_TRIGGER_ID), intent, null);
+        if (returnToTriggerSource(intent)) {
+            showStatus("Trigger block complete. Returning to source app.");
+            return;
+        }
+        showStatus("Trigger block complete. Waiting for next trigger.");
+    }
+
+    private void routeTrigger(Intent intent) throws IOException, JSONException {
+        loadStateIfPresent();
+        if (activePlan == null && hasPlanPayload(intent)) {
+            activePlan = readPlan(intent);
+            activeChainId = firstNonBlank(extra(intent, "mq.chainId"), activePlan.optString("chainId", ""), newRunId());
+            activeContextExtras = persistentContextExtras(intent);
+            currentStepIndex = -1;
+            writeState("running", null);
+            appendEvent("plan-start", activeChainId, intent, null);
+        }
+        if (activePlan == null) {
+            showStatus("No active plan. Trigger routing needs mq.chainPlanJson/path/base64 or a started plan.");
+            appendEvent("trigger-no-active-plan", extra(intent, EXTRA_TRIGGER_ID), intent, null);
+            return;
+        }
+
+        mergePersistentContextExtras(intent);
+        String triggerId = firstNonBlank(extra(intent, EXTRA_TRIGGER_ID), query(intent, "triggerId"));
+        if (isBlank(triggerId)) {
+            showStatus("Trigger command is missing mq.triggerId.");
+            appendEvent("trigger-invalid", "missing-trigger-id", intent, null);
+            return;
+        }
+
+        JSONArray steps = activePlan.optJSONArray("steps");
+        if (steps == null) {
+            showStatus("Active plan has no steps.");
+            appendEvent("plan-invalid", "missing-steps", intent, null);
+            return;
+        }
+
+        int match = findStepForTrigger(steps, triggerId, currentStepIndex + 1);
+        if (match < 0) {
+            match = findStepForTrigger(steps, triggerId, 0);
+        }
+        if (match < 0) {
+            showStatus("No block mapped for trigger: " + triggerId);
+            appendEvent("trigger-unmapped", triggerId, intent, null);
+            return;
+        }
+
+        JSONObject step = steps.optJSONObject(match);
+        currentStepIndex = match - 1;
+        writeState("running", null);
+        appendEvent("trigger-route", triggerId, intent, step);
+        continuePlan(intent);
+    }
+
     private void launchDirect(Intent intent) throws JSONException, IOException {
         JSONObject step = new JSONObject();
         step.put("id", "direct-launch");
@@ -227,10 +300,16 @@ public final class ChainLinkActivity extends Activity {
     }
 
     private Intent intentForStep(JSONObject step, Intent triggerIntent) throws JSONException {
-        String packageName = step.optString("package", "");
-        String activityName = normalizeActivity(packageName, step.optString("activity", ""));
-        String action = step.optString("action", "");
         String type = step.optString("type", "");
+        String packageName = step.optString("package", "");
+        String activityValue = step.optString("activity", "");
+        String action = step.optString("action", "");
+        if ("temporalTracer".equals(type)) {
+            packageName = firstNonBlank(packageName, TEMPORAL_TRACER_PACKAGE);
+            activityValue = firstNonBlank(activityValue, TEMPORAL_TRACER_ACTIVITY);
+            action = firstNonBlank(action, TEMPORAL_TRACER_ACTION);
+        }
+        String activityName = normalizeActivity(packageName, activityValue);
 
         Intent intent;
         if (!isBlank(activityName)) {
@@ -267,10 +346,27 @@ public final class ChainLinkActivity extends Activity {
         intent.putExtra("mq.chainStepId", step.optString("id", blockNumber(currentStepIndex)));
         intent.putExtra("mq.callerPackage", getPackageName());
         intent.putExtra("mq.callerActivity", getClass().getName());
+        if ("questionnaire".equals(type) || "temporalTracer".equals(type)) {
+            intent.putExtra(EXTRA_HANDOFF_SCHEMA, "mq.handoff.v1");
+            intent.putExtra(EXTRA_RETURN_PENDING_INTENT, returnPendingIntentForCurrentStep(step));
+        }
         if (!intent.hasExtra("mq.finishBehavior") && "questionnaire".equals(type)) {
             intent.putExtra("mq.finishBehavior", "resumeCaller");
         }
         return intent;
+    }
+
+    private PendingIntent returnPendingIntentForCurrentStep(JSONObject step) {
+        Intent callback = new Intent(ACTION_COMMAND);
+        callback.setClassName(getPackageName(), getClass().getName());
+        callback.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        callback.putExtra(EXTRA_COMMAND, isTriggerRoutedStep(step) ? COMMAND_TRIGGER_COMPLETE : COMMAND_NEXT_BLOCK);
+        callback.putExtra("mq.returnTarget", "chainlink");
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= 31) {
+            flags |= PendingIntent.FLAG_MUTABLE;
+        }
+        return PendingIntent.getActivity(this, (activeChainId + ":" + currentStepIndex).hashCode(), callback, flags);
     }
 
     private void loadStateIfPresent() throws IOException, JSONException {
@@ -337,6 +433,9 @@ public final class ChainLinkActivity extends Activity {
         if (!isBlank(command)) {
             return command;
         }
+        if (!isBlank(extra(intent, EXTRA_TRIGGER_ID)) || !isBlank(query(intent, "triggerId"))) {
+            return COMMAND_TRIGGER;
+        }
         if ("complete".equals(extra(intent, EXTRA_RESULT_STATUS))) {
             return COMMAND_NEXT_BLOCK;
         }
@@ -385,7 +484,7 @@ public final class ChainLinkActivity extends Activity {
         }
         BaseBundle extras = intent.getExtras();
         for (String key : extras.keySet()) {
-            if (key != null && (key.startsWith("mq.result") || key.startsWith("mq.export") || key.startsWith("mq.combined") || key.equals("mq.runId") || key.equals("mq.timestampUtc"))) {
+            if (key != null && (key.startsWith("mq.result") || key.startsWith("mq.export") || key.startsWith("mq.combined") || key.equals("mq.runId") || key.equals("mq.triggerId") || key.equals("mq.timestampUtc") || key.equals("mq.tracerConfigId") || key.equals("mq.questionnaireConfigId"))) {
                 Object value = extras.get(key);
                 if (value != null) {
                     json.put(key, String.valueOf(value));
@@ -441,7 +540,81 @@ public final class ChainLinkActivity extends Activity {
             || "mq.trialId".equals(key)
             || "mq.participantId".equals(key)
             || "mq.participantName".equals(key)
-            || "mq.language".equals(key);
+            || "mq.language".equals(key)
+            || "mq.sourcePackage".equals(key)
+            || "mq.sourceActivity".equals(key)
+            || "mq.callerPackage".equals(key)
+            || "mq.callerActivity".equals(key);
+    }
+
+    private boolean returnToTriggerSource(Intent completedIntent) throws IOException, JSONException {
+        String packageName = firstNonBlank(
+            extra(completedIntent, "mq.sourcePackage"),
+            activeContextExtras.optString("mq.sourcePackage", ""),
+            activeContextExtras.optString("mq.callerPackage", ""));
+        String activityName = firstNonBlank(
+            extra(completedIntent, "mq.sourceActivity"),
+            activeContextExtras.optString("mq.sourceActivity", ""),
+            activeContextExtras.optString("mq.callerActivity", ""));
+        if (isBlank(packageName)) {
+            appendEvent("trigger-source-missing", extra(completedIntent, EXTRA_TRIGGER_ID), completedIntent, null);
+            return false;
+        }
+
+        Intent source = new Intent();
+        if (!isBlank(activityName)) {
+            source.setClassName(packageName, normalizeActivity(packageName, activityName));
+        } else {
+            Intent launch = getPackageManager().getLaunchIntentForPackage(packageName);
+            if (launch == null) {
+                appendEvent("trigger-source-missing", packageName, completedIntent, null);
+                return false;
+            }
+            source = launch;
+        }
+        source.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        copyMqExtras(completedIntent, source);
+        source.putExtra("mq.returnTarget", "triggerSource");
+        appendEvent("trigger-return-source", packageName, completedIntent, null);
+        startActivity(source);
+        return true;
+    }
+
+    private boolean hasPlanPayload(Intent intent) {
+        return !isBlank(extra(intent, EXTRA_PLAN_JSON))
+            || !isBlank(extra(intent, EXTRA_PLAN_PATH))
+            || !isBlank(extra(intent, EXTRA_PLAN_BASE64))
+            || !isBlank(query(intent, "chainPlanJson"))
+            || !isBlank(query(intent, "chainPlanPath"))
+            || !isBlank(query(intent, "chainPlanBase64"));
+    }
+
+    private boolean isTriggerRoutedStep(JSONObject step) {
+        JSONObject trigger = step != null ? step.optJSONObject("trigger") : null;
+        return trigger != null && "apkManifestTrigger".equals(trigger.optString("type", ""));
+    }
+
+    private int findStepForTrigger(JSONArray steps, String triggerId, int startIndex) {
+        String wanted = triggerId.trim();
+        for (int i = Math.max(0, startIndex); i < steps.length(); i++) {
+            JSONObject step = steps.optJSONObject(i);
+            if (step != null && stepMatchesTrigger(step, wanted)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private boolean stepMatchesTrigger(JSONObject step, String triggerId) {
+        if (triggerId.equals(step.optString("triggerId", "")) || triggerId.equals(step.optString("id", ""))) {
+            return true;
+        }
+        JSONObject trigger = step.optJSONObject("trigger");
+        if (trigger != null && (triggerId.equals(trigger.optString("triggerId", "")) || triggerId.equals(trigger.optString("id", "")))) {
+            return true;
+        }
+        JSONObject extras = step.optJSONObject("extras");
+        return extras != null && triggerId.equals(extras.optString(EXTRA_TRIGGER_ID, ""));
     }
 
     private void copyJsonExtras(Intent intent, JSONObject extras) {

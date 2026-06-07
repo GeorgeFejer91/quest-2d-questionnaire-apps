@@ -1,7 +1,9 @@
 package org.viscereality.temporaltracer2d;
 
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 
@@ -31,6 +33,9 @@ final class TemporalTracerLaunchContext {
     static final String EXTRA_EXPORT_CSV_PATH = "mq.exportCsvPath";
     static final String EXTRA_EXPORT_SVG_PATH = "mq.exportSvgPath";
     static final String EXTRA_TRACER_CONFIG_ID = "mq.tracerConfigId";
+    static final String EXTRA_HANDOFF_SCHEMA = "mq.handoffSchema";
+    static final String EXTRA_RETURN_PENDING_INTENT = "mq.returnPendingIntent";
+    static final String EXTRA_TRIGGER_ID = "mq.triggerId";
     static final String EXTRA_BLOCK_NUMBER = "mq.blockNumber";
     static final String EXTRA_BLOCK_ID = "mq.blockId";
     static final String EXTRA_AUTO_TRACE = "mq.autoTrace";
@@ -38,6 +43,7 @@ final class TemporalTracerLaunchContext {
     static final String FINISH_RESUME_CALLER = "resumeCaller";
     static final String FINISH_OPEN_NEXT = "openNext";
     static final String FINISH_STAY_SAVED = "staySaved";
+    static final String HANDOFF_SCHEMA_V1 = "mq.handoff.v1";
 
     final String runId;
     final String sessionId;
@@ -57,6 +63,9 @@ final class TemporalTracerLaunchContext {
     final String nextPackage;
     final String nextActivity;
     final long autoCloseDelayMs;
+    final PendingIntent returnPendingIntent;
+    final String handoffSchema;
+    final String triggerId;
     final String blockNumber;
     final String blockId;
     final boolean chained;
@@ -81,6 +90,9 @@ final class TemporalTracerLaunchContext {
         String nextPackage,
         String nextActivity,
         long autoCloseDelayMs,
+        PendingIntent returnPendingIntent,
+        String handoffSchema,
+        String triggerId,
         String blockNumber,
         String blockId,
         boolean chained,
@@ -103,6 +115,9 @@ final class TemporalTracerLaunchContext {
         this.nextPackage = clean(nextPackage);
         this.nextActivity = clean(nextActivity);
         this.autoCloseDelayMs = Math.max(0L, autoCloseDelayMs);
+        this.returnPendingIntent = returnPendingIntent;
+        this.handoffSchema = clean(handoffSchema);
+        this.triggerId = clean(triggerId);
         this.blockNumber = clean(blockNumber);
         this.blockId = clean(blockId);
         this.chained = chained;
@@ -135,6 +150,9 @@ final class TemporalTracerLaunchContext {
             value(intent, EXTRA_NEXT_PACKAGE, "nextPackage"),
             value(intent, EXTRA_NEXT_ACTIVITY, "nextActivity"),
             longValue(intent, EXTRA_AUTO_CLOSE_DELAY_MS, "autoCloseDelayMs", 2000L),
+            pendingIntentExtra(intent, EXTRA_RETURN_PENDING_INTENT),
+            firstNonBlank(value(intent, EXTRA_HANDOFF_SCHEMA, "handoffSchema"), HANDOFF_SCHEMA_V1),
+            value(intent, EXTRA_TRIGGER_ID, "triggerId"),
             value(intent, EXTRA_BLOCK_NUMBER, "blockNumber"),
             value(intent, EXTRA_BLOCK_ID, "blockId"),
             hasMqExtras(intent) || ACTION_RUN.equals(intent != null ? intent.getAction() : null),
@@ -151,6 +169,10 @@ final class TemporalTracerLaunchContext {
 
     boolean shouldStaySaved() {
         return FINISH_STAY_SAVED.equals(finishBehavior);
+    }
+
+    boolean hasReturnPendingIntent() {
+        return returnPendingIntent != null;
     }
 
     Intent completionIntent(Context context, TemporalTraceExporter.ExportResult lastExport, TemporalTracerConfig config) {
@@ -172,17 +194,37 @@ final class TemporalTracerLaunchContext {
         }
 
         target.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        addCompletionExtras(target, lastExport, config);
+        return target;
+    }
+
+    void sendReturnPendingIntent(Context context, TemporalTraceExporter.ExportResult lastExport, TemporalTracerConfig config) throws PendingIntent.CanceledException {
+        Intent fillIn = new Intent();
+        addCompletionExtras(fillIn, lastExport, config);
+        returnPendingIntent.send(context, 0, fillIn);
+    }
+
+    private void addCompletionExtras(Intent target, TemporalTraceExporter.ExportResult lastExport, TemporalTracerConfig config) {
+        target.putExtra(EXTRA_HANDOFF_SCHEMA, HANDOFF_SCHEMA_V1);
         target.putExtra(EXTRA_RESULT_STATUS, "complete");
+        target.putExtra(EXTRA_TRIGGER_ID, triggerId);
         target.putExtra(EXTRA_RUN_ID, runId);
         target.putExtra(EXTRA_SESSION_ID, sessionId);
+        target.putExtra(EXTRA_CHAIN_ID, chainId);
+        target.putExtra(EXTRA_CHAIN_STEP_ID, chainStepId);
+        target.putExtra(EXTRA_CHAIN_STEP_INDEX, chainStepIndex);
+        target.putExtra(EXTRA_BLOCK_NUMBER, blockNumber);
+        target.putExtra(EXTRA_BLOCK_ID, blockId);
         target.putExtra(EXTRA_TIMESTAMP_UTC, TimeUtil.utcIsoNowMillis());
         target.putExtra(EXTRA_TRACER_CONFIG_ID, config.tracerId);
+        target.putExtra(EXTRA_PARTICIPANT_ID, participantId);
+        target.putExtra(EXTRA_PARTICIPANT_NAME, participantName);
+        target.putExtra(EXTRA_LANGUAGE, language);
         if (lastExport != null) {
             target.putExtra(EXTRA_EXPORT_JSON_PATH, lastExport.jsonFile.getAbsolutePath());
             target.putExtra(EXTRA_EXPORT_CSV_PATH, lastExport.csvFile.getAbsolutePath());
             target.putExtra(EXTRA_EXPORT_SVG_PATH, lastExport.svgFile.getAbsolutePath());
         }
-        return target;
     }
 
     private static String normalizeLanguage(String value) {
@@ -268,6 +310,29 @@ final class TemporalTracerLaunchContext {
             return intent.getBooleanExtra(legacyName, defaultValue);
         }
         return defaultValue;
+    }
+
+    private static PendingIntent pendingIntentExtra(Intent intent, String extraName) {
+        if (intent == null || !intent.hasExtra(extraName)) {
+            return null;
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            return intent.getParcelableExtra(extraName, PendingIntent.class);
+        }
+        return intent.getParcelableExtra(extraName);
+    }
+
+    private static String firstNonBlank(String... values) {
+        if (values == null) {
+            return "";
+        }
+        for (String value : values) {
+            String clean = clean(value);
+            if (!TextUtils.isEmpty(clean)) {
+                return clean;
+            }
+        }
+        return "";
     }
 
     static String clean(String value) {

@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "mq.xr_questionnaire_panel_handoff.recipe.v1",
+  "recipeId": "awe-great-dictator-pending-intent-handoff",
+  "goal": "Prove XR focused -> 2D panel focused -> same XR app focused again without ADB foreground switching in the product path.",
+  "strategyCandidates": [
+    {
+      "id": "A",
+      "label": "direct-pending-intent",
+      "path": "XR app -> 2D panel -> same XR app via mq.returnPendingIntent",
+      "default": true
+    },
+    {
+      "id": "B",
+      "label": "chainlink-trigger-router",
+      "path": "XR app -> ChainLink mq.command=trigger -> 2D panel -> ChainLink -> XR app"
+    },
+    {
+      "id": "C",
+      "label": "legacy-caller-component",
+      "path": "XR app -> 2D panel -> explicit caller package/activity"
+    }
+  ],
+  "apps": {
+    "xr": {
+      "package": "org.questionnairebuilder.stimulusdemo",
+      "activity": "org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity",
+      "project": "AweGreatDictatorUnity",
+      "catalog": "AweGreatDictatorUnity/Assets/StreamingAssets/mq/questionnaire-trigger-catalog.json"
+    },
+    "questionnaire": {
+      "package": "org.viscereality.questionnaires2d",
+      "activity": "org.viscereality.questionnaires2d.MainActivity",
+      "action": "org.viscereality.questionnaires2d.RUN"
+    },
+    "temporalTracer": {
+      "package": "org.viscereality.temporaltracer2d",
+      "activity": "org.viscereality.temporaltracer2d.MainActivity",
+      "action": "org.viscereality.temporaltracer2d.RUN"
+    },
+    "chainlink": {
+      "package": "org.viscereality.chainlink",
+      "activity": "org.viscereality.chainlink.ChainLinkActivity",
+      "action": "org.viscereality.chainlink.COMMAND"
+    }
+  },
+  "triggers": [
+    {
+      "triggerId": "trigger_1_launch_questionnaire",
+      "blockNumber": "001",
+      "blockId": "001_trigger_1_launch_questionnaire",
+      "expectedPanel": "questionnaire",
+      "expectedMode": "demographics",
+      "expectedExports": [
+        "json",
+        "csv"
+      ]
+    },
+    {
+      "triggerId": "trigger_2_video_complete",
+      "blockNumber": "002",
+      "blockId": "002_trigger_2_video_complete",
+      "expectedPanel": "temporalTracer",
+      "expectedExports": [
+        "svg",
+        "csv",
+        "json"
+      ]
+    }
+  ],
+  "localGates": [
+    "builder-smoke emits awe-great-dictator-handoff.config.json and ChainLink plan",
+    "questionnaire config validates",
+    "questionnaire APK generation runs with local Android render preview",
+    "temporal tracer config validates",
+    "temporal tracer local render preview passes",
+    "Unity video asset gate confirms H.264 yuv420p/AAC and nonblack sampled frames",
+    "Unity editor render gate sees nonblack video frame"
+  ],
+  "questEvidence": [
+    "adb devices/model/version/size/density",
+    "APK install transcripts",
+    "APK package/activity inspection",
+    "foreground before initial launch",
+    "bounded logcat with trigger, pause, resume, panel completion, and export markers",
+    "foreground sequence: XR -> questionnaire -> XR -> temporal tracer -> XR",
+    "questionnaire export JSON/CSV pulled from app external files",
+    "temporal tracer SVG/CSV/JSON pulled from app external files",
+    "ChainLink state/events only when Candidate B is under test"
+  ],
+  "acceptance": {
+    "directPendingIntentTrials": 10,
+    "manualHeadsetPasses": 1,
+    "noProductPathShellForegroundSwitch": true,
+    "bothPackagesStayAlive": true,
+    "sameXrActivityReceivesReturnIntent": true
+  }
+}

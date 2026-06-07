@@ -1,6 +1,6 @@
 param(
     [string]$ProjectPath = (Split-Path -Parent $PSScriptRoot),
-    [string]$GradleWrapper = "C:\Users\cogpsy-vrlab\Documents\GithubVR\MyQuestionnaireVR-2D\gradlew.bat",
+    [string]$GradleWrapper = "",
     [string]$UnityAndroidRoot = "C:\Users\cogpsy-vrlab\Unity\Hub\Editor\6000.2.7f2\Editor\Data\PlaybackEngines\AndroidPlayer",
     [string]$OutputRoot = "",
     [string]$RunId = "",
@@ -10,13 +10,21 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
+$ProjectPath = [System.IO.Path]::GetFullPath($ProjectPath)
+
 if ([string]::IsNullOrWhiteSpace($RunId)) {
     $RunId = "render-" + (Get-Date).ToUniversalTime().ToString('yyyyMMdd_HHmmss')
 }
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $ProjectPath "artifacts\temporal-tracer-render-validation\$RunId"
 }
+$OutputRoot = [System.IO.Path]::GetFullPath($OutputRoot)
 New-Item -ItemType Directory -Force -Path $OutputRoot | Out-Null
+
+if ([string]::IsNullOrWhiteSpace($GradleWrapper)) {
+    $GradleWrapper = Join-Path $ProjectPath 'gradlew.bat'
+}
+$GradleWrapper = [System.IO.Path]::GetFullPath($GradleWrapper)
 
 if (-not (Test-Path -LiteralPath $GradleWrapper)) {
     throw "Gradle wrapper not found: $GradleWrapper"

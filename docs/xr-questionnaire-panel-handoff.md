@@ -339,6 +339,11 @@ the 2D-first launcher gate, and then run direct handoff preflight or live
 trials according to the same `Preflight only` toggle. It reuses the existing
 companion endpoints so the one-button path and individual-button path share
 the same evidence semantics.
+The GUI's `Audit readiness` control calls `/api/handoff-readiness-audit`. That
+companion endpoint runs the Universal Handoff audit against local summaries and
+returns an `auditReceipt`, so the website can show how many requirements are
+proven, how many physical gates remain, and which summary can be bundled for
+review.
 The workflow polling endpoint returns a compact `workflowReceipt`, while the
 install, replay/export, 2D-first launcher, and direct handoff polling endpoints
 return compact `jobReceipt` objects. The GUI displays these beside the job status so the
@@ -350,8 +355,9 @@ The companion `/api/status` health payload advertises `apiVersion`,
 `receiptSchemaVersion`, and receipt capabilities such as
 `generate-apk-receipt`, `artifact-preview`, `workflow-render-previews`,
 `evidence-bundle`, `workflow-receipt`, `direct-handoff-preflight`,
-`2d-first-launcher-preflight`, and `runner-job-receipts`; the hosted GUI should
-warn if a user connects an older local companion that lacks those capabilities. The
+`2d-first-launcher-preflight`, `handoff-readiness-audit`, and
+`runner-job-receipts`; the hosted GUI should warn if a user connects an older
+local companion that lacks those capabilities. The
 `artifact-preview` capability means the companion can serve generation-receipt
 and workflow-receipt sample PNGs through the token-protected
 `/api/artifact-preview` route. That route is only for generated local PNG

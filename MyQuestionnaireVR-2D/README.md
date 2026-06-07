@@ -370,6 +370,10 @@ preflight or live trials according to the existing `Preflight only` and
 optional `Wake before readiness` toggles. This button reuses the same
 companion endpoints as the individual controls; it is an orchestration
 convenience, not a different validation path.
+Use `Audit readiness` after a sequence or stress run to ask the companion for
+the Universal Handoff requirement matrix. It reports proven offline gates,
+remaining physical headset gates, and an auditable summary path that can be
+included in an evidence bundle.
 
 Run the full local ladder from builder smoke test through generated APK and
 Android render preview:

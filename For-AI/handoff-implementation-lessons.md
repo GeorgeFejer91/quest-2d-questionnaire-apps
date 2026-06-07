@@ -766,6 +766,24 @@ first, put that gate in the operator GUI and in the companion receipt contract.
 CLI validators are useful, but the default study path should surface the same
 proof boundary where the operator actually runs the workflow.
 
+## Completion Audits Should Be Operator-Visible
+
+Problem: the Universal Handoff audit could already summarize proven offline
+requirements and pending physical gates, but it lived behind a PowerShell
+command. That made the GUI good at starting jobs while leaving the actual
+"are we done yet?" answer in a separate CLI artifact.
+
+Solution: expose `audit-universal-handoff-readiness.ps1` through the local
+companion as `/api/handoff-readiness-audit`, add an `Audit readiness` button,
+and return an `auditReceipt` that the GUI renders like the other evidence
+receipts. The companion stress validator calls the endpoint against its own
+summary so the audit route proves current-run evidence, not just stale files.
+
+Generalizable rule: dashboards that orchestrate validation should also expose
+the completion audit. Operators should see proven requirements, missing
+offline evidence, and pending physical gates in the same place where they
+generate APKs and run headset jobs.
+
 ## Unity Must Own Panel-Focus Media Pause
 
 Problem: launching a 2D questionnaire or tracer over a Unity Quest app does not

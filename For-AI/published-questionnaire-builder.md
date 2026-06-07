@@ -59,8 +59,9 @@ profile, or repository path.
 `apiVersion`, `receiptSchemaVersion`, and capabilities such as
 `generate-apk-receipt`, `artifact-preview`, `workflow-render-previews`,
 `evidence-bundle`, `workflow-receipt`, `direct-handoff-preflight`,
-`2d-first-launcher-preflight`, and `runner-job-receipts` so the hosted GUI can
-warn when a user connects an older local companion package.
+`2d-first-launcher-preflight`, `handoff-readiness-audit`, and
+`runner-job-receipts` so the hosted GUI can warn when a user connects an older
+local companion package.
 
 Render preview thumbnails are fetched from the companion through
 `GET /api/artifact-preview?path=...`. That route must stay token-protected,
@@ -89,6 +90,10 @@ individual controls, in order: save, validate, generate with tests and local
 render preview, readiness, install, replay/export, 2D-first launcher
 preflight/live trial, and direct handoff preflight or live trials. Do not let
 it become a separate hidden backend workflow.
+`Audit readiness` should call `/api/handoff-readiness-audit` and show the
+Universal Handoff requirement matrix from local evidence. It is the GUI's
+completion readout: offline evidence can pass while live Quest trials and
+manual signoff remain explicitly pending.
 `Wake before readiness` should remain opt-in, ignored for `Preflight only`, and
 passed through to `/api/direct-handoff` or `/api/validate-workflow` only for
 live direct-handoff attempts so wake-assisted evidence stays explicit.

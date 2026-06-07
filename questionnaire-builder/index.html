@@ -1084,6 +1084,7 @@
               <button id="directHandoffAppButton" type="button">Run direct handoff</button>
               <button id="headsetSequenceAppButton" type="button">Run headset sequence</button>
               <button id="validateWorkflowAppButton" type="button">Validate workflow</button>
+              <button id="auditHandoffReadinessButton" type="button">Audit readiness</button>
               <button id="downloadEvidenceBundleButton" type="button" disabled>Download evidence bundle</button>
             </div>
             <pre id="appBackendLog" style="margin-top: 10px; max-height: 280px;"></pre>
@@ -1199,6 +1200,7 @@
       { id: "workflow-receipt", label: "workflow receipts" },
       { id: "direct-handoff-preflight", label: "direct handoff preflight" },
       { id: "2d-first-launcher-preflight", label: "2D-first launcher preflight" },
+      { id: "handoff-readiness-audit", label: "handoff readiness audit" },
       { id: "runner-job-receipts", label: "runner job receipts" }
     ];
 
@@ -3195,10 +3197,10 @@
 
     function workflowReceiptLevel(receipt) {
       const status = receipt?.status || "";
-      if (status === "fail" || status === "blocked" || status === "missing-summary") {
+      if (status === "fail" || status === "blocked" || status === "missing-summary" || status === "incomplete-missing-evidence" || status === "error") {
         return "error";
       }
-      if (status === "pass") {
+      if (status === "pass" || status === "complete") {
         return "ok";
       }
       return "warn";
@@ -3300,7 +3302,7 @@
     function jobReceiptText(data) {
       const receipt = data?.jobReceipt;
       if (!receipt) {
-        return "";
+        return auditReceiptText(data);
       }
       const kindLabels = {
         "quest-apk-install": "Quest APK install",
@@ -3381,11 +3383,49 @@
       return `${pieces.join("; ")}.`;
     }
 
+    function auditReceiptText(data) {
+      const receipt = data?.auditReceipt;
+      if (!receipt) {
+        return "";
+      }
+      const counts = receipt.counts || {};
+      const artifacts = receipt.artifacts || {};
+      const pieces = [`Evidence receipt: Universal handoff audit ${receipt.status || "unknown"}`];
+      const proven = Number(counts.proven || 0);
+      const total = Number(counts.requirements || 0);
+      const physicalPending = Number(counts.physicalPending || 0);
+      const failed = Number(counts.failedOrMissing || 0);
+      if (total > 0) {
+        pieces.push(`${proven}/${total} requirements proven`);
+      }
+      if (physicalPending > 0) {
+        pieces.push(`${physicalPending} physical gates pending`);
+      }
+      if (failed > 0) {
+        pieces.push(`${failed} missing`);
+      }
+      if (receipt.completionApproved) {
+        pieces.push("completion approved");
+      }
+      if (receipt.defaultDirectPendingIntentApproved === false) {
+        pieces.push("production direct default still pending");
+      }
+      const productPathStatus = artifacts.nextPhysicalGates?.productPathStatus;
+      if (productPathStatus) {
+        pieces.push(`product path ${productPathStatus}`);
+      }
+      if (artifacts.summaryPath) {
+        pieces.push(`summary: ${artifacts.summaryPath}`);
+      }
+      return `${pieces.join("; ")}.`;
+    }
+
     function evidenceBundleSummaryPath(data) {
       return String(
         data?.workflowReceipt?.artifacts?.summaryPath ||
         data?.generationReceipt?.artifacts?.summaryPath ||
         data?.jobReceipt?.artifacts?.summaryPath ||
+        data?.auditReceipt?.artifacts?.summaryPath ||
         data?.summaryPath ||
         ""
       ).trim();
@@ -3413,7 +3453,7 @@
         return;
       }
       target.hidden = false;
-      target.className = `issue ${workflowReceiptLevel(data?.workflowReceipt || data?.generationReceipt || data?.jobReceipt)}`;
+      target.className = `issue ${workflowReceiptLevel(data?.workflowReceipt || data?.generationReceipt || data?.jobReceipt || data?.auditReceipt)}`;
       target.textContent = text;
     }
 
@@ -4380,6 +4420,27 @@
       }
     }
 
+    async function auditHandoffReadinessWithApp() {
+      const button = byId("auditHandoffReadinessButton");
+      const wasDisabled = button.disabled;
+      button.disabled = true;
+      try {
+        setAppBackendStatus("Auditing Universal Handoff readiness from local evidence...", "");
+        setWorkflowReceiptStatus(null);
+        const data = await callAppBackend("/api/handoff-readiness-audit", {});
+        setAppBackendStatus(auditReceiptText(data), workflowReceiptLevel(data?.auditReceipt));
+        setWorkflowReceiptStatus(data);
+        setAppBackendLog(data);
+      } catch (error) {
+        setAppBackendStatus(error.message || String(error), "error");
+        setWorkflowReceiptStatus(error.backendData || null);
+        setAppBackendLog(error.backendData || error.message || String(error));
+      } finally {
+        button.disabled = wasDisabled;
+        updateWorkflowGate();
+      }
+    }
+
     async function runHeadsetSequenceWithApp() {
       const button = byId("headsetSequenceAppButton");
       const wasDisabled = button.disabled;
@@ -4549,6 +4610,7 @@
     byId("directHandoffAppButton").addEventListener("click", runDirectHandoffWithApp);
     byId("headsetSequenceAppButton").addEventListener("click", runHeadsetSequenceWithApp);
     byId("validateWorkflowAppButton").addEventListener("click", validateWorkflowWithApp);
+    byId("auditHandoffReadinessButton").addEventListener("click", auditHandoffReadinessWithApp);
     byId("downloadEvidenceBundleButton").addEventListener("click", downloadEvidenceBundleWithApp);
     byId("questionnaireFirstDefaultsButton").addEventListener("click", () => applyQuestionnaireFirstDefaults());
     byId("chainStartMode").addEventListener("change", () => {

@@ -2266,6 +2266,63 @@ function Handle-DependencyInstall {
     }
 }
 
+function Invoke-HandoffReadinessAudit {
+    param([object]$Payload)
+
+    $runId = 'builder-handoff-readiness-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    $script = Join-Path $ProjectPath 'tools\audit-universal-handoff-readiness.ps1'
+    $summaryPath = Join-Path $ProjectPath ("artifacts\universal-handoff-readiness\$runId\universal-handoff-readiness-audit-summary.json")
+    $arguments = @(
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        $script,
+        '-ProjectPath',
+        $ProjectPath,
+        '-RunId',
+        $runId
+    )
+    if ($Payload.PSObject.Properties.Name -contains 'companionSummaryPath' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.companionSummaryPath)) {
+        $companionSummaryPath = Resolve-EvidenceBundleSummaryPath -Path ([string]$Payload.companionSummaryPath)
+        $arguments += @('-CompanionSummaryPath', $companionSummaryPath)
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'requireComplete' -and [bool]$Payload.requireComplete) {
+        $arguments += '-RequireComplete'
+    }
+
+    $result = Invoke-ProjectPowerShell -Arguments $arguments
+    $summary = Read-JsonFileIfExists -Path $summaryPath
+    $auditStatus = if ($summary) { [string]$summary.status } elseif ($result.exitCode -eq 0) { 'missing-summary' } else { 'error' }
+    $counts = if ($summary -and $summary.PSObject.Properties.Name -contains 'counts') { $summary.counts } else { [pscustomobject]@{} }
+    $auditReceipt = [ordered]@{
+        schemaVersion = 'mq.builder_audit.receipt.v1'
+        kind = 'universal-handoff-readiness'
+        status = $auditStatus
+        exitCode = $result.exitCode
+        completionApproved = if ($summary -and $summary.PSObject.Properties.Name -contains 'completionApproved') { [bool]$summary.completionApproved } else { $false }
+        defaultDirectPendingIntentApproved = if ($summary -and $summary.PSObject.Properties.Name -contains 'defaultDirectPendingIntentApproved') { [bool]$summary.defaultDirectPendingIntentApproved } else { $false }
+        counts = $counts
+        physicalQuestProductPathPending = if ($summary -and $counts.PSObject.Properties.Name -contains 'physicalPending') { [int]$counts.physicalPending -gt 0 } else { $true }
+        artifacts = [ordered]@{
+            summaryPath = $summaryPath
+            nextPhysicalGates = if ($summary -and $summary.PSObject.Properties.Name -contains 'nextPhysicalGates') { $summary.nextPhysicalGates } else { $null }
+        }
+        proofBoundary = 'Readiness audit summarizes existing evidence. It cannot replace the remaining live Quest product-path trials or manual headset signoff.'
+    }
+
+    return [ordered]@{
+        status = if ($summary) { 'ok' } else { 'error' }
+        auditStatus = $auditStatus
+        runId = $runId
+        exitCode = $result.exitCode
+        summaryPath = $summaryPath
+        auditReceipt = $auditReceipt
+        summary = $summary
+        output = $result.output
+    }
+}
+
 function New-StatusPayload {
     param([bool]$Authorized)
 
@@ -2304,6 +2361,7 @@ function New-StatusPayload {
             '2d-first-launcher',
             '2d-first-launcher-preflight',
             '2d-first-launcher-job-status',
+            'handoff-readiness-audit',
             'runner-job-receipts',
             'dependency-status',
             'install-dependencies'
@@ -2320,6 +2378,7 @@ function New-StatusPayload {
             validateWorkflow = Join-Path $ProjectPath 'tools\validate-builder-to-quest-workflow.ps1'
             directHandoff = Join-Path $ProjectPath 'tools\quest-direct-handoff-validate.ps1'
             twoDFirstLauncher = Join-Path $ProjectPath 'tools\quest-2d-first-launcher-validate.ps1'
+            handoffReadinessAudit = Join-Path $ProjectPath 'tools\audit-universal-handoff-readiness.ps1'
         }
     }
     return $payload
@@ -2514,6 +2573,14 @@ function Handle-Request {
         $payload = Receive-JsonPayload -Request $request
         $job = Start-TwoDFirstLauncherJob -Payload $payload
         Write-JsonResponse -Context $Context -StatusCode 202 -Value $job
+        return
+    }
+
+    if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/handoff-readiness-audit') {
+        Assert-OriginAndToken -Request $request
+        $payload = Receive-JsonPayload -Request $request
+        $result = Invoke-HandoffReadinessAudit -Payload $payload
+        Write-JsonResponse -Context $Context -StatusCode ($(if ($result.status -eq 'ok') { 200 } else { 500 })) -Value $result
         return
     }
 

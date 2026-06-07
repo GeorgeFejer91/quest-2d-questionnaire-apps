@@ -70,6 +70,10 @@ Use absolute dates.
   2D-first launch`. The one-button headset sequence now runs this front-door
   gate before direct handoff so the GUI checks the participant-facing
   questionnaire-first path as well as the Unity-triggered return path.
+- Exposed the Universal Handoff readiness audit through the companion and GUI
+  as `/api/handoff-readiness-audit` and `Audit readiness`, returning an
+  `auditReceipt` so the website can show proven offline requirements and the
+  exact physical Quest gates still pending.
 
 ## 2026-06-07
 

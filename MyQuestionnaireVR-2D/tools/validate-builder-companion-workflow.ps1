@@ -34,6 +34,7 @@ $RequiredCompanionCapabilities = @(
     'workflow-receipt',
     'direct-handoff-preflight',
     '2d-first-launcher-preflight',
+    'handoff-readiness-audit',
     'runner-job-receipts'
 )
 
@@ -580,6 +581,7 @@ try {
     $unauthorizedQuestReplayStatus = $null
     $unauthorizedDirectHandoffStatus = $null
     $unauthorizedTwoDFirstLauncherStatus = $null
+    $unauthorizedHandoffReadinessAuditStatus = $null
     $unauthorizedArtifactPreviewStatus = $null
     try {
         Invoke-Json -Method GET -Uri "$baseUrl/api/dependency-status" | Out-Null
@@ -639,6 +641,16 @@ try {
         $unauthorizedTwoDFirstLauncherStatus = Get-HttpErrorStatusCode -Exception $_.Exception
         if ($unauthorizedTwoDFirstLauncherStatus -ne 401) {
             throw "Unauthorized 2d-first-launcher expected 401, got $unauthorizedTwoDFirstLauncherStatus"
+        }
+    }
+    try {
+        Invoke-Json -Method POST -Uri "$baseUrl/api/handoff-readiness-audit" -Body @{} | Out-Null
+        throw "Unauthorized handoff-readiness-audit call unexpectedly succeeded."
+    }
+    catch {
+        $unauthorizedHandoffReadinessAuditStatus = Get-HttpErrorStatusCode -Exception $_.Exception
+        if ($unauthorizedHandoffReadinessAuditStatus -ne 401) {
+            throw "Unauthorized handoff-readiness-audit expected 401, got $unauthorizedHandoffReadinessAuditStatus"
         }
     }
     try {
@@ -1112,6 +1124,7 @@ try {
         $unauthorizedQuestReplayStatus -eq 401 -and
         $unauthorizedDirectHandoffStatus -eq 401 -and
         $unauthorizedTwoDFirstLauncherStatus -eq 401 -and
+        $unauthorizedHandoffReadinessAuditStatus -eq 401 -and
         $unauthorizedArtifactPreviewStatus -eq 401 -and
         $unauthorizedEvidenceBundleStatus -eq 401
     )
@@ -1343,6 +1356,7 @@ try {
             unauthorizedQuestReplayStatus = $unauthorizedQuestReplayStatus
             unauthorizedDirectHandoffStatus = $unauthorizedDirectHandoffStatus
             unauthorizedTwoDFirstLauncherStatus = $unauthorizedTwoDFirstLauncherStatus
+            unauthorizedHandoffReadinessAuditStatus = $unauthorizedHandoffReadinessAuditStatus
             unauthorizedArtifactPreviewStatus = $unauthorizedArtifactPreviewStatus
             unauthorizedEvidenceBundleStatus = $unauthorizedEvidenceBundleStatus
         }
@@ -1483,6 +1497,33 @@ try {
     $summaryPath = Join-Path $artifactDir 'builder-companion-workflow-summary.json'
     $summary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
     Add-Progress "summary-written=$summaryPath"
+
+    Write-Host "== Universal handoff readiness audit through companion =="
+    $handoffReadinessAudit = Invoke-Json -Method POST -Uri "$baseUrl/api/handoff-readiness-audit" -Headers $headers -Body @{
+        companionSummaryPath = $summaryPath
+    } -TimeoutSec 180
+    Add-Progress "handoff-readiness-audit-complete status=$($handoffReadinessAudit.auditStatus) summary=$($handoffReadinessAudit.summaryPath)"
+    if ($handoffReadinessAudit.status -ne 'ok' -or [string]::IsNullOrWhiteSpace([string]$handoffReadinessAudit.summaryPath) -or -not (Test-Path -LiteralPath $handoffReadinessAudit.summaryPath)) {
+        throw "Companion handoff-readiness-audit did not produce a usable audit summary."
+    }
+    $handoffReadinessAuditSummary = if ($handoffReadinessAudit.PSObject.Properties.Name -contains 'summary') { $handoffReadinessAudit.summary } else { $null }
+    $handoffReadinessAuditMissing = if ($handoffReadinessAuditSummary -and $handoffReadinessAuditSummary.counts) { [int]$handoffReadinessAuditSummary.counts.failedOrMissing } else { 999 }
+    $handoffReadinessAuditPass = ($handoffReadinessAuditMissing -eq 0 -and @('complete', 'pass-with-physical-pending') -contains [string]$handoffReadinessAudit.auditStatus)
+    if (-not $handoffReadinessAuditPass) {
+        throw "Companion handoff-readiness-audit found missing offline evidence. auditStatus=$($handoffReadinessAudit.auditStatus), failedOrMissing=$handoffReadinessAuditMissing"
+    }
+    $summary['endToEndReceipt']['checks']['handoffReadinessAuditPass'] = $handoffReadinessAuditPass
+    $summary['endToEndReceipt']['artifacts']['handoffReadinessAuditSummaryPath'] = [string]$handoffReadinessAudit.summaryPath
+    $summary['handoffReadinessAudit'] = [ordered]@{
+        status = $handoffReadinessAudit.auditStatus
+        runId = $handoffReadinessAudit.runId
+        summaryPath = $handoffReadinessAudit.summaryPath
+        auditReceipt = $handoffReadinessAudit.auditReceipt
+        counts = if ($handoffReadinessAuditSummary -and $handoffReadinessAuditSummary.counts) { $handoffReadinessAuditSummary.counts } else { $null }
+        nextPhysicalGates = if ($handoffReadinessAuditSummary -and $handoffReadinessAuditSummary.nextPhysicalGates) { $handoffReadinessAuditSummary.nextPhysicalGates } else { $null }
+    }
+    $summary['completedAt'] = (Get-Date).ToString('o')
+    $summary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
     Write-Host "Builder companion workflow summary: $summaryPath"
 }
 catch {

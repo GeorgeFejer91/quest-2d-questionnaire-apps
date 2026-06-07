@@ -105,6 +105,10 @@ headset is asleep or Horizon is already focused on
 `initialUnityLaunchAttempted=false`; wake/wear the headset or clear the system
 dialog before claiming a handoff result. Once Unity is launched, the validator
 only observes and pulls evidence.
+For unattended developer trials, add `-WakeBeforeReadiness` only when you want
+the host to send a bounded wake key before readiness polling. The summary
+records that assistance, and the usual product-path and manual headset gates
+still apply.
 
 For a single evidence matrix from GUI config through local software, APKs,
 local renderers, Unity bridge static checks, APK handoff preflight, and Quest

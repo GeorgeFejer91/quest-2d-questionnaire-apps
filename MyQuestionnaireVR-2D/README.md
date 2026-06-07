@@ -234,6 +234,12 @@ readiness samples instead of launching Unity. If the headset or display falls
 asleep after the product path has already begun, the direct handoff validator
 now records a blocked product-path evidence window instead of treating missing
 markers as a direct handoff failure when no fatal app logs are present.
+For unattended development attempts, `Wake before readiness` can be enabled
+after clearing `Preflight only`; the companion passes this to the direct
+handoff validator as `-WakeBeforeReadiness`, records it in the summary and job
+receipt, and still leaves the usual readiness and product-path gates in force.
+Do not treat that wake event as a replacement for the required manual headset
+pass.
 
 One live Quest direct-handoff pass was captured on 2026-06-07 in
 `artifacts\quest-direct-handoff\20260607T111059Z`: the questionnaire returned
@@ -248,9 +254,9 @@ Use `Run headset sequence` in the builder runner for the ordered GUI path:
 save config, validate config, generate the APK with unit tests and a local
 render preview, detect Quest readiness, install the generated APK, run
 replay/export, and then run direct handoff preflight or live trials according
-to the existing `Preflight only` toggle. This button reuses the same companion
-endpoints as the individual controls; it is an orchestration convenience, not
-a different validation path.
+to the existing `Preflight only` and optional `Wake before readiness` toggles.
+This button reuses the same companion endpoints as the individual controls; it
+is an orchestration convenience, not a different validation path.
 
 Run the full local ladder from builder smoke test through generated APK and
 Android render preview:

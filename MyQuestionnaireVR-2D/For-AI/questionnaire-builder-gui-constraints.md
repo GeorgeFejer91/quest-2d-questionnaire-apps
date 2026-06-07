@@ -42,6 +42,9 @@ Workflow constraint:
   local companion for trusted PC actions.
 - Section 1 should include a user-friendly "Load example APK" fallback with the
   GitHub folder URL for `example-scenario-apk/`.
+- Device-state helpers in the runner, such as `Wake before readiness`, must be
+  explicit opt-in controls, disabled by default, and ignored by preflight-only
+  paths. They should be recorded in companion receipts when used.
 
 Security and portability constraints:
 

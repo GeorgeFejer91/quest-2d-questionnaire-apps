@@ -84,6 +84,9 @@ direct handoff preflight in the aggregate workflow matrix by sending
 individual controls, in order: save, validate, generate with tests and local
 render preview, readiness, install, replay/export, and direct handoff preflight
 or live trials. Do not let it become a separate hidden backend workflow.
+`Wake before readiness` should remain opt-in, ignored for `Preflight only`, and
+passed through to `/api/direct-handoff` or `/api/validate-workflow` only for
+live direct-handoff attempts so wake-assisted evidence stays explicit.
 
 ## Important Files
 

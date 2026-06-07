@@ -22,6 +22,7 @@ param(
     [switch]$RunQuestReadiness,
     [switch]$RunQuestDirectHandoff,
     [switch]$DryRunQuestDirectHandoff,
+    [switch]$WakeBeforeReadiness,
     [switch]$SkipInstall
 )
 
@@ -947,6 +948,7 @@ $directQuestStatus = 'pending'
 $directQuestEvidence = 'Direct Quest handoff trials were not requested.'
 $directQuestSummary = $null
 $directQuestFacts = $null
+$effectiveWakeBeforeReadiness = ([bool]$WakeBeforeReadiness -and -not [bool]$DryRunQuestDirectHandoff)
 if ($RunQuestDirectHandoff) {
     if ([string]::IsNullOrWhiteSpace($Serial) -and -not $DryRunQuestDirectHandoff) {
         $directQuestStatus = 'blocked'
@@ -986,6 +988,9 @@ if ($RunQuestDirectHandoff) {
         if ($DryRunQuestDirectHandoff) {
             $directArgs += '-DryRun'
         }
+        if ($effectiveWakeBeforeReadiness) {
+            $directArgs += '-WakeBeforeReadiness'
+        }
         $directStep = Invoke-ToolStep `
             -Name 'quest-direct-pendingintent-handoff' `
             -Arguments $directArgs `
@@ -998,11 +1003,13 @@ if ($RunQuestDirectHandoff) {
             $directQuestFacts = [ordered]@{
                 status = $directQuestSummary.status
                 dryRun = [bool]$DryRunQuestDirectHandoff
+                wakeBeforeReadiness = [bool]$effectiveWakeBeforeReadiness
                 requestedQuestTrials = $QuestTrials
                 requestedWaitForReadySeconds = $WaitForReadySeconds
                 trialCount = if ($directQuestSummary.PSObject.Properties.Name -contains 'trialCount') { $directQuestSummary.trialCount } else { $null }
                 attemptedTrialCount = if ($directQuestSummary.PSObject.Properties.Name -contains 'attemptedTrialCount') { $directQuestSummary.attemptedTrialCount } else { $null }
                 waitForReadySeconds = if ($directQuestSummary.PSObject.Properties.Name -contains 'waitForReadySeconds') { $directQuestSummary.waitForReadySeconds } else { $null }
+                summaryWakeBeforeReadiness = if ($directQuestSummary.PSObject.Properties.Name -contains 'wakeBeforeReadiness') { $directQuestSummary.wakeBeforeReadiness } else { $null }
                 passCount = $directQuestSummary.passCount
                 warnCount = $directQuestSummary.warnCount
                 blockedCount = $directQuestSummary.blockedCount

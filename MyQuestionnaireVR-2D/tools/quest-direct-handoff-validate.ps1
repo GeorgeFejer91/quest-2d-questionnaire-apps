@@ -21,6 +21,7 @@ param(
     [switch]$AutoTraceForValidation,
     [switch]$FastVideoForValidation,
     [int]$ValidationVideoEndAfterSeconds = 3,
+    [switch]$WakeBeforeReadiness,
     [switch]$AllowActivityMismatch,
     [switch]$AllowLaunchWhenNotReady,
     [switch]$DryRun
@@ -307,6 +308,9 @@ function New-DirectHandoffDecisionGate {
     $blockedDuringProductPathCount = @($trialArray | Where-Object {
         $_.blockedReasons -and (@($_.blockedReasons) -contains 'headset-asleep-or-display-off-during-product-path')
     }).Count
+    $wakeBeforeReadinessCount = @($trialArray | Where-Object {
+        $_.productPath -and [bool]$_.productPath.wakeBeforeReadiness
+    }).Count
     $automatedTrialGatePassed = (
         -not $IsDryRun -and
         [string]$PreflightStatus -eq 'pass' -and
@@ -392,6 +396,7 @@ function New-DirectHandoffDecisionGate {
         shellDrivenForegroundSwitchAfterInitialLaunchCount = $shellSwitchCount
         blockedBeforeProductPathCount = $blockedBeforeProductPathCount
         blockedDuringProductPathCount = $blockedDuringProductPathCount
+        wakeBeforeReadinessCount = $wakeBeforeReadinessCount
         passedRequiredTrials = $automatedTrialGatePassed
         automatedQuestTrialGatePassed = $automatedTrialGatePassed
         manualHeadsetPassRequired = $true
@@ -702,6 +707,7 @@ if ($DryRun) {
             noAutoReplay = [bool]$NoAutoReplay
             waitForReadySeconds = $WaitForReadySeconds
             readinessPollSeconds = [Math]::Max(1, $ReadinessPollSeconds)
+            wakeBeforeReadiness = [bool]$WakeBeforeReadiness
             allowLaunchWhenNotReady = [bool]$AllowLaunchWhenNotReady
         }
         decisionGate = (New-DirectHandoffDecisionGate `
@@ -738,6 +744,10 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
     $trialDir = Join-Path $OutputRoot $trialId
     New-Item -ItemType Directory -Force -Path $trialDir | Out-Null
     $participantName = "QuestHandoffP{0:00}" -f $trial
+    if ($WakeBeforeReadiness) {
+        Invoke-AdbText -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP') -OutputPath (Join-Path $trialDir 'wake-before-readiness.txt') | Out-Null
+        Start-Sleep -Seconds 2
+    }
     $readiness = Wait-QuestReadiness -TrialDir $trialDir
     $readinessBlockedReasons = Get-QuestReadinessBlockedReasons -Readiness $readiness.last
     if (-not $readiness.ready -and -not $AllowLaunchWhenNotReady) {
@@ -757,6 +767,7 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
                 autoReplayMarkerUsed = $false
                 autoTraceForValidation = [bool]$AutoTraceForValidation
                 fastVideoForValidation = [bool]$FastVideoForValidation
+                wakeBeforeReadiness = [bool]$WakeBeforeReadiness
             }
             readiness = $readiness
             markerCounts = (New-EmptyMarkerCounts)
@@ -964,6 +975,7 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
             autoReplayMarkerUsed = -not [bool]$NoAutoReplay
             autoTraceForValidation = [bool]$AutoTraceForValidation
             fastVideoForValidation = [bool]$FastVideoForValidation
+            wakeBeforeReadiness = [bool]$WakeBeforeReadiness
         }
         readiness = $readiness
         markerCounts = $markerCounts
@@ -1035,6 +1047,7 @@ $summary = [ordered]@{
     focusPollMilliseconds = $FocusPollMilliseconds
     waitForReadySeconds = $WaitForReadySeconds
     readinessPollSeconds = [Math]::Max(1, $ReadinessPollSeconds)
+    wakeBeforeReadiness = [bool]$WakeBeforeReadiness
     allowLaunchWhenNotReady = [bool]$AllowLaunchWhenNotReady
     preflight = $preflightSummary
     trials = $trialArray

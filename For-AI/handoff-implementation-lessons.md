@@ -363,6 +363,27 @@ reckless. Make wait windows explicit, bounded, and visible in the evidence
 instead of baking in a magic sleep; never repeat identical physical blockers
 just to fill a trial count.
 
+## Wake Assistance Must Be Explicit Evidence
+
+Problem: long or unattended Quest handoff runs can stall before the product
+path when the headset display falls asleep. Sending a blind wake key inside
+every validator would make overnight attempts more likely to start, but it
+would also blur the evidence boundary: reviewers could no longer tell whether
+the trial began naturally from an already-ready headset or because the host
+assisted device state immediately before readiness sampling.
+
+Solution: make wake assistance an explicit, opt-in control. The builder exposes
+`Wake before readiness` only for live direct-handoff attempts, the companion
+passes `-WakeBeforeReadiness`, and the direct validator records
+`wakeBeforeReadiness` plus `wakeBeforeReadinessCount` in the run evidence. The
+readiness gate, product-path blocked classification, 10 clean trials, and
+manual headset pass remain unchanged.
+
+Generalizable rule: device-state assistance can be useful developer tooling,
+but it must be named, bounded, and recorded as part of the evidence. Never hide
+power/proximity/wake actions inside a validator that is supposed to prove user
+product behavior.
+
 ## Stress Ladders Should Test Their Own Safety Bounds
 
 Problem: adding an operator-controlled readiness wait made unattended Quest

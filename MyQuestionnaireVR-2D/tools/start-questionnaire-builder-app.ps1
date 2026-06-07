@@ -1073,6 +1073,7 @@ function New-DirectHandoffJobReceipt {
     $preflight = Get-JsonProperty -Object $Summary -Name 'preflight'
     $decisionGate = Get-JsonProperty -Object $Summary -Name 'decisionGate'
     $summaryDryRun = if ($null -ne $Summary) { [bool](Get-JsonProperty -Object $Summary -Name 'dryRun' -Default $DryRun) } else { $DryRun }
+    $wakeBeforeReadiness = [bool](Get-JsonProperty -Object $Summary -Name 'wakeBeforeReadiness' -Default $false)
     $defaultDirectApproved = if ($null -ne $decisionGate) { [bool](Get-JsonProperty -Object $decisionGate -Name 'defaultDirectPendingIntentApproved' -Default $false) } else { $false }
     $candidateAStatus = Get-JsonProperty -Object $decisionGate -Name 'candidateAStatus'
     $preflightStatus = Get-JsonProperty -Object $decisionGate -Name 'preflightStatus' -Default (Get-JsonProperty -Object $preflight -Name 'status')
@@ -1084,6 +1085,7 @@ function New-DirectHandoffJobReceipt {
         jobStatus = $JobStatus
         actionStatus = $HandoffStatus
         dryRun = $summaryDryRun
+        wakeBeforeReadiness = $wakeBeforeReadiness
         candidateAStatus = $candidateAStatus
         defaultDirectPendingIntentApproved = $defaultDirectApproved
         physicalQuestProductPathPending = (-not $defaultDirectApproved)
@@ -1106,6 +1108,7 @@ function New-DirectHandoffJobReceipt {
             warnCount = Get-JsonProperty -Object $Summary -Name 'warnCount' -Default 0
             blockedCount = Get-JsonProperty -Object $Summary -Name 'blockedCount' -Default 0
             failCount = Get-JsonProperty -Object $Summary -Name 'failCount' -Default 0
+            wakeBeforeReadiness = $wakeBeforeReadiness
             decisionGate = $decisionGate
         }
         proofBoundary = 'A dry-run can approve the direct handoff runner contract, but production direct PendingIntent needs real Quest product-path trials plus a manual headset pass.'
@@ -1168,6 +1171,10 @@ function New-WorkflowValidationArguments {
     if ($Payload.PSObject.Properties.Name -contains 'waitForReadySeconds' -and [int]$Payload.waitForReadySeconds -ge 0) {
         $waitForReadySeconds = [Math]::Min(28800, [Math]::Max(0, [int]$Payload.waitForReadySeconds))
         $arguments += @('-WaitForReadySeconds', [string]$waitForReadySeconds)
+    }
+    $dryRunDirectHandoff = ($Payload.PSObject.Properties.Name -contains 'dryRunQuestDirectHandoff' -and [bool]$Payload.dryRunQuestDirectHandoff)
+    if (-not $dryRunDirectHandoff -and $Payload.PSObject.Properties.Name -contains 'wakeBeforeReadiness' -and [bool]$Payload.wakeBeforeReadiness) {
+        $arguments += '-WakeBeforeReadiness'
     }
 
     return $arguments
@@ -1762,6 +1769,7 @@ function Get-DirectHandoffJobStatus {
         dryRun = [bool]$job['dryRun']
         trialCount = [int]$job['trialCount']
         waitForReadySeconds = [int]$job['waitForReadySeconds']
+        wakeBeforeReadiness = [bool]$job['wakeBeforeReadiness']
         waitSeconds = [int]$job['waitSeconds']
         artifactDir = $job['artifactDir']
         summaryPath = $job['summaryPath']
@@ -1792,6 +1800,7 @@ function Start-DirectHandoffJob {
     $trialCount = if ($Payload.PSObject.Properties.Name -contains 'trialCount') { [Math]::Min(10, [Math]::Max(1, [int]$Payload.trialCount)) } else { 10 }
     $waitForReadySeconds = if ($Payload.PSObject.Properties.Name -contains 'waitForReadySeconds') { [Math]::Min(28800, [Math]::Max(0, [int]$Payload.waitForReadySeconds)) } else { 30 }
     $waitSeconds = if ($Payload.PSObject.Properties.Name -contains 'waitSeconds') { [Math]::Max(1, [int]$Payload.waitSeconds) } else { 95 }
+    $wakeBeforeReadiness = (-not $dryRun -and $Payload.PSObject.Properties.Name -contains 'wakeBeforeReadiness' -and [bool]$Payload.wakeBeforeReadiness)
 
     $stdoutPath = Join-Path $jobDir 'direct-handoff-stdout.txt'
     $stderrPath = Join-Path $jobDir 'direct-handoff-stderr.txt'
@@ -1834,6 +1843,9 @@ function Start-DirectHandoffJob {
     if ($skipInstall) {
         $arguments += '-SkipInstall'
     }
+    if ($wakeBeforeReadiness) {
+        $arguments += '-WakeBeforeReadiness'
+    }
 
     $process = Start-Process `
         -FilePath 'powershell' `
@@ -1854,6 +1866,7 @@ function Start-DirectHandoffJob {
         dryRun = [bool]$dryRun
         trialCount = [int]$trialCount
         waitForReadySeconds = [int]$waitForReadySeconds
+        wakeBeforeReadiness = [bool]$wakeBeforeReadiness
         waitSeconds = [int]$waitSeconds
         artifactDir = $jobDir
         stdoutPath = $stdoutPath

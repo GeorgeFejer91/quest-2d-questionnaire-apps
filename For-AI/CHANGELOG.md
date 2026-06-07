@@ -207,6 +207,10 @@ Use absolute dates.
 - Updated direct handoff validation so final headset/display sleep after the
   product path has begun is classified as a blocked evidence window rather than
   a direct handoff failure when no fatal app logs are present.
+- Added an opt-in `Wake before readiness` live-trial control for direct
+  handoff attempts. The GUI sends it only when `Preflight only` is cleared, the
+  companion passes `-WakeBeforeReadiness`, and summaries/receipts record
+  `wakeBeforeReadiness` so wake-assisted unattended attempts remain auditable.
 - Captured a one-trial live Quest direct-handoff pass at
   `quest-direct-handoff\20260607T111059Z`: trigger 1 questionnaire return,
   Unity video resume/non-black frame markers, trigger 2 Temporal Tracer export,

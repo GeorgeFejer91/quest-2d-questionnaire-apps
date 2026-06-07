@@ -170,6 +170,11 @@ headset or display fell asleep before required app markers arrived, the direct
 handoff validator classifies the trial as `blocked` with
 `headset-asleep-or-display-off-during-product-path` instead of counting it as a
 Candidate A failure.
+Use `-WakeBeforeReadiness` only as an explicit developer aid for unattended
+product-path attempts. It sends a bounded `KEYCODE_WAKEUP` before the
+readiness poll, records `wakeBeforeReadiness` in the trial and summary
+evidence, and still requires the normal readiness, focus, export, 10-trial,
+and manual headset gates.
 
 ## Local Validation
 
@@ -261,5 +266,9 @@ product-path readiness before classifying the attempt as blocked; the companion
 clamps it to 0-28800 seconds. A pre-product-path readiness block records one
 blocked trial and stops, because repeated blocked trials would not add product
 path evidence.
+The optional `Wake before readiness` runner toggle is ignored for `Preflight
+only` and passed through only for live direct-handoff attempts. Its receipt
+field exists so reviewers can distinguish ordinary handoff evidence from a run
+where the host sent a wake key before readiness sampling.
 A `warn` status is expected when the physical 10/10 direct PendingIntent Quest
 trials are not requested or cannot start because the headset is asleep.

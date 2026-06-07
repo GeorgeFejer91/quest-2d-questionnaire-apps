@@ -1031,6 +1031,10 @@
                 Ready wait (s)
                 <input id="directHandoffWaitSeconds" type="number" min="0" max="28800" step="30" value="30">
               </label>
+              <label class="toggle-row">
+                <input id="directHandoffWakeBeforeReadiness" type="checkbox">
+                <span>Wake before readiness</span>
+              </label>
               <label>
                 Quest serial
                 <input id="workflowQuestSerial" placeholder="2G0YC1ZG1002QL" spellcheck="false">
@@ -3729,6 +3733,10 @@
       return Boolean(byId("directHandoffPreflightOnly")?.checked);
     }
 
+    function directHandoffWakeBeforeReadiness() {
+      return Boolean(byId("directHandoffWakeBeforeReadiness")?.checked);
+    }
+
     function directHandoffWorkflowOptions() {
       const preflightOnly = directHandoffPreflightOnly();
       const liveTrialsRequested = Boolean(byId("workflowDirectHandoff").checked);
@@ -3740,7 +3748,8 @@
         runDirect,
         runReadiness: Boolean(byId("workflowQuestReadiness").checked) || liveTrials,
         trialCount: preflightOnly ? 1 : directHandoffTrialCount(),
-        waitForReadySeconds: preflightOnly ? 0 : directHandoffWaitSeconds()
+        waitForReadySeconds: preflightOnly ? 0 : directHandoffWaitSeconds(),
+        wakeBeforeReadiness: preflightOnly ? false : directHandoffWakeBeforeReadiness()
       };
     }
 
@@ -3757,7 +3766,8 @@
         skipInstall: directOptions.preflightOnly,
         questSerial: byId("workflowQuestSerial").value.trim(),
         questTrials: directOptions.trialCount,
-        waitForReadySeconds: directOptions.waitForReadySeconds
+        waitForReadySeconds: directOptions.waitForReadySeconds,
+        wakeBeforeReadiness: directOptions.wakeBeforeReadiness
       };
     }
 
@@ -4072,6 +4082,7 @@
         const preflightOnly = directHandoffPreflightOnly();
         const waitForReadySeconds = preflightOnly ? 0 : directHandoffWaitSeconds();
         const trialCount = preflightOnly ? 1 : directHandoffTrialCount();
+        const wakeBeforeReadiness = preflightOnly ? false : directHandoffWakeBeforeReadiness();
         setAppBackendStatus(preflightOnly ? "Starting direct handoff package/catalog preflight..." : "Starting direct PendingIntent handoff trials...", "");
         setWorkflowReceiptStatus(null);
         const payload = {
@@ -4079,7 +4090,8 @@
           questSerial: byId("workflowQuestSerial").value.trim(),
           trialCount,
           waitForReadySeconds,
-          waitSeconds: preflightOnly ? 1 : 95
+          waitSeconds: preflightOnly ? 1 : 95,
+          wakeBeforeReadiness
         };
         if (preflightOnly) {
           payload.dryRun = true;
@@ -4197,13 +4209,15 @@
         const preflightOnly = directHandoffPreflightOnly();
         const waitForReadySeconds = preflightOnly ? 0 : directHandoffWaitSeconds();
         const trialCount = preflightOnly ? 1 : directHandoffTrialCount();
+        const wakeBeforeReadiness = preflightOnly ? false : directHandoffWakeBeforeReadiness();
         latestData = await runSequenceStep(sequenceLog, preflightOnly ? "Run direct handoff preflight" : "Run direct handoff trials", async () => {
           const payload = {
             questionnaireApk: apkPath,
             questSerial: serialInput.value.trim(),
             trialCount,
             waitForReadySeconds,
-            waitSeconds: preflightOnly ? 1 : 95
+            waitSeconds: preflightOnly ? 1 : 95,
+            wakeBeforeReadiness
           };
           if (preflightOnly) {
             payload.dryRun = true;

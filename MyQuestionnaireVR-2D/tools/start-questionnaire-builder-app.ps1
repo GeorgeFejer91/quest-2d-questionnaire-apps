@@ -67,6 +67,8 @@ $script:WorkflowJobs = @{}
 $script:WorkflowJobOrder = New-Object 'System.Collections.Generic.List[string]'
 $script:InstallApkJobs = @{}
 $script:InstallApkJobOrder = New-Object 'System.Collections.Generic.List[string]'
+$script:QuestReplayJobs = @{}
+$script:QuestReplayJobOrder = New-Object 'System.Collections.Generic.List[string]'
 
 function New-Utf8NoBomEncoding {
     return [System.Text.UTF8Encoding]::new($false)
@@ -674,6 +676,166 @@ function Start-InstallApkJob {
     return Get-InstallApkJobStatus -RunId $runId
 }
 
+function Get-QuestReplayJobStatus {
+    param([string]$RunId)
+
+    if ([string]::IsNullOrWhiteSpace($RunId) -or -not $script:QuestReplayJobs.ContainsKey($RunId)) {
+        return $null
+    }
+
+    $job = $script:QuestReplayJobs[$RunId]
+    $process = $job['process']
+    $hasExited = $false
+    $exitCode = $null
+    $processError = ''
+    if ($null -ne $process) {
+        try {
+            $process.Refresh()
+            $hasExited = [bool]$process.HasExited
+            if ($hasExited) {
+                $exitCode = [int]$process.ExitCode
+                if ([string]::IsNullOrWhiteSpace([string]$job['completedAt'])) {
+                    $job['completedAt'] = (Get-Date).ToString('o')
+                }
+            }
+        }
+        catch {
+            $hasExited = $true
+            $processError = $_.Exception.Message
+            if ([string]::IsNullOrWhiteSpace([string]$job['completedAt'])) {
+                $job['completedAt'] = (Get-Date).ToString('o')
+            }
+        }
+    }
+
+    $summary = Read-JsonFileIfExists -Path ([string]$job['summaryPath'])
+    $jobStatus = 'running'
+    $replayStatus = 'running'
+    if ($hasExited) {
+        $jobStatus = if ($null -ne $exitCode -and $exitCode -eq 0) { 'completed' } else { 'failed' }
+        if ($summary) {
+            $replayStatus = [string]$summary.status
+        }
+        elseif ($jobStatus -eq 'completed') {
+            $replayStatus = 'missing-summary'
+        }
+        else {
+            $replayStatus = 'error'
+        }
+    }
+    elseif ($summary -and $summary.PSObject.Properties.Name -contains 'status') {
+        $replayStatus = [string]$summary.status
+    }
+
+    return [ordered]@{
+        status = 'ok'
+        jobId = $RunId
+        runId = $RunId
+        jobStatus = $jobStatus
+        replayStatus = $replayStatus
+        exitCode = $exitCode
+        processError = $processError
+        apk = $job['apk']
+        questSerial = $job['questSerial']
+        dryRun = [bool]$job['dryRun']
+        artifactDir = $job['artifactDir']
+        summaryPath = $job['summaryPath']
+        stdoutPath = $job['stdoutPath']
+        stderrPath = $job['stderrPath']
+        stdout = Get-TailText -Path ([string]$job['stdoutPath'])
+        stderr = Get-TailText -Path ([string]$job['stderrPath'])
+        summary = $summary
+        startedAt = $job['startedAt']
+        completedAt = $job['completedAt']
+    }
+}
+
+function Start-QuestReplayJob {
+    param([object]$Payload)
+
+    $runId = 'builder-quest-replay-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    $jobDir = Join-Path $ProjectPath ("artifacts\builder-app-quest-replay\$runId")
+    New-Item -ItemType Directory -Force -Path $jobDir | Out-Null
+
+    $apk = if ($Payload.PSObject.Properties.Name -contains 'apk') { [string]$Payload.apk } else { '' }
+    $serial = if ($Payload.PSObject.Properties.Name -contains 'questSerial') { [string]$Payload.questSerial } else { '' }
+    $dryRun = ($Payload.PSObject.Properties.Name -contains 'dryRun' -and [bool]$Payload.dryRun)
+    $waitSeconds = if ($Payload.PSObject.Properties.Name -contains 'waitSeconds') { [int]$Payload.waitSeconds } else { 20 }
+
+    $stdoutPath = Join-Path $jobDir 'replay-stdout.txt'
+    $stderrPath = Join-Path $jobDir 'replay-stderr.txt'
+    $summaryPath = Join-Path $jobDir 'quest-replay-export-summary.json'
+    $script = Join-Path $ProjectPath 'tools\run-questionnaire-replay-on-quest.ps1'
+    $arguments = @(
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        $script,
+        '-ProjectPath',
+        $ProjectPath,
+        '-OutputRoot',
+        $jobDir,
+        '-RunId',
+        $runId,
+        '-WaitSeconds',
+        [string][Math]::Max(1, $waitSeconds)
+    )
+    if (-not [string]::IsNullOrWhiteSpace($apk)) {
+        $arguments += @('-Apk', $apk)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($serial)) {
+        $arguments += @('-Serial', $serial)
+    }
+    if ($dryRun) {
+        $arguments += '-DryRun'
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'leaveForeground' -and [bool]$Payload.leaveForeground) {
+        $arguments += '-LeaveForeground'
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'stopLegacyUnityApp' -and [bool]$Payload.stopLegacyUnityApp) {
+        $arguments += '-StopLegacyUnityApp'
+    }
+
+    $process = Start-Process `
+        -FilePath 'powershell' `
+        -ArgumentList $arguments `
+        -WorkingDirectory $ProjectPath `
+        -PassThru `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput $stdoutPath `
+        -RedirectStandardError $stderrPath
+
+    $script:QuestReplayJobs[$runId] = [ordered]@{
+        process = $process
+        runId = $runId
+        apk = $apk
+        questSerial = $serial
+        dryRun = [bool]$dryRun
+        artifactDir = $jobDir
+        stdoutPath = $stdoutPath
+        stderrPath = $stderrPath
+        summaryPath = $summaryPath
+        startedAt = (Get-Date).ToString('o')
+        completedAt = ''
+    }
+    $script:QuestReplayJobOrder.Add($runId) | Out-Null
+
+    while ($script:QuestReplayJobOrder.Count -gt 20) {
+        $oldest = $script:QuestReplayJobOrder[0]
+        $script:QuestReplayJobOrder.RemoveAt(0)
+        if ($script:QuestReplayJobs.ContainsKey($oldest)) {
+            $oldJob = $script:QuestReplayJobs[$oldest]
+            $oldProcess = $oldJob['process']
+            if ($oldProcess -and $oldProcess.HasExited) {
+                $script:QuestReplayJobs.Remove($oldest)
+            }
+        }
+    }
+
+    return Get-QuestReplayJobStatus -RunId $runId
+}
+
 function Receive-JsonPayload {
     param([System.Net.HttpListenerRequest]$Request)
 
@@ -824,6 +986,8 @@ function New-StatusPayload {
             'quest-readiness',
             'install-apk',
             'install-apk-job-status',
+            'quest-replay',
+            'quest-replay-job-status',
             'dependency-status',
             'install-dependencies'
         )
@@ -919,6 +1083,24 @@ function Handle-Request {
         return
     }
 
+    if ($request.HttpMethod -eq 'GET' -and $path -eq '/api/quest-replay-job') {
+        Assert-OriginAndToken -Request $request
+        $runId = [string]$request.QueryString['runId']
+        if ([string]::IsNullOrWhiteSpace($runId)) {
+            $runId = [string]$request.QueryString['jobId']
+        }
+        $status = Get-QuestReplayJobStatus -RunId $runId
+        if ($null -eq $status) {
+            Write-JsonResponse -Context $Context -StatusCode 404 -Value ([ordered]@{
+                status = 'error'
+                message = "Unknown Quest replay job: $runId"
+            })
+            return
+        }
+        Write-JsonResponse -Context $Context -StatusCode 200 -Value $status
+        return
+    }
+
     if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/install-dependencies') {
         Assert-OriginAndToken -Request $request
         $result = Handle-DependencyInstall
@@ -938,6 +1120,14 @@ function Handle-Request {
         Assert-OriginAndToken -Request $request
         $payload = Receive-JsonPayload -Request $request
         $job = Start-InstallApkJob -Payload $payload
+        Write-JsonResponse -Context $Context -StatusCode 202 -Value $job
+        return
+    }
+
+    if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/quest-replay') {
+        Assert-OriginAndToken -Request $request
+        $payload = Receive-JsonPayload -Request $request
+        $job = Start-QuestReplayJob -Payload $payload
         Write-JsonResponse -Context $Context -StatusCode 202 -Value $job
         return
     }

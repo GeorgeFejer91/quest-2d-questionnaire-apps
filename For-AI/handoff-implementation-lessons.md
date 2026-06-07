@@ -189,3 +189,22 @@ performing an install.
 Generalizable rule: for dashboard buttons that change device state, separate
 the command contract from the live side effect. Validate the command contract
 with a dry run, and reserve the real side effect for explicit operator action.
+
+## Replay Gates Need The Same Job Boundary As Installs
+
+Problem: command replay/export validation proves much more than installation,
+but it also launches the 2D panel app, writes marker files, pulls exports, and
+captures evidence. Running that synchronously from the browser or hiding it in
+the full workflow matrix makes the user-facing pipeline harder to understand
+and harder to test safely.
+
+Solution: wrap `quest-validate.ps1` behind a narrow
+`run-questionnaire-replay-on-quest.ps1` helper and expose it through a
+token-protected `/api/quest-replay` job. The builder gets a visible
+`Run replay/export` step after install, while the companion stress test uses
+`dryRun=true` to cover auth, job polling, readiness, and artifacts without
+launching the app.
+
+Generalizable rule: every live device validation rung that can be clicked in a
+dashboard should have a reusable CLI helper, a job endpoint, and a dry-run
+contract test.

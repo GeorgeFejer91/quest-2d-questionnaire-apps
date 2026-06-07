@@ -142,6 +142,26 @@ function Wait-InstallApkJob {
     throw "Install APK job did not finish before timeout: $RunId"
 }
 
+function Wait-QuestReplayJob {
+    param(
+        [string]$BaseUrl,
+        [hashtable]$Headers,
+        [string]$RunId,
+        [int]$TimeoutSec = 900
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    $encodedRunId = [System.Uri]::EscapeDataString($RunId)
+    while ((Get-Date) -lt $deadline) {
+        $job = Invoke-Json -Method GET -Uri "$BaseUrl/api/quest-replay-job?runId=$encodedRunId" -Headers $Headers -TimeoutSec 30
+        if ($job.jobStatus -ne 'running') {
+            return $job
+        }
+        Start-Sleep -Seconds 2
+    }
+    throw "Quest replay/export job did not finish before timeout: $RunId"
+}
+
 if ($Port -le 0) {
     $Port = Get-FreeLoopbackPort
 }
@@ -202,6 +222,7 @@ try {
     $unauthorizedDependencyStatus = $null
     $unauthorizedQuestReadinessStatus = $null
     $unauthorizedInstallApkStatus = $null
+    $unauthorizedQuestReplayStatus = $null
     try {
         Invoke-Json -Method GET -Uri "$baseUrl/api/dependency-status" | Out-Null
         throw "Unauthorized dependency-status call unexpectedly succeeded."
@@ -230,6 +251,16 @@ try {
         $unauthorizedInstallApkStatus = Get-HttpErrorStatusCode -Exception $_.Exception
         if ($unauthorizedInstallApkStatus -ne 401) {
             throw "Unauthorized install-apk expected 401, got $unauthorizedInstallApkStatus"
+        }
+    }
+    try {
+        Invoke-Json -Method POST -Uri "$baseUrl/api/quest-replay" -Body @{ apk = "missing.apk"; dryRun = $true } | Out-Null
+        throw "Unauthorized quest-replay call unexpectedly succeeded."
+    }
+    catch {
+        $unauthorizedQuestReplayStatus = Get-HttpErrorStatusCode -Exception $_.Exception
+        if ($unauthorizedQuestReplayStatus -ne 401) {
+            throw "Unauthorized quest-replay expected 401, got $unauthorizedQuestReplayStatus"
         }
     }
 
@@ -269,6 +300,30 @@ try {
     Add-Progress "install-apk-complete jobStatus=$($installApk.jobStatus) installStatus=$($installApk.installStatus)"
     if ($installApk.installStatus -eq 'fail' -or [string]::IsNullOrWhiteSpace([string]$installApk.summaryPath) -or -not (Test-Path -LiteralPath $installApk.summaryPath)) {
         throw "Companion install-apk dry run did not produce a usable install summary."
+    }
+
+    Write-Host "== Quest replay/export dry run through companion =="
+    $replayDryRunApk = Join-Path $artifactDir 'replay-dry-run-placeholder.apk'
+    Set-Content -LiteralPath $replayDryRunApk -Value 'dry-run placeholder for companion quest replay endpoint validation' -Encoding UTF8
+    $replayStart = Invoke-Json -Method POST -Uri "$baseUrl/api/quest-replay" -Headers $headers -Body @{
+        apk = $replayDryRunApk
+        questSerial = [string]$questReadiness.targetSerial
+        waitSeconds = 1
+        dryRun = $true
+    } -TimeoutSec 60
+    Add-Progress "quest-replay-started=$($replayStart.runId)"
+    if ($replayStart.status -ne 'ok' -or [string]::IsNullOrWhiteSpace([string]$replayStart.runId)) {
+        throw "Companion quest-replay did not start a replay/export job."
+    }
+    $questReplay = if ($replayStart.jobStatus -eq 'running') {
+        Wait-QuestReplayJob -BaseUrl $baseUrl -Headers $headers -RunId $replayStart.runId -TimeoutSec 900
+    }
+    else {
+        $replayStart
+    }
+    Add-Progress "quest-replay-complete jobStatus=$($questReplay.jobStatus) replayStatus=$($questReplay.replayStatus)"
+    if ($questReplay.replayStatus -eq 'fail' -or [string]::IsNullOrWhiteSpace([string]$questReplay.summaryPath) -or -not (Test-Path -LiteralPath $questReplay.summaryPath)) {
+        throw "Companion quest-replay dry run did not produce a usable replay summary."
     }
 
     Write-Host "== Save config through companion =="
@@ -343,6 +398,7 @@ try {
             unauthorizedDependencyStatus = $unauthorizedDependencyStatus
             unauthorizedQuestReadinessStatus = $unauthorizedQuestReadinessStatus
             unauthorizedInstallApkStatus = $unauthorizedInstallApkStatus
+            unauthorizedQuestReplayStatus = $unauthorizedQuestReplayStatus
         }
         dependency = $dependency
         questReadiness = [ordered]@{
@@ -357,6 +413,12 @@ try {
             installStatus = $installApk.installStatus
             runId = $installApk.runId
             summaryPath = $installApk.summaryPath
+        }
+        questReplayDryRun = [ordered]@{
+            jobStatus = $questReplay.jobStatus
+            replayStatus = $questReplay.replayStatus
+            runId = $questReplay.runId
+            summaryPath = $questReplay.summaryPath
         }
         builder = [ordered]@{
             outputDir = $builderOut

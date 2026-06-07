@@ -89,3 +89,7 @@ Use absolute dates.
 - Added an explicit generated-APK install path: `Install APK on Quest` in the
   builder, `/api/install-apk` plus `/api/install-apk-job` in the companion, and
   `tools/install-questionnaire-apk-on-quest.ps1` for the reusable install gate.
+- Added an explicit Quest command replay/export path: `Run replay/export` in
+  the builder, `/api/quest-replay` plus `/api/quest-replay-job` in the
+  companion, and `tools/run-questionnaire-replay-on-quest.ps1` as the wrapper
+  around `quest-validate.ps1`.

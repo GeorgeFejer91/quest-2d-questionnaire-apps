@@ -181,10 +181,11 @@ companion, checks pairing-token enforcement, saves and validates the generated
 handoff config through HTTP, and drives `/api/generate-apk` so the PC software
 creates the APK and local render evidence. It also calls `/api/quest-readiness`
 for a read-only ADB device check, dry-runs `/api/install-apk` so the install
-job contract is covered without changing the headset, then calls
-`/api/validate-workflow` and polls `/api/workflow-job` so the companion proves
-the same builder-to-Quest evidence matrix that the GUI's `Validate workflow`
-button runs without blocking the browser:
+job contract is covered without changing the headset, dry-runs
+`/api/quest-replay` so replay/export orchestration is covered without launching
+the app, then calls `/api/validate-workflow` and polls `/api/workflow-job` so
+the companion proves the same builder-to-Quest evidence matrix that the GUI's
+`Validate workflow` button runs without blocking the browser:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-builder-companion-workflow.ps1

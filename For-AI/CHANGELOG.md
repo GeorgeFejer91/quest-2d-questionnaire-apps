@@ -107,3 +107,7 @@ Use absolute dates.
   handoff and full workflow jobs can wait longer for product-path readiness
   during supervised or unattended headset attempts without bypassing the
   asleep/headset-launch-dialog block classification.
+- Updated direct handoff validation so one pre-product-path readiness block
+  stops the run instead of waiting the full readiness window once per requested
+  trial; GUI polling and companion job status now account for long readiness
+  windows.

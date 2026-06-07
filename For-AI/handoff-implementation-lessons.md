@@ -258,8 +258,11 @@ Solution: keep the product-path readiness gate strict, but expose the wait
 window as a runner control. The builder now lets the operator set a bounded
 `Ready wait (s)` value for direct handoff and full workflow validation; the
 companion clamps that value to 0-28800 seconds and still refuses to launch when
-readiness never clears.
+readiness never clears. When readiness is blocked before the product path, the
+direct validator records one blocked trial and stops instead of multiplying the
+same physical blocker across all requested trials.
 
 Generalizable rule: physical-device validation should be patient but not
 reckless. Make wait windows explicit, bounded, and visible in the evidence
-instead of baking in a magic sleep.
+instead of baking in a magic sleep; never repeat identical physical blockers
+just to fill a trial count.

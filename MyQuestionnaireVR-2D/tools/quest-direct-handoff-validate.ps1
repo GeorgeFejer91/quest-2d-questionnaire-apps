@@ -549,7 +549,7 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
         }
         Write-Json -Value $trialSummary -Path (Join-Path $trialDir 'trial-summary.json') -Depth 16
         $trialSummaries.Add($trialSummary) | Out-Null
-        continue
+        break
     }
 
     Invoke-AdbText -Arguments @('shell', 'am', 'force-stop', $questionnairePackage) -OutputPath (Join-Path $trialDir 'setup-force-stop-questionnaire.txt') | Out-Null
@@ -771,6 +771,7 @@ $summary = [ordered]@{
     serial = $Serial
     outputRoot = $OutputRoot
     trialCount = $TrialCount
+    attemptedTrialCount = $trialArray.Count
     passCount = $passCount
     warnCount = $warnCount
     blockedCount = $blockedCount

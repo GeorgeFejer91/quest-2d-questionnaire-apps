@@ -186,6 +186,8 @@ dedicated `Run direct handoff` action backed by `/api/direct-handoff` and
 `/api/direct-handoff-job`, placed after replay/export in the sequential runner.
 The runner's `Ready wait (s)` field controls how long these jobs wait for
 product-path readiness before classifying the attempt as blocked; the companion
-clamps it to 0-28800 seconds.
+clamps it to 0-28800 seconds. A pre-product-path readiness block records one
+blocked trial and stops, because repeated blocked trials would not add product
+path evidence.
 A `warn` status is expected when the physical 10/10 direct PendingIntent Quest
 trials are not requested or cannot start because the headset is asleep.

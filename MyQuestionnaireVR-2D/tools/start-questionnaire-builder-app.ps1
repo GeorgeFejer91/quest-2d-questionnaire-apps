@@ -412,6 +412,9 @@ function Get-WorkflowJobStatus {
         exitCode = $exitCode
         processError = $processError
         configPath = $job['configPath']
+        runQuestDirectHandoff = [bool]$job['runQuestDirectHandoff']
+        questTrials = [int]$job['questTrials']
+        waitForReadySeconds = [int]$job['waitForReadySeconds']
         artifactDir = $job['artifactDir']
         summaryPath = $job['summaryPath']
         stdoutPath = $job['stdoutPath']
@@ -435,6 +438,9 @@ function Start-WorkflowValidationJob {
     $stdoutPath = Join-Path $jobDir 'workflow-stdout.txt'
     $stderrPath = Join-Path $jobDir 'workflow-stderr.txt'
     $summaryPath = Join-Path $ProjectPath ("artifacts\builder-to-quest-workflow\$runId\builder-to-quest-workflow-summary.json")
+    $runQuestDirectHandoff = ($Payload.PSObject.Properties.Name -contains 'runQuestDirectHandoff' -and [bool]$Payload.runQuestDirectHandoff)
+    $questTrials = if ($Payload.PSObject.Properties.Name -contains 'questTrials' -and [int]$Payload.questTrials -gt 0) { [Math]::Min(10, [Math]::Max(1, [int]$Payload.questTrials)) } else { 10 }
+    $waitForReadySeconds = if ($Payload.PSObject.Properties.Name -contains 'waitForReadySeconds' -and [int]$Payload.waitForReadySeconds -ge 0) { [Math]::Min(28800, [Math]::Max(0, [int]$Payload.waitForReadySeconds)) } else { 30 }
     $arguments = New-WorkflowValidationArguments -Payload $Payload -ConfigPath $configPath -RunId $runId
 
     $process = Start-Process `
@@ -450,6 +456,9 @@ function Start-WorkflowValidationJob {
         process = $process
         runId = $runId
         configPath = $configPath
+        runQuestDirectHandoff = [bool]$runQuestDirectHandoff
+        questTrials = [int]$questTrials
+        waitForReadySeconds = [int]$waitForReadySeconds
         artifactDir = $jobDir
         stdoutPath = $stdoutPath
         stderrPath = $stderrPath
@@ -915,6 +924,8 @@ function Get-DirectHandoffJobStatus {
         questSerial = $job['questSerial']
         dryRun = [bool]$job['dryRun']
         trialCount = [int]$job['trialCount']
+        waitForReadySeconds = [int]$job['waitForReadySeconds']
+        waitSeconds = [int]$job['waitSeconds']
         artifactDir = $job['artifactDir']
         summaryPath = $job['summaryPath']
         stdoutPath = $job['stdoutPath']
@@ -1004,6 +1015,8 @@ function Start-DirectHandoffJob {
         questSerial = $serial
         dryRun = [bool]$dryRun
         trialCount = [int]$trialCount
+        waitForReadySeconds = [int]$waitForReadySeconds
+        waitSeconds = [int]$waitSeconds
         artifactDir = $jobDir
         stdoutPath = $stdoutPath
         stderrPath = $stderrPath

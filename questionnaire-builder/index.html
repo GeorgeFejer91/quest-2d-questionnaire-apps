@@ -3126,9 +3126,17 @@
       return `Workflow validation ${data?.workflowStatus || data?.jobStatus}; summary: ${data?.summaryPath || "not written yet"}`;
     }
 
-    async function pollWorkflowJob(runId) {
+    function handoffPollTimeoutMs(waitForReadySeconds, trialCount, extraSeconds = 600) {
+      const wait = Number.isFinite(Number(waitForReadySeconds)) ? Math.max(0, Number(waitForReadySeconds)) : 0;
+      const trials = Number.isFinite(Number(trialCount)) ? Math.max(1, Math.min(10, Number(trialCount))) : 1;
+      return Math.max(30 * 60 * 1000, (wait + (trials * 140) + extraSeconds) * 1000);
+    }
+
+    async function pollWorkflowJob(runId, waitForReadySeconds = 0, trialCount = 1, runDirect = false) {
       const startedAt = Date.now();
-      const timeoutMs = 30 * 60 * 1000;
+      const timeoutMs = runDirect
+        ? Math.max(60 * 60 * 1000, handoffPollTimeoutMs(waitForReadySeconds, trialCount, 1800))
+        : 30 * 60 * 1000;
       while (Date.now() - startedAt < timeoutMs) {
         const data = await callAppBackend(`/api/workflow-job?runId=${encodeURIComponent(runId)}`);
         setAppBackendStatus(workflowJobText(data), workflowJobLevel(data));
@@ -3267,12 +3275,9 @@
       return `Direct handoff ${data?.handoffStatus || data?.jobStatus}; summary: ${data?.summaryPath || "not written yet"}`;
     }
 
-    async function pollDirectHandoffJob(runId) {
+    async function pollDirectHandoffJob(runId, waitForReadySeconds = directHandoffWaitSeconds(), trialCount = directHandoffTrialCount()) {
       const startedAt = Date.now();
-      const timeoutMs = Math.max(
-        30 * 60 * 1000,
-        (directHandoffWaitSeconds() + (directHandoffTrialCount() * 120) + 120) * 1000
-      );
+      const timeoutMs = handoffPollTimeoutMs(waitForReadySeconds, trialCount, 600);
       while (Date.now() - startedAt < timeoutMs) {
         const data = await callAppBackend(`/api/direct-handoff-job?runId=${encodeURIComponent(runId)}`);
         setAppBackendStatus(directHandoffJobText(data), directHandoffJobLevel(data));
@@ -3479,18 +3484,19 @@
       try {
         const apkPath = lastGeneratedApkPath || expectedGeneratedApkPath();
         const waitForReadySeconds = directHandoffWaitSeconds();
+        const trialCount = directHandoffTrialCount();
         setAppBackendStatus("Starting direct PendingIntent handoff trials...", "");
         const data = await callAppBackend("/api/direct-handoff", {
           questionnaireApk: apkPath,
           questSerial: byId("workflowQuestSerial").value.trim(),
-          trialCount: directHandoffTrialCount(),
+          trialCount,
           waitForReadySeconds,
           waitSeconds: 95
         });
         setAppBackendStatus(directHandoffJobText(data), directHandoffJobLevel(data));
         setAppBackendLog(data);
         if (data.jobStatus === "running" && (data.runId || data.jobId)) {
-          const finalData = await pollDirectHandoffJob(data.runId || data.jobId);
+          const finalData = await pollDirectHandoffJob(data.runId || data.jobId, waitForReadySeconds, trialCount);
           setAppBackendStatus(directHandoffJobText(finalData), directHandoffJobLevel(finalData));
           setAppBackendLog(finalData);
         }
@@ -3527,7 +3533,7 @@
         setAppBackendStatus(workflowJobText(data), workflowJobLevel(data));
         setAppBackendLog(data);
         if (data.jobStatus === "running" && (data.runId || data.jobId)) {
-          const finalData = await pollWorkflowJob(data.runId || data.jobId);
+          const finalData = await pollWorkflowJob(data.runId || data.jobId, waitForReadySeconds, trialCount, runDirect);
           setAppBackendStatus(workflowJobText(finalData), workflowJobLevel(finalData));
           setAppBackendLog(finalData);
         }

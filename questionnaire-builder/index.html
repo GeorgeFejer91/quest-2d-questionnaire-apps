@@ -950,6 +950,7 @@
               </label>
             </div>
             <div id="appBackendStatus" class="issue">Backend not checked.</div>
+            <div id="workflowReceiptStatus" class="issue" hidden></div>
             <div class="compact-grid">
               <label class="toggle-row">
                 <input id="appRunTests" type="checkbox" checked>
@@ -2965,6 +2966,100 @@
       byId("appBackendLog").textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
     }
 
+    function formatReceiptBytes(bytes) {
+      const value = Number(bytes);
+      if (!Number.isFinite(value) || value <= 0) {
+        return "";
+      }
+      if (value >= 1024 * 1024) {
+        return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+      }
+      if (value >= 1024) {
+        return `${(value / 1024).toFixed(1)} KB`;
+      }
+      return `${value} bytes`;
+    }
+
+    function workflowReceiptLevel(receipt) {
+      const status = receipt?.status || "";
+      if (status === "fail" || status === "blocked" || status === "missing-summary") {
+        return "error";
+      }
+      if (status === "pass") {
+        return "ok";
+      }
+      return "warn";
+    }
+
+    function workflowReceiptText(data) {
+      const receipt = data?.workflowReceipt;
+      if (!receipt) {
+        return "";
+      }
+      const counts = receipt.counts || {};
+      const artifacts = receipt.artifacts || {};
+      const pieces = [`Evidence receipt: ${receipt.status || "unknown"}`];
+      if (receipt.offlineEvidenceReady) {
+        pieces.push("offline gates inspectable");
+      }
+      const failed = Number(counts.failed || 0);
+      const blocked = Number(counts.blocked || 0);
+      const pending = Number(counts.pending || 0);
+      const warn = Number(counts.warn || 0);
+      const skipped = Number(counts.skipped || 0);
+      pieces.push(`${failed} failures`);
+      if (blocked > 0) {
+        pieces.push(`${blocked} blocked gates`);
+      }
+      if (pending > 0) {
+        pieces.push(`${pending} physical gates pending`);
+      }
+      if (warn > 0) {
+        pieces.push(`${warn} warnings`);
+      }
+      if (skipped > 0) {
+        pieces.push(`${skipped} skipped gates`);
+      }
+      const apkBytes = formatReceiptBytes(artifacts.questionnaireApk?.bytes);
+      if (artifacts.questionnaireApk?.exists && apkBytes) {
+        pieces.push(`questionnaire APK ${apkBytes}`);
+      }
+      const questionnaireRenderCount = Number(artifacts.questionnaireRender?.renderCount || 0);
+      const temporalRenderCount = Number(artifacts.temporalTracerRender?.renderCount || 0);
+      const renderCount = questionnaireRenderCount + temporalRenderCount;
+      if (renderCount > 0) {
+        pieces.push(`${renderCount} local renders`);
+      }
+      const decision = artifacts.directQuestHandoff?.decisionGate;
+      if (decision?.candidateAStatus) {
+        pieces.push(`direct handoff ${decision.candidateAStatus}`);
+      }
+      if (receipt.defaultDirectPendingIntentApproved === false) {
+        pieces.push("production direct default still pending");
+      }
+      const productPathStatus = artifacts.questAdb?.productPathStatus;
+      if (productPathStatus && productPathStatus !== "not-probed") {
+        pieces.push(`product path ${productPathStatus}`);
+      }
+      if (artifacts.summaryPath) {
+        pieces.push(`summary: ${artifacts.summaryPath}`);
+      }
+      return `${pieces.join("; ")}.`;
+    }
+
+    function setWorkflowReceiptStatus(data) {
+      const target = byId("workflowReceiptStatus");
+      const text = workflowReceiptText(data);
+      if (!text) {
+        target.hidden = true;
+        target.textContent = "";
+        return;
+      }
+      target.hidden = false;
+      target.className = `issue ${workflowReceiptLevel(data.workflowReceipt)}`;
+      target.textContent = text;
+    }
+
     function appendAppBackendLog(value) {
       const log = byId("appBackendLog");
       const text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
@@ -3140,6 +3235,7 @@
       while (Date.now() - startedAt < timeoutMs) {
         const data = await callAppBackend(`/api/workflow-job?runId=${encodeURIComponent(runId)}`);
         setAppBackendStatus(workflowJobText(data), workflowJobLevel(data));
+        setWorkflowReceiptStatus(data);
         setAppBackendLog(data);
         if (data.jobStatus !== "running") {
           return data;
@@ -3519,6 +3615,7 @@
         const trialCount = directHandoffTrialCount();
         const waitForReadySeconds = directHandoffWaitSeconds();
         setAppBackendStatus("Starting builder-to-Quest workflow validation...", "");
+        setWorkflowReceiptStatus(null);
         const data = await callAppBackend("/api/validate-workflow", {
           config: buildConfig(),
           skipBuild: false,
@@ -3531,14 +3628,17 @@
           waitForReadySeconds: runDirect ? waitForReadySeconds : 0
         });
         setAppBackendStatus(workflowJobText(data), workflowJobLevel(data));
+        setWorkflowReceiptStatus(data);
         setAppBackendLog(data);
         if (data.jobStatus === "running" && (data.runId || data.jobId)) {
           const finalData = await pollWorkflowJob(data.runId || data.jobId, waitForReadySeconds, trialCount, runDirect);
           setAppBackendStatus(workflowJobText(finalData), workflowJobLevel(finalData));
+          setWorkflowReceiptStatus(finalData);
           setAppBackendLog(finalData);
         }
       } catch (error) {
         setAppBackendStatus(error.message || String(error), "error");
+        setWorkflowReceiptStatus(error.backendData || null);
         setAppBackendLog(error.backendData || error.message || String(error));
       } finally {
         button.disabled = wasDisabled;

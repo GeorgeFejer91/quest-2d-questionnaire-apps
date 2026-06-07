@@ -187,6 +187,11 @@ The hosted/offline GUI exposes the same gate through the companion
 `/api/validate-workflow` endpoint. It also exposes the direct handoff gate as a
 dedicated `Run direct handoff` action backed by `/api/direct-handoff` and
 `/api/direct-handoff-job`, placed after replay/export in the sequential runner.
+The workflow polling endpoint also returns a compact `workflowReceipt`, and the
+GUI displays it beside the job status so the reviewer can see whether offline
+gates are inspectable, how many failures/blocks/pending physical gates remain,
+which APK/render artifacts were produced, and whether direct PendingIntent is
+still awaiting product-path evidence.
 The runner's `Ready wait (s)` field controls how long these jobs wait for
 product-path readiness before classifying the attempt as blocked; the companion
 clamps it to 0-28800 seconds. A pre-product-path readiness block records one

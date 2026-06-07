@@ -677,6 +677,10 @@ try {
     if ($workflow.workflowStatus -eq 'fail' -or [string]::IsNullOrWhiteSpace([string]$workflow.summaryPath) -or -not (Test-Path -LiteralPath $workflow.summaryPath)) {
         throw "Companion validate-workflow did not produce a usable workflow summary."
     }
+    $workflowReceipt = if ($workflow.PSObject.Properties.Name -contains 'workflowReceipt') { $workflow.workflowReceipt } else { $null }
+    if ($null -eq $workflowReceipt -or [string]::IsNullOrWhiteSpace([string]$workflowReceipt.status) -or -not [bool]$workflowReceipt.offlineEvidenceReady) {
+        throw "Companion validate-workflow did not return an inspectable workflow receipt."
+    }
 
     Write-Host "== Validate workflow direct handoff clamp dry run through companion =="
     $workflowClampBody = @{
@@ -709,6 +713,10 @@ try {
     Add-Progress "validate-workflow-clamp-complete jobStatus=$($workflowClamp.jobStatus) workflowStatus=$($workflowClamp.workflowStatus) questTrials=$($workflowClamp.questTrials) waitForReadySeconds=$($workflowClamp.waitForReadySeconds)"
     if ($workflowClamp.workflowStatus -eq 'fail' -or [string]::IsNullOrWhiteSpace([string]$workflowClamp.summaryPath) -or -not (Test-Path -LiteralPath $workflowClamp.summaryPath)) {
         throw "Companion validate-workflow clamp dry run did not produce a usable workflow summary."
+    }
+    $workflowClampReceipt = if ($workflowClamp.PSObject.Properties.Name -contains 'workflowReceipt') { $workflowClamp.workflowReceipt } else { $null }
+    if ($null -eq $workflowClampReceipt -or [string]::IsNullOrWhiteSpace([string]$workflowClampReceipt.status)) {
+        throw "Companion validate-workflow clamp dry run did not return a workflow receipt."
     }
     if ([int]$workflowClamp.questTrials -ne 10 -or [int]$workflowClamp.waitForReadySeconds -ne 28800 -or -not [bool]$workflowClamp.dryRunQuestDirectHandoff) {
         throw "Companion validate-workflow final clamp mismatch. Expected questTrials=10, waitForReadySeconds=28800, dryRunQuestDirectHandoff=true; got questTrials=$($workflowClamp.questTrials), waitForReadySeconds=$($workflowClamp.waitForReadySeconds), dryRunQuestDirectHandoff=$($workflowClamp.dryRunQuestDirectHandoff)."
@@ -785,6 +793,7 @@ try {
         $workflowMatrixInspectable -and
         [string]$installApk.installStatus -eq 'pass' -and
         [string]$questReplay.replayStatus -ne 'fail' -and
+        [bool]$workflowReceipt.offlineEvidenceReady -and
         $directHandoffDryRunGatePass -and
         $directHandoffClampGatePass -and
         $workflowClampGatePass
@@ -800,6 +809,7 @@ try {
         $workflowMatrixInspectable -and
         [string]$installApk.installStatus -eq 'pass' -and
         [string]$questReplay.replayStatus -ne 'fail' -and
+        [bool]$workflowReceipt.offlineEvidenceReady -and
         $directHandoffDryRunGatePass -and
         $directHandoffClampGatePass -and
         $workflowClampGatePass
@@ -830,6 +840,7 @@ try {
             generateApkHashPass = $generatedApkHashPass
             renderPreviewArtifactGatePass = $renderPreviewPass
             workflowMatrixInspectable = $workflowMatrixInspectable
+            workflowReceiptInspectable = [bool]$workflowReceipt.offlineEvidenceReady
             workflowDirectHandoffClampGatePass = $workflowClampGatePass
         }
         artifacts = [ordered]@{
@@ -840,8 +851,10 @@ try {
             renderEvidence = $generateRenderEvidence
             workflowSummaryPath = $workflow.summaryPath
             workflowCounts = $workflowCounts
+            workflowReceipt = $workflowReceipt
             directHandoffSummaryPath = $directHandoff.summaryPath
             workflowClampSummaryPath = $workflowClamp.summaryPath
+            workflowClampReceipt = $workflowClampReceipt
         }
         physicalEvidenceStillNeeded = [ordered]@{
             directPendingIntentQuestTrials = '10 clean product-path trials'
@@ -939,6 +952,7 @@ try {
             renderSummaryPath = $generateRenderSummaryPath
             renderEvidence = $generateRenderEvidence
             workflowStatus = $workflow.workflowStatus
+            workflowReceipt = $workflowReceipt
             workflowSummaryPath = $workflow.summaryPath
         }
         workflowDirectHandoffClampDryRun = [ordered]@{

@@ -146,3 +146,8 @@ Use absolute dates.
   authorization, config save/validate, APK hash, local render artifacts,
   workflow matrix, and direct-handoff dry-run gates all pass; fast runs with
   intentionally skipped APK/render evidence report `partial-skipped-evidence`.
+- Added a GUI-visible `workflowReceipt` to `/api/workflow-job`. Future
+  workflow-button changes should keep the visible receipt aligned with the
+  matrix artifact so users can see offline evidence readiness, failure/block
+  counts, APK/render facts, and remaining physical Quest gates without opening
+  nested JSON.

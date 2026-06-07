@@ -26,6 +26,16 @@ function Assert-ChildPath {
     }
 }
 
+function Write-Utf8NoBomLf {
+    param(
+        [string]$Path,
+        [string]$Text
+    )
+
+    $normalized = ($Text -replace "`r`n", "`n") -replace "`r", "`n"
+    [System.IO.File]::WriteAllText($Path, $normalized + "`n", [System.Text.UTF8Encoding]::new($false))
+}
+
 $projectFull = Get-SafeFullPath $ProjectPath
 if ([string]::IsNullOrWhiteSpace($PagesRoot)) {
     $parentRoot = Split-Path -Parent $projectFull
@@ -98,7 +108,7 @@ $manifest = [ordered]@{
     localConnectorLauncher = 'Start-QuestionnaireBuilderOnlineConnector.cmd'
     completedAt = (Get-Date).ToString('o')
 }
-$manifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $targetDir 'questionnaire-builder-pages-manifest.json') -Encoding UTF8
+Write-Utf8NoBomLf -Path (Join-Path $targetDir 'questionnaire-builder-pages-manifest.json') -Text ($manifest | ConvertTo-Json -Depth 6)
 
 Write-Host "GitHub Pages questionnaire builder staged at $targetDir"
 Write-Host "Commit and push that folder from the Pages repository to publish it."

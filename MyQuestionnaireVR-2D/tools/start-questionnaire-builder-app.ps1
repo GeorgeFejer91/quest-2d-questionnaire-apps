@@ -288,6 +288,162 @@ function Get-TailText {
     return "[trimmed to last $MaxChars chars]`n" + $text.Substring($text.Length - $MaxChars)
 }
 
+function Get-JsonProperty {
+    param(
+        [object]$Object,
+        [string]$Name,
+        [object]$Default = $null
+    )
+
+    if ($null -eq $Object -or -not ($Object.PSObject.Properties.Name -contains $Name)) {
+        return $Default
+    }
+    return $Object.PSObject.Properties[$Name].Value
+}
+
+function Get-WorkflowCount {
+    param(
+        [object]$Counts,
+        [string]$Name
+    )
+
+    $value = Get-JsonProperty -Object $Counts -Name $Name -Default 0
+    if ($null -eq $value -or [string]::IsNullOrWhiteSpace([string]$value)) {
+        return 0
+    }
+    return [int]$value
+}
+
+function New-WorkflowReceipt {
+    param(
+        [object]$Summary,
+        [string]$SummaryPath,
+        [string]$JobStatus = '',
+        [string]$WorkflowStatus = ''
+    )
+
+    if ($null -eq $Summary) {
+        $status = if ($JobStatus -eq 'running') { 'running' } else { 'missing-summary' }
+        return [ordered]@{
+            schemaVersion = 'mq.builder_to_quest.workflow_receipt.v1'
+            status = $status
+            jobStatus = $JobStatus
+            workflowStatus = $WorkflowStatus
+            offlineEvidenceReady = $false
+            physicalQuestProductPathPending = $true
+            defaultDirectPendingIntentApproved = $false
+            counts = [ordered]@{
+                requirements = 0
+                failed = 0
+                blocked = 0
+                pending = 0
+                warn = 0
+                skipped = 0
+            }
+            artifacts = [ordered]@{
+                summaryPath = $SummaryPath
+            }
+            proofBoundary = 'Workflow evidence is not inspectable until the matrix summary is written.'
+        }
+    }
+
+    $summaryWorkflowStatus = [string](Get-JsonProperty -Object $Summary -Name 'status' -Default $WorkflowStatus)
+    $countsSource = Get-JsonProperty -Object $Summary -Name 'counts'
+    $counts = [ordered]@{
+        requirements = Get-WorkflowCount -Counts $countsSource -Name 'requirements'
+        failed = Get-WorkflowCount -Counts $countsSource -Name 'failed'
+        blocked = Get-WorkflowCount -Counts $countsSource -Name 'blocked'
+        pending = Get-WorkflowCount -Counts $countsSource -Name 'pending'
+        warn = Get-WorkflowCount -Counts $countsSource -Name 'warn'
+        skipped = Get-WorkflowCount -Counts $countsSource -Name 'skipped'
+    }
+
+    $evidence = Get-JsonProperty -Object $Summary -Name 'evidence'
+    $questionnaireApk = Get-JsonProperty -Object $evidence -Name 'questionnaireApk'
+    $temporalTracerApk = Get-JsonProperty -Object $evidence -Name 'temporalTracerApk'
+    $unityApk = Get-JsonProperty -Object $evidence -Name 'unityApk'
+    $questionnaireRender = Get-JsonProperty -Object $evidence -Name 'questionnaireRender'
+    $temporalRender = Get-JsonProperty -Object $evidence -Name 'temporalTracerRender'
+    $triggerBlockMapping = Get-JsonProperty -Object $evidence -Name 'triggerBlockMapping'
+    $panelReturnContracts = Get-JsonProperty -Object $evidence -Name 'panelReturnContracts'
+    $directPreflight = Get-JsonProperty -Object $evidence -Name 'directHandoffPreflight'
+    $questAdb = Get-JsonProperty -Object $evidence -Name 'questAdb'
+    $directQuest = Get-JsonProperty -Object $evidence -Name 'directQuestHandoff'
+    $decisionGate = Get-JsonProperty -Object $directQuest -Name 'decisionGate'
+    $defaultDirectApproved = if ($null -ne $decisionGate) { [bool](Get-JsonProperty -Object $decisionGate -Name 'defaultDirectPendingIntentApproved' -Default $false) } else { $false }
+    $physicalPending = -not $defaultDirectApproved
+    $offlineEvidenceReady = ($counts.failed -eq 0 -and $counts.blocked -eq 0)
+
+    $receiptStatus = 'pass'
+    if ($summaryWorkflowStatus -eq 'fail' -or $summaryWorkflowStatus -eq 'error' -or $counts.failed -gt 0) {
+        $receiptStatus = 'fail'
+    } elseif ($summaryWorkflowStatus -eq 'blocked' -or $counts.blocked -gt 0) {
+        $receiptStatus = 'blocked'
+    } elseif ($counts.skipped -gt 0) {
+        $receiptStatus = 'partial-skipped-evidence'
+    } elseif ($physicalPending -or $counts.pending -gt 0 -or $counts.warn -gt 0 -or $summaryWorkflowStatus -eq 'warn') {
+        $receiptStatus = 'pass-with-physical-pending'
+    }
+
+    return [ordered]@{
+        schemaVersion = 'mq.builder_to_quest.workflow_receipt.v1'
+        status = $receiptStatus
+        jobStatus = $JobStatus
+        workflowStatus = $summaryWorkflowStatus
+        offlineEvidenceReady = $offlineEvidenceReady
+        physicalQuestProductPathPending = $physicalPending
+        defaultDirectPendingIntentApproved = $defaultDirectApproved
+        counts = $counts
+        checks = [ordered]@{
+            questionnaireApkExists = [bool](Get-JsonProperty -Object $questionnaireApk -Name 'exists' -Default $false)
+            questionnaireRenderArtifactGatePass = [bool](Get-JsonProperty -Object $questionnaireRender -Name 'passesArtifactGate' -Default $false)
+            temporalTracerRenderArtifactGatePass = [bool](Get-JsonProperty -Object $temporalRender -Name 'passesArtifactGate' -Default $false)
+            triggerBlockMappingPass = ([string](Get-JsonProperty -Object $triggerBlockMapping -Name 'status' -Default '') -eq 'pass')
+            panelReturnContractsPass = ([string](Get-JsonProperty -Object $panelReturnContracts -Name 'status' -Default '') -eq 'pass')
+            directHandoffPreflightPass = ([string](Get-JsonProperty -Object $directPreflight -Name 'preflightStatus' -Default (Get-JsonProperty -Object $directPreflight -Name 'status' -Default '')) -eq 'pass')
+            questAdbProductPathReady = [bool](Get-JsonProperty -Object $questAdb -Name 'productPathReady' -Default $false)
+        }
+        artifacts = [ordered]@{
+            summaryPath = $SummaryPath
+            questionnaireApk = $questionnaireApk
+            temporalTracerApk = $temporalTracerApk
+            unityApk = $unityApk
+            questionnaireRender = [ordered]@{
+                summaryPath = Get-JsonProperty -Object $questionnaireRender -Name 'summaryPath'
+                renderCount = Get-JsonProperty -Object $questionnaireRender -Name 'renderCount' -Default 0
+                passesArtifactGate = [bool](Get-JsonProperty -Object $questionnaireRender -Name 'passesArtifactGate' -Default $false)
+            }
+            temporalTracerRender = [ordered]@{
+                summaryPath = Get-JsonProperty -Object $temporalRender -Name 'summaryPath'
+                renderCount = Get-JsonProperty -Object $temporalRender -Name 'renderCount' -Default 0
+                passesArtifactGate = [bool](Get-JsonProperty -Object $temporalRender -Name 'passesArtifactGate' -Default $false)
+            }
+            directHandoffPreflight = [ordered]@{
+                summaryPath = Get-JsonProperty -Object $directPreflight -Name 'summaryPath'
+                status = Get-JsonProperty -Object $directPreflight -Name 'status'
+                preflightStatus = Get-JsonProperty -Object $directPreflight -Name 'preflightStatus'
+                triggerCount = Get-JsonProperty -Object $directPreflight -Name 'triggerCount' -Default 0
+            }
+            questAdb = [ordered]@{
+                readiness = Get-JsonProperty -Object $questAdb -Name 'readiness'
+                productPathStatus = Get-JsonProperty -Object $questAdb -Name 'productPathStatus' -Default 'not-probed'
+                productPathReady = [bool](Get-JsonProperty -Object $questAdb -Name 'productPathReady' -Default $false)
+            }
+            directQuestHandoff = [ordered]@{
+                status = Get-JsonProperty -Object $directQuest -Name 'status'
+                dryRun = [bool](Get-JsonProperty -Object $directQuest -Name 'dryRun' -Default $false)
+                requestedQuestTrials = Get-JsonProperty -Object $directQuest -Name 'requestedQuestTrials' -Default 0
+                attemptedTrialCount = Get-JsonProperty -Object $directQuest -Name 'attemptedTrialCount' -Default 0
+                passCount = Get-JsonProperty -Object $directQuest -Name 'passCount' -Default 0
+                blockedCount = Get-JsonProperty -Object $directQuest -Name 'blockedCount' -Default 0
+                failCount = Get-JsonProperty -Object $directQuest -Name 'failCount' -Default 0
+                decisionGate = $decisionGate
+            }
+        }
+        proofBoundary = 'Direct PendingIntent cannot become the production default until 10 clean real Quest product-path trials plus one manual headset pass prove the route.'
+    }
+}
+
 function New-WorkflowValidationArguments {
     param(
         [object]$Payload,
@@ -405,6 +561,7 @@ function Get-WorkflowJobStatus {
     elseif ($summary -and $summary.PSObject.Properties.Name -contains 'status') {
         $workflowStatus = [string]$summary.status
     }
+    $workflowReceipt = New-WorkflowReceipt -Summary $summary -SummaryPath ([string]$job['summaryPath']) -JobStatus $jobStatus -WorkflowStatus $workflowStatus
 
     return [ordered]@{
         status = 'ok'
@@ -425,6 +582,7 @@ function Get-WorkflowJobStatus {
         stderrPath = $job['stderrPath']
         stdout = Get-TailText -Path ([string]$job['stdoutPath'])
         stderr = Get-TailText -Path ([string]$job['stderrPath'])
+        workflowReceipt = $workflowReceipt
         summary = $summary
         startedAt = $job['startedAt']
         completedAt = $job['completedAt']
@@ -1468,15 +1626,19 @@ function Handle-Request {
             $result = Invoke-ProjectPowerShell -Arguments $arguments
             $summaryPath = Join-Path $ProjectPath ("artifacts\builder-to-quest-workflow\$runId\builder-to-quest-workflow-summary.json")
             $summary = Read-JsonFileIfExists -Path $summaryPath
+            $jobStatus = if ($result.exitCode -eq 0) { 'completed' } else { 'failed' }
+            $workflowStatus = if ($summary) { $summary.status } else { 'missing-summary' }
+            $workflowReceipt = New-WorkflowReceipt -Summary $summary -SummaryPath $summaryPath -JobStatus $jobStatus -WorkflowStatus $workflowStatus
             Write-JsonResponse -Context $Context -StatusCode ($(if ($result.exitCode -eq 0) { 200 } else { 500 })) -Value ([ordered]@{
                 status = if ($result.exitCode -eq 0) { 'ok' } else { 'error' }
-                jobStatus = if ($result.exitCode -eq 0) { 'completed' } else { 'failed' }
-                workflowStatus = if ($summary) { $summary.status } else { 'missing-summary' }
+                jobStatus = $jobStatus
+                workflowStatus = $workflowStatus
                 configPath = $configPath
                 runId = $runId
                 jobId = $runId
                 exitCode = $result.exitCode
                 summaryPath = $summaryPath
+                workflowReceipt = $workflowReceipt
                 summary = $summary
                 stdout = $result.output
                 output = $result.output

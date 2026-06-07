@@ -420,3 +420,24 @@ Generalizable rule: multi-stage builder pipelines need a single top-level
 receipt that distinguishes full evidence, skipped evidence, and physical
 evidence still pending. Keep detailed artifacts, but promote the audit-critical
 facts into one reviewer-facing object.
+
+## User-Facing Workflow Buttons Need Receipts Too
+
+Problem: even when `/api/validate-workflow` wrote a strong matrix, the GUI
+status line only showed a raw workflow status and summary path. That left the
+main user-facing button weaker than the machine artifact because a reviewer
+could miss APK bytes, render counts, failed/blocked/pending gate counts, and
+the direct handoff decision boundary unless they opened JSON.
+
+Solution: `/api/workflow-job` now derives a compact `workflowReceipt` from the
+builder-to-Quest matrix and the GUI renders it as a visible evidence line. The
+raw summary remains available in the log, but the runner panel promotes the
+audit-critical facts: offline gates inspectable, failure/block/pending counts,
+APK size, local render count, direct handoff status, product-path readiness,
+and the reminder that production direct PendingIntent remains pending until
+real Quest trials plus manual headset evidence pass.
+
+Generalizable rule: if a dashboard button launches a long evidence-producing
+job, its polling endpoint should return both raw artifact paths and a compact
+human-readable receipt. Do not make users open nested JSON to learn whether the
+button proved the promised workflow.

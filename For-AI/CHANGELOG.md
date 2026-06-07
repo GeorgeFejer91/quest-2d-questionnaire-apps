@@ -79,3 +79,7 @@ Use absolute dates.
 - Rebuilt the local `AweGreatDictatorUnity` demo APK after fixing the custom
   Android manifest path; the earlier APK launched Unity's stock Activity even
   though the trigger catalog named the custom return Activity.
+- Converted companion workflow validation to a background job contract:
+  `/api/validate-workflow` returns a `runId`/`jobId`, `/api/workflow-job`
+  exposes status/log tails/summary paths, and the builder polls instead of
+  blocking the page during long validation.

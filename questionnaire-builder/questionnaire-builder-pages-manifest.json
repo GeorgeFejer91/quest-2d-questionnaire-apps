@@ -1,4 +1,4 @@
-﻿{
+{
     "schemaVersion":  "my-questionnaire-2d.github-pages-builder.v1",
     "status":  "pass",
     "projectPath":  "C:\\Users\\cogpsy-vrlab\\Documents\\GithubVR\\quest-2d-questionnaire-apps\\MyQuestionnaireVR-2D",
@@ -7,5 +7,5 @@
     "entrypoint":  "C:\\Users\\cogpsy-vrlab\\Documents\\GithubVR\\quest-2d-questionnaire-apps\\questionnaire-builder\\index.html",
     "localConnectorUrl":  "http://127.0.0.1:8765",
     "localConnectorLauncher":  "Start-QuestionnaireBuilderOnlineConnector.cmd",
-    "completedAt":  "2026-06-07T04:37:20.5382910+02:00"
+    "completedAt":  "2026-06-07T05:04:35.5733217+02:00"
 }

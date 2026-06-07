@@ -63,6 +63,9 @@ if ([string]::IsNullOrWhiteSpace($PairingToken)) {
     $PairingToken = [Convert]::ToBase64String($bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_')
 }
 
+$script:WorkflowJobs = @{}
+$script:WorkflowJobOrder = New-Object 'System.Collections.Generic.List[string]'
+
 function New-Utf8NoBomEncoding {
     return [System.Text.UTF8Encoding]::new($false)
 }
@@ -244,6 +247,225 @@ function Read-JsonFileIfExists {
     return Get-Content -LiteralPath $Path -Encoding UTF8 -Raw | ConvertFrom-Json
 }
 
+function Read-TextFileIfExists {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path)) {
+        return ''
+    }
+
+    $stream = [System.IO.File]::Open($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+    try {
+        $reader = [System.IO.StreamReader]::new($stream, [System.Text.Encoding]::UTF8, $true)
+        try {
+            return $reader.ReadToEnd()
+        }
+        finally {
+            $reader.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
+function Get-TailText {
+    param(
+        [string]$Path,
+        [int]$MaxChars = 6000
+    )
+
+    $text = Read-TextFileIfExists -Path $Path
+    if ($text.Length -le $MaxChars) {
+        return $text
+    }
+    return "[trimmed to last $MaxChars chars]`n" + $text.Substring($text.Length - $MaxChars)
+}
+
+function New-WorkflowValidationArguments {
+    param(
+        [object]$Payload,
+        [string]$ConfigPath,
+        [string]$RunId
+    )
+
+    $script = Join-Path $ProjectPath 'tools\validate-builder-to-quest-workflow.ps1'
+    $arguments = @(
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        $script,
+        '-ConfigPath',
+        $ConfigPath,
+        '-ProjectPath',
+        $ProjectPath,
+        '-ReferenceProjectPath',
+        $ReferenceProjectPath,
+        '-RunId',
+        $RunId,
+        '-InvokedByCompanion'
+    )
+
+    if ($Payload.PSObject.Properties.Name -contains 'skipBuild' -and [bool]$Payload.skipBuild) {
+        $arguments += '-SkipApkBuild'
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'skipQuestionnaireRender' -and [bool]$Payload.skipQuestionnaireRender) {
+        $arguments += '-SkipQuestionnaireRender'
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'skipTemporalRender' -and [bool]$Payload.skipTemporalRender) {
+        $arguments += '-SkipTemporalRender'
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'runQuestReadiness' -and [bool]$Payload.runQuestReadiness) {
+        $arguments += '-RunQuestReadiness'
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'runQuestDirectHandoff' -and [bool]$Payload.runQuestDirectHandoff) {
+        $arguments += '-RunQuestDirectHandoff'
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'skipInstall' -and [bool]$Payload.skipInstall) {
+        $arguments += '-SkipInstall'
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'questSerial' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.questSerial)) {
+        $arguments += @('-Serial', [string]$Payload.questSerial)
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'questTrials' -and [int]$Payload.questTrials -gt 0) {
+        $arguments += @('-QuestTrials', [string][int]$Payload.questTrials)
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'waitForReadySeconds' -and [int]$Payload.waitForReadySeconds -ge 0) {
+        $arguments += @('-WaitForReadySeconds', [string][int]$Payload.waitForReadySeconds)
+    }
+
+    return $arguments
+}
+
+function Get-WorkflowJobStatus {
+    param([string]$RunId)
+
+    if ([string]::IsNullOrWhiteSpace($RunId) -or -not $script:WorkflowJobs.ContainsKey($RunId)) {
+        return $null
+    }
+
+    $job = $script:WorkflowJobs[$RunId]
+    $process = $job['process']
+    $hasExited = $false
+    $exitCode = $null
+    $processError = ''
+
+    if ($null -ne $process) {
+        try {
+            $process.Refresh()
+            $hasExited = [bool]$process.HasExited
+            if ($hasExited) {
+                $exitCode = [int]$process.ExitCode
+                if ([string]::IsNullOrWhiteSpace([string]$job['completedAt'])) {
+                    $job['completedAt'] = (Get-Date).ToString('o')
+                }
+            }
+        }
+        catch {
+            $hasExited = $true
+            $processError = $_.Exception.Message
+            if ([string]::IsNullOrWhiteSpace([string]$job['completedAt'])) {
+                $job['completedAt'] = (Get-Date).ToString('o')
+            }
+        }
+    }
+
+    $summary = Read-JsonFileIfExists -Path ([string]$job['summaryPath'])
+    $jobStatus = 'running'
+    $workflowStatus = 'running'
+    if ($hasExited) {
+        if ($null -ne $exitCode -and $exitCode -eq 0) {
+            $jobStatus = 'completed'
+        }
+        else {
+            $jobStatus = 'failed'
+        }
+        if ($summary) {
+            $workflowStatus = [string]$summary.status
+        }
+        elseif ($jobStatus -eq 'completed') {
+            $workflowStatus = 'missing-summary'
+        }
+        else {
+            $workflowStatus = 'error'
+        }
+    }
+    elseif ($summary -and $summary.PSObject.Properties.Name -contains 'status') {
+        $workflowStatus = [string]$summary.status
+    }
+
+    return [ordered]@{
+        status = 'ok'
+        jobId = $RunId
+        runId = $RunId
+        jobStatus = $jobStatus
+        workflowStatus = $workflowStatus
+        exitCode = $exitCode
+        processError = $processError
+        configPath = $job['configPath']
+        artifactDir = $job['artifactDir']
+        summaryPath = $job['summaryPath']
+        stdoutPath = $job['stdoutPath']
+        stderrPath = $job['stderrPath']
+        stdout = Get-TailText -Path ([string]$job['stdoutPath'])
+        stderr = Get-TailText -Path ([string]$job['stderrPath'])
+        summary = $summary
+        startedAt = $job['startedAt']
+        completedAt = $job['completedAt']
+    }
+}
+
+function Start-WorkflowValidationJob {
+    param([object]$Payload)
+
+    $configPath = Save-ConfigPayload -Payload $Payload
+    $runId = 'builder-workflow-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    $jobDir = Join-Path $ProjectPath ("artifacts\builder-app-jobs\$runId")
+    New-Item -ItemType Directory -Force -Path $jobDir | Out-Null
+
+    $stdoutPath = Join-Path $jobDir 'workflow-stdout.txt'
+    $stderrPath = Join-Path $jobDir 'workflow-stderr.txt'
+    $summaryPath = Join-Path $ProjectPath ("artifacts\builder-to-quest-workflow\$runId\builder-to-quest-workflow-summary.json")
+    $arguments = New-WorkflowValidationArguments -Payload $Payload -ConfigPath $configPath -RunId $runId
+
+    $process = Start-Process `
+        -FilePath 'powershell' `
+        -ArgumentList $arguments `
+        -WorkingDirectory $ProjectPath `
+        -PassThru `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput $stdoutPath `
+        -RedirectStandardError $stderrPath
+
+    $script:WorkflowJobs[$runId] = [ordered]@{
+        process = $process
+        runId = $runId
+        configPath = $configPath
+        artifactDir = $jobDir
+        stdoutPath = $stdoutPath
+        stderrPath = $stderrPath
+        summaryPath = $summaryPath
+        startedAt = (Get-Date).ToString('o')
+        completedAt = ''
+    }
+    $script:WorkflowJobOrder.Add($runId) | Out-Null
+
+    while ($script:WorkflowJobOrder.Count -gt 20) {
+        $oldest = $script:WorkflowJobOrder[0]
+        $script:WorkflowJobOrder.RemoveAt(0)
+        if ($script:WorkflowJobs.ContainsKey($oldest)) {
+            $oldJob = $script:WorkflowJobs[$oldest]
+            $oldProcess = $oldJob['process']
+            if ($oldProcess -and $oldProcess.HasExited) {
+                $script:WorkflowJobs.Remove($oldest)
+            }
+        }
+    }
+
+    return Get-WorkflowJobStatus -RunId $runId
+}
+
 function Receive-JsonPayload {
     param([System.Net.HttpListenerRequest]$Request)
 
@@ -390,6 +612,7 @@ function New-StatusPayload {
             'validate-config',
             'generate-apk',
             'validate-workflow',
+            'workflow-job-status',
             'dependency-status',
             'install-dependencies'
         )
@@ -446,6 +669,24 @@ function Handle-Request {
     if ($request.HttpMethod -eq 'GET' -and $path -eq '/api/dependency-status') {
         Assert-OriginAndToken -Request $request
         Write-JsonResponse -Context $Context -StatusCode 200 -Value (Get-DependencyStatus)
+        return
+    }
+
+    if ($request.HttpMethod -eq 'GET' -and $path -eq '/api/workflow-job') {
+        Assert-OriginAndToken -Request $request
+        $runId = [string]$request.QueryString['runId']
+        if ([string]::IsNullOrWhiteSpace($runId)) {
+            $runId = [string]$request.QueryString['jobId']
+        }
+        $status = Get-WorkflowJobStatus -RunId $runId
+        if ($null -eq $status) {
+            Write-JsonResponse -Context $Context -StatusCode 404 -Value ([ordered]@{
+                status = 'error'
+                message = "Unknown workflow job: $runId"
+            })
+            return
+        }
+        Write-JsonResponse -Context $Context -StatusCode 200 -Value $status
         return
     }
 
@@ -545,67 +786,31 @@ function Handle-Request {
     if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/validate-workflow') {
         Assert-OriginAndToken -Request $request
         $payload = Receive-JsonPayload -Request $request
-        $configPath = Save-ConfigPayload -Payload $payload
-        $runId = 'builder-workflow-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
-        $script = Join-Path $ProjectPath 'tools\validate-builder-to-quest-workflow.ps1'
-        $arguments = @(
-            '-NoProfile',
-            '-ExecutionPolicy',
-            'Bypass',
-            '-File',
-            $script,
-            '-ConfigPath',
-            $configPath,
-            '-ProjectPath',
-            $ProjectPath,
-            '-ReferenceProjectPath',
-            $ReferenceProjectPath,
-            '-RunId',
-            $runId,
-            '-InvokedByCompanion'
-        )
-
-        if ($payload.PSObject.Properties.Name -contains 'skipBuild' -and [bool]$payload.skipBuild) {
-            $arguments += '-SkipApkBuild'
-        }
-        if ($payload.PSObject.Properties.Name -contains 'skipQuestionnaireRender' -and [bool]$payload.skipQuestionnaireRender) {
-            $arguments += '-SkipQuestionnaireRender'
-        }
-        if ($payload.PSObject.Properties.Name -contains 'skipTemporalRender' -and [bool]$payload.skipTemporalRender) {
-            $arguments += '-SkipTemporalRender'
-        }
-        if ($payload.PSObject.Properties.Name -contains 'runQuestReadiness' -and [bool]$payload.runQuestReadiness) {
-            $arguments += '-RunQuestReadiness'
-        }
-        if ($payload.PSObject.Properties.Name -contains 'runQuestDirectHandoff' -and [bool]$payload.runQuestDirectHandoff) {
-            $arguments += '-RunQuestDirectHandoff'
-        }
-        if ($payload.PSObject.Properties.Name -contains 'skipInstall' -and [bool]$payload.skipInstall) {
-            $arguments += '-SkipInstall'
-        }
-        if ($payload.PSObject.Properties.Name -contains 'questSerial' -and -not [string]::IsNullOrWhiteSpace([string]$payload.questSerial)) {
-            $arguments += @('-Serial', [string]$payload.questSerial)
-        }
-        if ($payload.PSObject.Properties.Name -contains 'questTrials' -and [int]$payload.questTrials -gt 0) {
-            $arguments += @('-QuestTrials', [string][int]$payload.questTrials)
-        }
-        if ($payload.PSObject.Properties.Name -contains 'waitForReadySeconds' -and [int]$payload.waitForReadySeconds -ge 0) {
-            $arguments += @('-WaitForReadySeconds', [string][int]$payload.waitForReadySeconds)
+        if ($payload.PSObject.Properties.Name -contains 'synchronous' -and [bool]$payload.synchronous) {
+            $configPath = Save-ConfigPayload -Payload $payload
+            $runId = 'builder-workflow-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+            $arguments = New-WorkflowValidationArguments -Payload $payload -ConfigPath $configPath -RunId $runId
+            $result = Invoke-ProjectPowerShell -Arguments $arguments
+            $summaryPath = Join-Path $ProjectPath ("artifacts\builder-to-quest-workflow\$runId\builder-to-quest-workflow-summary.json")
+            $summary = Read-JsonFileIfExists -Path $summaryPath
+            Write-JsonResponse -Context $Context -StatusCode ($(if ($result.exitCode -eq 0) { 200 } else { 500 })) -Value ([ordered]@{
+                status = if ($result.exitCode -eq 0) { 'ok' } else { 'error' }
+                jobStatus = if ($result.exitCode -eq 0) { 'completed' } else { 'failed' }
+                workflowStatus = if ($summary) { $summary.status } else { 'missing-summary' }
+                configPath = $configPath
+                runId = $runId
+                jobId = $runId
+                exitCode = $result.exitCode
+                summaryPath = $summaryPath
+                summary = $summary
+                stdout = $result.output
+                output = $result.output
+            })
+            return
         }
 
-        $result = Invoke-ProjectPowerShell -Arguments $arguments
-        $summaryPath = Join-Path $ProjectPath ("artifacts\builder-to-quest-workflow\$runId\builder-to-quest-workflow-summary.json")
-        $summary = Read-JsonFileIfExists -Path $summaryPath
-        Write-JsonResponse -Context $Context -StatusCode ($(if ($result.exitCode -eq 0) { 200 } else { 500 })) -Value ([ordered]@{
-            status = if ($result.exitCode -eq 0) { 'ok' } else { 'error' }
-            workflowStatus = if ($summary) { $summary.status } else { 'missing-summary' }
-            configPath = $configPath
-            runId = $runId
-            exitCode = $result.exitCode
-            summaryPath = $summaryPath
-            summary = $summary
-            output = $result.output
-        })
+        $job = Start-WorkflowValidationJob -Payload $payload
+        Write-JsonResponse -Context $Context -StatusCode 202 -Value $job
         return
     }
 

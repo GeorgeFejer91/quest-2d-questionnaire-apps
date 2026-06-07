@@ -137,3 +137,20 @@ file first.
 Generalizable rule: for multi-tool experiment builders, make the validation
 artifact line up with the user's promised workflow instead of relying on a
 collection of unrelated green checks.
+
+## Browser Controls Need Job Handles For Long Work
+
+Problem: `/api/validate-workflow` originally ran the full builder-to-Quest
+matrix inside one HTTP request. That made the GUI look stuck during local
+renders, APK preparation, and Quest-readiness checks, and risked browser or
+proxy timeouts while hiding partial progress.
+
+Solution: the companion now starts workflow validation as a background
+PowerShell process, returns a `runId`/`jobId`, captures stdout/stderr under
+`artifacts\builder-app-jobs\`, and exposes `/api/workflow-job` for status
+polling. The GUI's `Validate workflow` button starts the job and polls until
+the workflow matrix reaches a terminal status.
+
+Generalizable rule: static dashboards should launch long trusted PC actions as
+observable jobs, not synchronous button calls; the useful contract is job id,
+status, artifact paths, and compact log tails.

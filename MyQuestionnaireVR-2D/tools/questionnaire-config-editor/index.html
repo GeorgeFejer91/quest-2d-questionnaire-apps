@@ -3088,6 +3088,46 @@
       return data;
     }
 
+    function delay(ms) {
+      return new Promise(resolve => window.setTimeout(resolve, ms));
+    }
+
+    function workflowJobLevel(data) {
+      if (data?.jobStatus === "failed" || data?.workflowStatus === "fail" || data?.workflowStatus === "error") {
+        return "error";
+      }
+      if (data?.jobStatus === "completed" && data?.workflowStatus === "pass") {
+        return "ok";
+      }
+      if (data?.jobStatus === "completed") {
+        return "warn";
+      }
+      return "";
+    }
+
+    function workflowJobText(data) {
+      const runId = data?.runId || data?.jobId || "workflow";
+      if (data?.jobStatus === "running") {
+        return `Workflow validation running: ${runId}.`;
+      }
+      return `Workflow validation ${data?.workflowStatus || data?.jobStatus}; summary: ${data?.summaryPath || "not written yet"}`;
+    }
+
+    async function pollWorkflowJob(runId) {
+      const startedAt = Date.now();
+      const timeoutMs = 30 * 60 * 1000;
+      while (Date.now() - startedAt < timeoutMs) {
+        const data = await callAppBackend(`/api/workflow-job?runId=${encodeURIComponent(runId)}`);
+        setAppBackendStatus(workflowJobText(data), workflowJobLevel(data));
+        setAppBackendLog(data);
+        if (data.jobStatus !== "running") {
+          return data;
+        }
+        await delay(2500);
+      }
+      throw new Error(`Timed out waiting for workflow job ${runId}.`);
+    }
+
     function formatMissingDependencies(data) {
       const missing = Array.isArray(data?.missingRequired) ? data.missingRequired : [];
       if (missing.length === 0) {
@@ -3173,10 +3213,13 @@
     }
 
     async function validateWorkflowWithApp() {
+      const button = byId("validateWorkflowAppButton");
+      const wasDisabled = button.disabled;
+      button.disabled = true;
       try {
         const runDirect = byId("workflowDirectHandoff").checked;
         const runReadiness = byId("workflowQuestReadiness").checked || runDirect;
-        setAppBackendStatus("Running builder-to-Quest workflow validation...", "");
+        setAppBackendStatus("Starting builder-to-Quest workflow validation...", "");
         const data = await callAppBackend("/api/validate-workflow", {
           config: buildConfig(),
           skipBuild: false,
@@ -3188,11 +3231,19 @@
           questTrials: runDirect ? 10 : 1,
           waitForReadySeconds: runDirect ? 30 : 0
         });
-        setAppBackendStatus(`Workflow validation ${data.workflowStatus}; summary: ${data.summaryPath}`, data.workflowStatus === "pass" ? "ok" : "warn");
+        setAppBackendStatus(workflowJobText(data), workflowJobLevel(data));
         setAppBackendLog(data);
+        if (data.jobStatus === "running" && (data.runId || data.jobId)) {
+          const finalData = await pollWorkflowJob(data.runId || data.jobId);
+          setAppBackendStatus(workflowJobText(finalData), workflowJobLevel(finalData));
+          setAppBackendLog(finalData);
+        }
       } catch (error) {
         setAppBackendStatus(error.message || String(error), "error");
         setAppBackendLog(error.backendData || error.message || String(error));
+      } finally {
+        button.disabled = wasDisabled;
+        updateWorkflowGate();
       }
     }
 

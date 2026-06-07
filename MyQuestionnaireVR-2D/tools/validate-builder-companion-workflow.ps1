@@ -102,6 +102,26 @@ function Wait-Companion {
     throw "Companion did not respond at $BaseUrl"
 }
 
+function Wait-WorkflowJob {
+    param(
+        [string]$BaseUrl,
+        [hashtable]$Headers,
+        [string]$RunId,
+        [int]$TimeoutSec = 1800
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    $encodedRunId = [System.Uri]::EscapeDataString($RunId)
+    while ((Get-Date) -lt $deadline) {
+        $job = Invoke-Json -Method GET -Uri "$BaseUrl/api/workflow-job?runId=$encodedRunId" -Headers $Headers -TimeoutSec 30
+        if ($job.jobStatus -ne 'running') {
+            return $job
+        }
+        Start-Sleep -Seconds 2
+    }
+    throw "Workflow job did not finish before timeout: $RunId"
+}
+
 if ($Port -le 0) {
     $Port = Get-FreeLoopbackPort
 }
@@ -220,11 +240,18 @@ try {
         runQuestReadiness = $false
         runQuestDirectHandoff = $false
     }
-    $workflow = Invoke-Json -Method POST -Uri "$baseUrl/api/validate-workflow" -Headers $headers -Body $workflowBody -TimeoutSec 1800
-    Add-Progress 'validate-workflow-complete'
-    if ($workflow.status -ne 'ok') {
-        throw "Companion validate-workflow failed."
+    $workflowStart = Invoke-Json -Method POST -Uri "$baseUrl/api/validate-workflow" -Headers $headers -Body $workflowBody -TimeoutSec 60
+    Add-Progress "validate-workflow-started=$($workflowStart.runId)"
+    if ($workflowStart.status -ne 'ok' -or [string]::IsNullOrWhiteSpace([string]$workflowStart.runId)) {
+        throw "Companion validate-workflow did not start a workflow job."
     }
+    $workflow = if ($workflowStart.jobStatus -eq 'running') {
+        Wait-WorkflowJob -BaseUrl $baseUrl -Headers $headers -RunId $workflowStart.runId -TimeoutSec 1800
+    }
+    else {
+        $workflowStart
+    }
+    Add-Progress "validate-workflow-complete jobStatus=$($workflow.jobStatus) workflowStatus=$($workflow.workflowStatus)"
     if ($workflow.workflowStatus -eq 'fail' -or [string]::IsNullOrWhiteSpace([string]$workflow.summaryPath) -or -not (Test-Path -LiteralPath $workflow.summaryPath)) {
         throw "Companion validate-workflow did not produce a usable workflow summary."
     }

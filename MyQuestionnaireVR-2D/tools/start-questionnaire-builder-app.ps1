@@ -69,6 +69,8 @@ $script:InstallApkJobs = @{}
 $script:InstallApkJobOrder = New-Object 'System.Collections.Generic.List[string]'
 $script:QuestReplayJobs = @{}
 $script:QuestReplayJobOrder = New-Object 'System.Collections.Generic.List[string]'
+$script:DirectHandoffJobs = @{}
+$script:DirectHandoffJobOrder = New-Object 'System.Collections.Generic.List[string]'
 
 function New-Utf8NoBomEncoding {
     return [System.Text.UTF8Encoding]::new($false)
@@ -841,6 +843,189 @@ function Start-QuestReplayJob {
     return Get-QuestReplayJobStatus -RunId $runId
 }
 
+function Get-DirectHandoffJobStatus {
+    param([string]$RunId)
+
+    if ([string]::IsNullOrWhiteSpace($RunId) -or -not $script:DirectHandoffJobs.ContainsKey($RunId)) {
+        return $null
+    }
+
+    $job = $script:DirectHandoffJobs[$RunId]
+    $process = $job['process']
+    $hasExited = $false
+    $exitCode = $null
+    $processError = ''
+    if ($null -ne $process) {
+        try {
+            $process.Refresh()
+            $hasExited = [bool]$process.HasExited
+            if ($hasExited) {
+                $exitCode = [int]$process.ExitCode
+                if ([string]::IsNullOrWhiteSpace([string]$job['completedAt'])) {
+                    $job['completedAt'] = (Get-Date).ToString('o')
+                }
+            }
+        }
+        catch {
+            $hasExited = $true
+            $processError = $_.Exception.Message
+            if ([string]::IsNullOrWhiteSpace([string]$job['completedAt'])) {
+                $job['completedAt'] = (Get-Date).ToString('o')
+            }
+        }
+    }
+
+    $summary = Read-JsonFileIfExists -Path ([string]$job['summaryPath'])
+    $jobStatus = 'running'
+    $handoffStatus = 'running'
+    if ($hasExited) {
+        $jobStatus = if ($null -ne $exitCode -and $exitCode -eq 0) { 'completed' } else { 'failed' }
+        if ($summary) {
+            $handoffStatus = [string]$summary.status
+        }
+        elseif ($jobStatus -eq 'completed') {
+            $handoffStatus = 'missing-summary'
+        }
+        else {
+            $handoffStatus = 'error'
+        }
+    }
+    elseif ($summary -and $summary.PSObject.Properties.Name -contains 'status') {
+        $handoffStatus = [string]$summary.status
+    }
+
+    return [ordered]@{
+        status = 'ok'
+        jobId = $RunId
+        runId = $RunId
+        jobStatus = $jobStatus
+        handoffStatus = $handoffStatus
+        passCount = if ($summary -and $summary.PSObject.Properties.Name -contains 'passCount') { $summary.passCount } else { $null }
+        warnCount = if ($summary -and $summary.PSObject.Properties.Name -contains 'warnCount') { $summary.warnCount } else { $null }
+        blockedCount = if ($summary -and $summary.PSObject.Properties.Name -contains 'blockedCount') { $summary.blockedCount } else { $null }
+        failCount = if ($summary -and $summary.PSObject.Properties.Name -contains 'failCount') { $summary.failCount } else { $null }
+        decisionGate = if ($summary -and $summary.PSObject.Properties.Name -contains 'decisionGate') { $summary.decisionGate } else { $null }
+        exitCode = $exitCode
+        processError = $processError
+        questionnaireApk = $job['questionnaireApk']
+        temporalTracerApk = $job['temporalTracerApk']
+        unityApk = $job['unityApk']
+        questSerial = $job['questSerial']
+        dryRun = [bool]$job['dryRun']
+        trialCount = [int]$job['trialCount']
+        artifactDir = $job['artifactDir']
+        summaryPath = $job['summaryPath']
+        stdoutPath = $job['stdoutPath']
+        stderrPath = $job['stderrPath']
+        stdout = Get-TailText -Path ([string]$job['stdoutPath'])
+        stderr = Get-TailText -Path ([string]$job['stderrPath'])
+        summary = $summary
+        startedAt = $job['startedAt']
+        completedAt = $job['completedAt']
+    }
+}
+
+function Start-DirectHandoffJob {
+    param([object]$Payload)
+
+    $runId = 'builder-direct-handoff-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    $jobDir = Join-Path $ProjectPath ("artifacts\builder-app-direct-handoff\$runId")
+    New-Item -ItemType Directory -Force -Path $jobDir | Out-Null
+
+    $questionnaireApk = if ($Payload.PSObject.Properties.Name -contains 'questionnaireApk') { [string]$Payload.questionnaireApk } elseif ($Payload.PSObject.Properties.Name -contains 'apk') { [string]$Payload.apk } else { '' }
+    $temporalTracerApk = if ($Payload.PSObject.Properties.Name -contains 'temporalTracerApk') { [string]$Payload.temporalTracerApk } else { '' }
+    $unityApk = if ($Payload.PSObject.Properties.Name -contains 'unityApk') { [string]$Payload.unityApk } else { '' }
+    $serial = if ($Payload.PSObject.Properties.Name -contains 'questSerial') { [string]$Payload.questSerial } else { '' }
+    $dryRun = ($Payload.PSObject.Properties.Name -contains 'dryRun' -and [bool]$Payload.dryRun)
+    $skipInstall = ($Payload.PSObject.Properties.Name -contains 'skipInstall' -and [bool]$Payload.skipInstall)
+    $trialCount = if ($Payload.PSObject.Properties.Name -contains 'trialCount') { [Math]::Min(10, [Math]::Max(1, [int]$Payload.trialCount)) } else { 10 }
+    $waitForReadySeconds = if ($Payload.PSObject.Properties.Name -contains 'waitForReadySeconds') { [Math]::Max(0, [int]$Payload.waitForReadySeconds) } else { 30 }
+    $waitSeconds = if ($Payload.PSObject.Properties.Name -contains 'waitSeconds') { [Math]::Max(1, [int]$Payload.waitSeconds) } else { 95 }
+
+    $stdoutPath = Join-Path $jobDir 'direct-handoff-stdout.txt'
+    $stderrPath = Join-Path $jobDir 'direct-handoff-stderr.txt'
+    $summaryPath = Join-Path $jobDir 'quest-direct-handoff-validation-summary.json'
+    $script = Join-Path $ProjectPath 'tools\quest-direct-handoff-validate.ps1'
+    $arguments = @(
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        $script,
+        '-ProjectPath',
+        $ProjectPath,
+        '-OutputRoot',
+        $jobDir,
+        '-TrialCount',
+        [string]$trialCount,
+        '-WaitForReadySeconds',
+        [string]$waitForReadySeconds,
+        '-WaitSeconds',
+        [string]$waitSeconds,
+        '-FastVideoForValidation',
+        '-AutoTraceForValidation'
+    )
+    if (-not [string]::IsNullOrWhiteSpace($questionnaireApk)) {
+        $arguments += @('-QuestionnaireApk', $questionnaireApk)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($temporalTracerApk)) {
+        $arguments += @('-TemporalTracerApk', $temporalTracerApk)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($unityApk)) {
+        $arguments += @('-UnityApk', $unityApk)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($serial)) {
+        $arguments += @('-Serial', $serial)
+    }
+    if ($dryRun) {
+        $arguments += '-DryRun'
+    }
+    if ($skipInstall) {
+        $arguments += '-SkipInstall'
+    }
+
+    $process = Start-Process `
+        -FilePath 'powershell' `
+        -ArgumentList $arguments `
+        -WorkingDirectory $ProjectPath `
+        -PassThru `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput $stdoutPath `
+        -RedirectStandardError $stderrPath
+
+    $script:DirectHandoffJobs[$runId] = [ordered]@{
+        process = $process
+        runId = $runId
+        questionnaireApk = $questionnaireApk
+        temporalTracerApk = $temporalTracerApk
+        unityApk = $unityApk
+        questSerial = $serial
+        dryRun = [bool]$dryRun
+        trialCount = [int]$trialCount
+        artifactDir = $jobDir
+        stdoutPath = $stdoutPath
+        stderrPath = $stderrPath
+        summaryPath = $summaryPath
+        startedAt = (Get-Date).ToString('o')
+        completedAt = ''
+    }
+    $script:DirectHandoffJobOrder.Add($runId) | Out-Null
+
+    while ($script:DirectHandoffJobOrder.Count -gt 20) {
+        $oldest = $script:DirectHandoffJobOrder[0]
+        $script:DirectHandoffJobOrder.RemoveAt(0)
+        if ($script:DirectHandoffJobs.ContainsKey($oldest)) {
+            $oldJob = $script:DirectHandoffJobs[$oldest]
+            $oldProcess = $oldJob['process']
+            if ($oldProcess -and $oldProcess.HasExited) {
+                $script:DirectHandoffJobs.Remove($oldest)
+            }
+        }
+    }
+
+    return Get-DirectHandoffJobStatus -RunId $runId
+}
+
 function Receive-JsonPayload {
     param([System.Net.HttpListenerRequest]$Request)
 
@@ -993,6 +1178,8 @@ function New-StatusPayload {
             'install-apk-job-status',
             'quest-replay',
             'quest-replay-job-status',
+            'direct-handoff',
+            'direct-handoff-job-status',
             'dependency-status',
             'install-dependencies'
         )
@@ -1006,6 +1193,7 @@ function New-StatusPayload {
             validateConfig = Join-Path $ProjectPath 'tools\validate-questionnaire-config.ps1'
             generateApk = Join-Path $ProjectPath 'tools\generate-questionnaire-apk.ps1'
             validateWorkflow = Join-Path $ProjectPath 'tools\validate-builder-to-quest-workflow.ps1'
+            directHandoff = Join-Path $ProjectPath 'tools\quest-direct-handoff-validate.ps1'
         }
     }
     return $payload
@@ -1106,6 +1294,24 @@ function Handle-Request {
         return
     }
 
+    if ($request.HttpMethod -eq 'GET' -and $path -eq '/api/direct-handoff-job') {
+        Assert-OriginAndToken -Request $request
+        $runId = [string]$request.QueryString['runId']
+        if ([string]::IsNullOrWhiteSpace($runId)) {
+            $runId = [string]$request.QueryString['jobId']
+        }
+        $status = Get-DirectHandoffJobStatus -RunId $runId
+        if ($null -eq $status) {
+            Write-JsonResponse -Context $Context -StatusCode 404 -Value ([ordered]@{
+                status = 'error'
+                message = "Unknown direct handoff job: $runId"
+            })
+            return
+        }
+        Write-JsonResponse -Context $Context -StatusCode 200 -Value $status
+        return
+    }
+
     if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/install-dependencies') {
         Assert-OriginAndToken -Request $request
         $result = Handle-DependencyInstall
@@ -1133,6 +1339,14 @@ function Handle-Request {
         Assert-OriginAndToken -Request $request
         $payload = Receive-JsonPayload -Request $request
         $job = Start-QuestReplayJob -Payload $payload
+        Write-JsonResponse -Context $Context -StatusCode 202 -Value $job
+        return
+    }
+
+    if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/direct-handoff') {
+        Assert-OriginAndToken -Request $request
+        $payload = Receive-JsonPayload -Request $request
+        $job = Start-DirectHandoffJob -Payload $payload
         Write-JsonResponse -Context $Context -StatusCode 202 -Value $job
         return
     }

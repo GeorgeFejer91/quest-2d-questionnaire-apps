@@ -98,3 +98,8 @@ Use absolute dates.
   blocked reasons, power/window evidence, and focus lines; the GUI warns when
   direct handoff or replay/export is blocked by headset sleep or Horizon launch
   dialogs.
+- Added an explicit direct PendingIntent handoff runner: `Run direct handoff`
+  in the builder, `/api/direct-handoff` plus `/api/direct-handoff-job` in the
+  companion, and dry-run coverage in
+  `tools/validate-builder-companion-workflow.ps1` using the real questionnaire,
+  tracer, and Unity APKs for package/catalog preflight.

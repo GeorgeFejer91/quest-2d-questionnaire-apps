@@ -226,3 +226,22 @@ replay/export stops as `blocked` before launching the panel.
 Generalizable rule: device transport readiness and product-path readiness are
 different gates. Dashboards should surface both before letting a user interpret
 launch or handoff evidence.
+
+## Decisive Handoff Gates Need Their Own Runner
+
+Problem: the direct `PendingIntent` handoff trial is the architecture decision
+gate for whether the product can use XR app -> 2D panel -> same XR app without
+ChainLink in the foreground. Keeping that trial only inside the broad
+builder-to-Quest matrix made the GUI sequence less obvious and made it harder
+to test the endpoint contract safely.
+
+Solution: expose `quest-direct-handoff-validate.ps1` through the companion as
+`/api/direct-handoff` plus `/api/direct-handoff-job`, and add a dedicated
+`Run direct handoff` button after replay/export in the builder runner stage.
+The companion workflow validator now dry-runs that endpoint with real
+questionnaire, temporal tracer, and Unity APKs so auth, package preflight, job
+polling, and summary artifacts are covered without launching the headset.
+
+Generalizable rule: if a validation step decides the long-term architecture,
+give it a first-class GUI button, job endpoint, and dry-run contract test
+instead of hiding it inside an aggregate validator.

@@ -169,7 +169,10 @@ The 2026-06-07 full companion pass wrote
 `MyQuestionnaireVR-2D\artifacts\builder-companion-workflow\builder-companion-20260607T013607Z\builder-companion-workflow-summary.json`
 and generated
 `MyQuestionnaireVR-2D\Builds\viscereality-maia2-1.0.0.apk` through the local
-`/api/generate-apk` endpoint.
+`/api/generate-apk` endpoint. The companion validator also dry-runs the
+standalone `/api/direct-handoff` job with real questionnaire, temporal tracer,
+and Unity APKs so the direct PendingIntent package/activity/catalog preflight
+is covered without launching the headset.
 
 The end-to-end builder-to-Quest evidence matrix is:
 
@@ -178,6 +181,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools
 ```
 
 The hosted/offline GUI exposes the same gate through the companion
-`/api/validate-workflow` endpoint. A `warn` status is expected when the
-physical 10/10 direct PendingIntent Quest trials are not requested or cannot
-start because the headset is asleep.
+`/api/validate-workflow` endpoint. It also exposes the direct handoff gate as a
+dedicated `Run direct handoff` action backed by `/api/direct-handoff` and
+`/api/direct-handoff-job`, placed after replay/export in the sequential runner.
+A `warn` status is expected when the physical 10/10 direct PendingIntent Quest
+trials are not requested or cannot start because the headset is asleep.

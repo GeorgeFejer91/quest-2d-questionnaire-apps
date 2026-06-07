@@ -968,6 +968,10 @@
                 <span>Run direct PendingIntent headset trials</span>
               </label>
               <label>
+                Direct trials
+                <input id="directHandoffTrials" type="number" min="1" max="10" step="1" value="10">
+              </label>
+              <label>
                 Quest serial
                 <input id="workflowQuestSerial" placeholder="2G0YC1ZG1002QL" spellcheck="false">
               </label>
@@ -980,6 +984,7 @@
               <button id="generateApkAppButton" class="primary" type="button">Generate APK</button>
               <button id="installApkAppButton" type="button">Install APK on Quest</button>
               <button id="questReplayAppButton" type="button">Run replay/export</button>
+              <button id="directHandoffAppButton" type="button">Run direct handoff</button>
               <button id="validateWorkflowAppButton" type="button">Validate workflow</button>
             </div>
             <pre id="appBackendLog" style="margin-top: 10px; max-height: 280px;"></pre>
@@ -3214,6 +3219,57 @@
       throw new Error(`Timed out waiting for Quest replay/export job ${runId}.`);
     }
 
+    function directHandoffTrialCount() {
+      const value = Number.parseInt(byId("directHandoffTrials").value, 10);
+      if (Number.isFinite(value)) {
+        return Math.max(1, Math.min(10, value));
+      }
+      return 10;
+    }
+
+    function directHandoffJobLevel(data) {
+      if (data?.jobStatus === "failed" || data?.handoffStatus === "fail" || data?.handoffStatus === "error") {
+        return "error";
+      }
+      if (data?.jobStatus === "completed" && data?.handoffStatus === "pass") {
+        return "ok";
+      }
+      if (data?.jobStatus === "completed") {
+        return "warn";
+      }
+      return "";
+    }
+
+    function directHandoffJobText(data) {
+      const runId = data?.runId || data?.jobId || "direct-handoff";
+      if (data?.jobStatus === "running") {
+        return `Direct handoff trials running: ${runId}.`;
+      }
+      if (data?.handoffStatus === "blocked") {
+        const blocked = Number.isFinite(Number(data?.blockedCount)) ? ` (${data.blockedCount} blocked)` : "";
+        return `Direct handoff blocked${blocked}; summary: ${data?.summaryPath || "not written yet"}`;
+      }
+      if (data?.handoffStatus === "pass") {
+        return `Direct handoff passed ${data?.passCount || 0}/${data?.trialCount || directHandoffTrialCount()} trials; summary: ${data?.summaryPath || "not written yet"}`;
+      }
+      return `Direct handoff ${data?.handoffStatus || data?.jobStatus}; summary: ${data?.summaryPath || "not written yet"}`;
+    }
+
+    async function pollDirectHandoffJob(runId) {
+      const startedAt = Date.now();
+      const timeoutMs = 30 * 60 * 1000;
+      while (Date.now() - startedAt < timeoutMs) {
+        const data = await callAppBackend(`/api/direct-handoff-job?runId=${encodeURIComponent(runId)}`);
+        setAppBackendStatus(directHandoffJobText(data), directHandoffJobLevel(data));
+        setAppBackendLog(data);
+        if (data.jobStatus !== "running") {
+          return data;
+        }
+        await delay(2500);
+      }
+      throw new Error(`Timed out waiting for direct handoff job ${runId}.`);
+    }
+
     function formatMissingDependencies(data) {
       const missing = Array.isArray(data?.missingRequired) ? data.missingRequired : [];
       if (missing.length === 0) {
@@ -3401,6 +3457,36 @@
       }
     }
 
+    async function runDirectHandoffWithApp() {
+      const button = byId("directHandoffAppButton");
+      const wasDisabled = button.disabled;
+      button.disabled = true;
+      try {
+        const apkPath = lastGeneratedApkPath || expectedGeneratedApkPath();
+        setAppBackendStatus("Starting direct PendingIntent handoff trials...", "");
+        const data = await callAppBackend("/api/direct-handoff", {
+          questionnaireApk: apkPath,
+          questSerial: byId("workflowQuestSerial").value.trim(),
+          trialCount: directHandoffTrialCount(),
+          waitForReadySeconds: 30,
+          waitSeconds: 95
+        });
+        setAppBackendStatus(directHandoffJobText(data), directHandoffJobLevel(data));
+        setAppBackendLog(data);
+        if (data.jobStatus === "running" && (data.runId || data.jobId)) {
+          const finalData = await pollDirectHandoffJob(data.runId || data.jobId);
+          setAppBackendStatus(directHandoffJobText(finalData), directHandoffJobLevel(finalData));
+          setAppBackendLog(finalData);
+        }
+      } catch (error) {
+        setAppBackendStatus(error.message || String(error), "error");
+        setAppBackendLog(error.backendData || error.message || String(error));
+      } finally {
+        button.disabled = wasDisabled;
+        updateWorkflowGate();
+      }
+    }
+
     async function validateWorkflowWithApp() {
       const button = byId("validateWorkflowAppButton");
       const wasDisabled = button.disabled;
@@ -3408,6 +3494,7 @@
       try {
         const runDirect = byId("workflowDirectHandoff").checked;
         const runReadiness = byId("workflowQuestReadiness").checked || runDirect;
+        const trialCount = directHandoffTrialCount();
         setAppBackendStatus("Starting builder-to-Quest workflow validation...", "");
         const data = await callAppBackend("/api/validate-workflow", {
           config: buildConfig(),
@@ -3417,7 +3504,7 @@
           runQuestReadiness: runReadiness,
           runQuestDirectHandoff: runDirect,
           questSerial: byId("workflowQuestSerial").value.trim(),
-          questTrials: runDirect ? 10 : 1,
+          questTrials: runDirect ? trialCount : 1,
           waitForReadySeconds: runDirect ? 30 : 0
         });
         setAppBackendStatus(workflowJobText(data), workflowJobLevel(data));
@@ -3454,6 +3541,7 @@
     byId("generateApkAppButton").addEventListener("click", generateApkWithApp);
     byId("installApkAppButton").addEventListener("click", installGeneratedApkWithApp);
     byId("questReplayAppButton").addEventListener("click", runQuestReplayWithApp);
+    byId("directHandoffAppButton").addEventListener("click", runDirectHandoffWithApp);
     byId("validateWorkflowAppButton").addEventListener("click", validateWorkflowWithApp);
     byId("includeMaia").addEventListener("change", () => {
       blocks = normalizeBlocks(blocks);

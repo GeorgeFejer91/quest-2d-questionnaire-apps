@@ -162,6 +162,26 @@ function Wait-QuestReplayJob {
     throw "Quest replay/export job did not finish before timeout: $RunId"
 }
 
+function Wait-DirectHandoffJob {
+    param(
+        [string]$BaseUrl,
+        [hashtable]$Headers,
+        [string]$RunId,
+        [int]$TimeoutSec = 900
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    $encodedRunId = [System.Uri]::EscapeDataString($RunId)
+    while ((Get-Date) -lt $deadline) {
+        $job = Invoke-Json -Method GET -Uri "$BaseUrl/api/direct-handoff-job?runId=$encodedRunId" -Headers $Headers -TimeoutSec 30
+        if ($job.jobStatus -ne 'running') {
+            return $job
+        }
+        Start-Sleep -Seconds 2
+    }
+    throw "Direct handoff job did not finish before timeout: $RunId"
+}
+
 if ($Port -le 0) {
     $Port = Get-FreeLoopbackPort
 }
@@ -223,6 +243,7 @@ try {
     $unauthorizedQuestReadinessStatus = $null
     $unauthorizedInstallApkStatus = $null
     $unauthorizedQuestReplayStatus = $null
+    $unauthorizedDirectHandoffStatus = $null
     try {
         Invoke-Json -Method GET -Uri "$baseUrl/api/dependency-status" | Out-Null
         throw "Unauthorized dependency-status call unexpectedly succeeded."
@@ -261,6 +282,16 @@ try {
         $unauthorizedQuestReplayStatus = Get-HttpErrorStatusCode -Exception $_.Exception
         if ($unauthorizedQuestReplayStatus -ne 401) {
             throw "Unauthorized quest-replay expected 401, got $unauthorizedQuestReplayStatus"
+        }
+    }
+    try {
+        Invoke-Json -Method POST -Uri "$baseUrl/api/direct-handoff" -Body @{ questionnaireApk = "missing.apk"; dryRun = $true } | Out-Null
+        throw "Unauthorized direct-handoff call unexpectedly succeeded."
+    }
+    catch {
+        $unauthorizedDirectHandoffStatus = Get-HttpErrorStatusCode -Exception $_.Exception
+        if ($unauthorizedDirectHandoffStatus -ne 401) {
+            throw "Unauthorized direct-handoff expected 401, got $unauthorizedDirectHandoffStatus"
         }
     }
 
@@ -324,6 +355,45 @@ try {
     Add-Progress "quest-replay-complete jobStatus=$($questReplay.jobStatus) replayStatus=$($questReplay.replayStatus)"
     if ($questReplay.replayStatus -eq 'fail' -or [string]::IsNullOrWhiteSpace([string]$questReplay.summaryPath) -or -not (Test-Path -LiteralPath $questReplay.summaryPath)) {
         throw "Companion quest-replay dry run did not produce a usable replay summary."
+    }
+
+    Write-Host "== Direct PendingIntent handoff dry run through companion =="
+    $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $ProjectPath '..'))
+    $questionnaireApkForDirect = Join-Path $ProjectPath 'Builds\viscereality-maia2-1.0.0.apk'
+    if (-not (Test-Path -LiteralPath $questionnaireApkForDirect)) {
+        $questionnaireApkForDirect = Join-Path $ProjectPath 'Builds\MyQuestionnaireVR-2D.apk'
+    }
+    $temporalTracerApkForDirect = Join-Path $repoRoot 'TemporalExperienceTracerVR-2D\Builds\TemporalExperienceTracerVR-2D.apk'
+    $unityApkForDirect = Join-Path $repoRoot 'AweGreatDictatorUnity\Builds\QuestionnaireStimulusBuilderDemo.apk'
+    $directHandoffRequiredApks = @($questionnaireApkForDirect, $temporalTracerApkForDirect, $unityApkForDirect)
+    $missingDirectHandoffApks = @($directHandoffRequiredApks | Where-Object { -not (Test-Path -LiteralPath $_) })
+    if ($missingDirectHandoffApks.Count -gt 0) {
+        throw "Direct handoff dry run needs real APKs for aapt preflight. Missing: $($missingDirectHandoffApks -join ', ')"
+    }
+    $directHandoffStart = Invoke-Json -Method POST -Uri "$baseUrl/api/direct-handoff" -Headers $headers -Body @{
+        questionnaireApk = $questionnaireApkForDirect
+        temporalTracerApk = $temporalTracerApkForDirect
+        unityApk = $unityApkForDirect
+        questSerial = [string]$questReadiness.targetSerial
+        trialCount = 1
+        waitForReadySeconds = 0
+        waitSeconds = 1
+        dryRun = $true
+        skipInstall = $true
+    } -TimeoutSec 60
+    Add-Progress "direct-handoff-started=$($directHandoffStart.runId)"
+    if ($directHandoffStart.status -ne 'ok' -or [string]::IsNullOrWhiteSpace([string]$directHandoffStart.runId)) {
+        throw "Companion direct-handoff did not start a handoff job."
+    }
+    $directHandoff = if ($directHandoffStart.jobStatus -eq 'running') {
+        Wait-DirectHandoffJob -BaseUrl $baseUrl -Headers $headers -RunId $directHandoffStart.runId -TimeoutSec 900
+    }
+    else {
+        $directHandoffStart
+    }
+    Add-Progress "direct-handoff-complete jobStatus=$($directHandoff.jobStatus) handoffStatus=$($directHandoff.handoffStatus)"
+    if ($directHandoff.handoffStatus -eq 'fail' -or $directHandoff.handoffStatus -eq 'error' -or [string]::IsNullOrWhiteSpace([string]$directHandoff.summaryPath) -or -not (Test-Path -LiteralPath $directHandoff.summaryPath)) {
+        throw "Companion direct-handoff dry run did not produce a usable handoff summary."
     }
 
     Write-Host "== Save config through companion =="
@@ -399,6 +469,7 @@ try {
             unauthorizedQuestReadinessStatus = $unauthorizedQuestReadinessStatus
             unauthorizedInstallApkStatus = $unauthorizedInstallApkStatus
             unauthorizedQuestReplayStatus = $unauthorizedQuestReplayStatus
+            unauthorizedDirectHandoffStatus = $unauthorizedDirectHandoffStatus
         }
         dependency = $dependency
         questReadiness = [ordered]@{
@@ -424,6 +495,20 @@ try {
             productPathBlockedReasons = if ($questReplay.PSObject.Properties.Name -contains 'productPathBlockedReasons') { @($questReplay.productPathBlockedReasons) } else { @() }
             runId = $questReplay.runId
             summaryPath = $questReplay.summaryPath
+        }
+        directHandoffDryRun = [ordered]@{
+            jobStatus = $directHandoff.jobStatus
+            handoffStatus = $directHandoff.handoffStatus
+            passCount = $directHandoff.passCount
+            warnCount = $directHandoff.warnCount
+            blockedCount = $directHandoff.blockedCount
+            failCount = $directHandoff.failCount
+            runId = $directHandoff.runId
+            summaryPath = $directHandoff.summaryPath
+            questionnaireApk = $questionnaireApkForDirect
+            temporalTracerApk = $temporalTracerApkForDirect
+            unityApk = $unityApkForDirect
+            decisionGate = $directHandoff.decisionGate
         }
         builder = [ordered]@{
             outputDir = $builderOut

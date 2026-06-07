@@ -48,6 +48,49 @@ function Resolve-FullPath {
     return [System.IO.Path]::GetFullPath((Join-Path $BasePath $Path))
 }
 
+function ConvertTo-LongPath {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $Path
+    }
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    if (-not $IsWindows -and [System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+        return $fullPath
+    }
+    if ($fullPath.StartsWith('\\?\', [System.StringComparison]::Ordinal)) {
+        return $fullPath
+    }
+    if ($fullPath.StartsWith('\\', [System.StringComparison]::Ordinal)) {
+        return '\\?\UNC\' + $fullPath.TrimStart('\')
+    }
+    return '\\?\' + $fullPath
+}
+
+function Write-Utf8TextFile {
+    param(
+        [string]$Path,
+        [string]$Text
+    )
+
+    $directory = Split-Path -Parent $Path
+    if (-not [string]::IsNullOrWhiteSpace($directory)) {
+        [System.IO.Directory]::CreateDirectory((ConvertTo-LongPath -Path $directory)) | Out-Null
+    }
+    $encoding = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
+    [System.IO.File]::WriteAllText((ConvertTo-LongPath -Path $Path), $Text, $encoding)
+}
+
+function Write-Utf8JsonFile {
+    param(
+        [string]$Path,
+        [object]$Object,
+        [int]$Depth = 100
+    )
+
+    Write-Utf8TextFile -Path $Path -Text (($Object | ConvertTo-Json -Depth $Depth) + [Environment]::NewLine)
+}
+
 function Get-FirstPropertyValue {
     param(
         [object]$Object,
@@ -221,7 +264,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\new-direct-handoff-m
 Direct handoff summary linked by this template:
 $resolvedDirectText
 "@
-$instructions | Set-Content -LiteralPath $instructionsPath -Encoding UTF8
+Write-Utf8TextFile -Path $instructionsPath -Text ($instructions + [Environment]::NewLine)
 
 $template = [ordered]@{
     schemaVersion = 'mq.direct_handoff_manual_signoff.operator.v1'
@@ -244,7 +287,7 @@ $template = [ordered]@{
     observedNoAdbForegroundSwitchAfterInitialLaunch = $false
     notes = ''
 }
-$template | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $templatePath -Encoding UTF8
+Write-Utf8JsonFile -Path $templatePath -Object $template -Depth 8
 
 $operatorSignoff = $null
 $operatorSignoffFull = ''
@@ -402,7 +445,7 @@ $summary = [ordered]@{
 }
 
 $summaryPath = Join-Path $outputFull 'direct-handoff-manual-signoff-summary.json'
-$summary | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
+Write-Utf8JsonFile -Path $summaryPath -Object $summary -Depth 100
 
 Write-Host "Direct handoff manual signoff status: $status"
 Write-Host "Summary: $summaryPath"

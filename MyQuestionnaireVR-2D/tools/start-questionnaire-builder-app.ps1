@@ -284,10 +284,38 @@ function Invoke-ProjectPowerShell {
 function Read-JsonFileIfExists {
     param([string]$Path)
 
-    if (-not (Test-Path -LiteralPath $Path)) {
+    if (-not (Test-FileExists -Path $Path)) {
         return $null
     }
-    return Get-Content -LiteralPath $Path -Encoding UTF8 -Raw | ConvertFrom-Json
+    return ([System.IO.File]::ReadAllText((ConvertTo-LongPath -Path $Path)) | ConvertFrom-Json)
+}
+
+function ConvertTo-LongPath {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $Path
+    }
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    if (-not $IsWindows -and [System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+        return $fullPath
+    }
+    if ($fullPath.StartsWith('\\?\', [System.StringComparison]::Ordinal)) {
+        return $fullPath
+    }
+    if ($fullPath.StartsWith('\\', [System.StringComparison]::Ordinal)) {
+        return '\\?\UNC\' + $fullPath.TrimStart('\')
+    }
+    return '\\?\' + $fullPath
+}
+
+function Test-FileExists {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $false
+    }
+    return [System.IO.File]::Exists((ConvertTo-LongPath -Path $Path))
 }
 
 function Read-TextFileIfExists {
@@ -1220,6 +1248,53 @@ function New-DirectHandoffManualSignoffReceipt {
         missing = $missing
         issues = $issues
         proofBoundary = 'This prepares or validates the structured manual headset signoff. A pending template is not a physical pass; production approval still requires a filled operator signoff tied to a real non-dry-run product-path summary.'
+    }
+}
+
+function New-PhysicalGatePacketReceipt {
+    param(
+        [object]$Summary,
+        [string]$SummaryPath,
+        [int]$ExitCode
+    )
+
+    $status = if ($Summary) { [string](Get-JsonProperty -Object $Summary -Name 'status' -Default 'unknown') } else { 'missing-summary' }
+    $counts = if ($Summary -and $Summary.PSObject.Properties.Name -contains 'counts') { $Summary.counts } else { [pscustomobject]@{} }
+    $artifacts = Get-JsonProperty -Object $Summary -Name 'artifacts' -Default ([pscustomobject]@{})
+    $audit = Get-JsonProperty -Object $Summary -Name 'audit' -Default ([pscustomobject]@{})
+    $manualSignoff = Get-JsonProperty -Object $Summary -Name 'manualSignoff' -Default ([pscustomobject]@{})
+    $remainingRequirements = @(Get-JsonProperty -Object $Summary -Name 'remainingRequirements' -Default @())
+    $runbookPath = [string](Get-JsonProperty -Object $artifacts -Name 'runbookPath' -Default '')
+    $auditSummaryPath = [string](Get-JsonProperty -Object $artifacts -Name 'auditSummaryPath' -Default ([string](Get-JsonProperty -Object $audit -Name 'summaryPath' -Default '')))
+    $manualSummaryPath = [string](Get-JsonProperty -Object $artifacts -Name 'manualSignoffSummaryPath' -Default ([string](Get-JsonProperty -Object $manualSignoff -Name 'summaryPath' -Default '')))
+    $templatePath = [string](Get-JsonProperty -Object $artifacts -Name 'operatorSignoffTemplatePath' -Default ([string](Get-JsonProperty -Object $manualSignoff -Name 'operatorSignoffTemplatePath' -Default '')))
+
+    return [ordered]@{
+        schemaVersion = 'mq.builder_physical_gate_packet.receipt.v1'
+        kind = 'universal-handoff-physical-gate-packet'
+        status = $status
+        exitCode = $ExitCode
+        completionApproved = if ($Summary -and $Summary.PSObject.Properties.Name -contains 'completionApproved') { [bool]$Summary.completionApproved } else { $false }
+        defaultDirectPendingIntentApproved = if ($Summary -and $Summary.PSObject.Properties.Name -contains 'defaultDirectPendingIntentApproved') { [bool]$Summary.defaultDirectPendingIntentApproved } else { $false }
+        physicalQuestProductPathPending = if ($Summary -and $Summary.PSObject.Properties.Name -contains 'physicalQuestProductPathPending') { [bool]$Summary.physicalQuestProductPathPending } else { $true }
+        checks = [ordered]@{
+            summaryWritten = ($null -ne $Summary -and (Test-FileExists -Path $SummaryPath))
+            runbookWritten = (Test-FileExists -Path $runbookPath)
+            auditSummaryPresent = (Test-FileExists -Path $auditSummaryPath)
+            manualSignoffTemplateWritten = (Test-FileExists -Path $templatePath)
+            manualSignoffSummaryPresent = (Test-FileExists -Path $manualSummaryPath)
+        }
+        counts = $counts
+        remainingGateCount = $remainingRequirements.Count
+        artifacts = [ordered]@{
+            summaryPath = $SummaryPath
+            runbookPath = $runbookPath
+            auditSummaryPath = $auditSummaryPath
+            manualSignoffSummaryPath = $manualSummaryPath
+            manualSignoffInstructionsPath = [string](Get-JsonProperty -Object $artifacts -Name 'manualSignoffInstructionsPath' -Default '')
+            operatorSignoffTemplatePath = $templatePath
+        }
+        proofBoundary = 'This packet prepares the remaining physical headset gates for an operator. It is not a product-path pass and does not replace live Quest trials or filled manual signoff.'
     }
 }
 
@@ -2424,6 +2499,52 @@ function Invoke-DirectHandoffManualSignoff {
     }
 }
 
+function Invoke-UniversalHandoffPhysicalGatePacket {
+    param([object]$Payload)
+
+    $runId = 'builder-universal-handoff-physical-gate-packet-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    $script = Join-Path $ProjectPath 'tools\new-universal-handoff-physical-gate-packet.ps1'
+    $summaryPath = Join-Path $ProjectPath ("artifacts\universal-handoff-physical-gate-packet\$runId\universal-handoff-physical-gate-packet-summary.json")
+    $arguments = @(
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        $script,
+        '-ProjectPath',
+        $ProjectPath,
+        '-RunId',
+        $runId
+    )
+    if ($Payload.PSObject.Properties.Name -contains 'auditSummaryPath' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.auditSummaryPath)) {
+        $auditSummaryPath = Resolve-EvidenceBundleSummaryPath -Path ([string]$Payload.auditSummaryPath)
+        $arguments += @('-AuditSummaryPath', $auditSummaryPath)
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'companionSummaryPath' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.companionSummaryPath)) {
+        $companionSummaryPath = Resolve-EvidenceBundleSummaryPath -Path ([string]$Payload.companionSummaryPath)
+        $arguments += @('-CompanionSummaryPath', $companionSummaryPath)
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'questSerial' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.questSerial)) {
+        $arguments += @('-QuestSerial', [string]$Payload.questSerial)
+    }
+
+    $result = Invoke-ProjectPowerShell -Arguments $arguments
+    $summary = Read-JsonFileIfExists -Path $summaryPath
+    $packetStatus = if ($summary) { [string]$summary.status } elseif ($result.exitCode -eq 0) { 'missing-summary' } else { 'error' }
+    $receipt = New-PhysicalGatePacketReceipt -Summary $summary -SummaryPath $summaryPath -ExitCode $result.exitCode
+
+    return [ordered]@{
+        status = if ($summary) { 'ok' } else { 'error' }
+        packetStatus = $packetStatus
+        runId = $runId
+        exitCode = $result.exitCode
+        summaryPath = $summaryPath
+        physicalGatePacketReceipt = $receipt
+        summary = $summary
+        output = $result.output
+    }
+}
+
 function New-StatusPayload {
     param([bool]$Authorized)
 
@@ -2464,6 +2585,7 @@ function New-StatusPayload {
             '2d-first-launcher-job-status',
             'handoff-readiness-audit',
             'direct-handoff-manual-signoff',
+            'physical-gate-packet',
             'runner-job-receipts',
             'dependency-status',
             'install-dependencies'
@@ -2482,6 +2604,7 @@ function New-StatusPayload {
             twoDFirstLauncher = Join-Path $ProjectPath 'tools\quest-2d-first-launcher-validate.ps1'
             handoffReadinessAudit = Join-Path $ProjectPath 'tools\audit-universal-handoff-readiness.ps1'
             directHandoffManualSignoff = Join-Path $ProjectPath 'tools\new-direct-handoff-manual-signoff.ps1'
+            physicalGatePacket = Join-Path $ProjectPath 'tools\new-universal-handoff-physical-gate-packet.ps1'
         }
     }
     return $payload
@@ -2691,6 +2814,14 @@ function Handle-Request {
         Assert-OriginAndToken -Request $request
         $payload = Receive-JsonPayload -Request $request
         $result = Invoke-DirectHandoffManualSignoff -Payload $payload
+        Write-JsonResponse -Context $Context -StatusCode ($(if ($result.status -eq 'ok') { 200 } else { 500 })) -Value $result
+        return
+    }
+
+    if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/physical-gate-packet') {
+        Assert-OriginAndToken -Request $request
+        $payload = Receive-JsonPayload -Request $request
+        $result = Invoke-UniversalHandoffPhysicalGatePacket -Payload $payload
         Write-JsonResponse -Context $Context -StatusCode ($(if ($result.status -eq 'ok') { 200 } else { 500 })) -Value $result
         return
     }

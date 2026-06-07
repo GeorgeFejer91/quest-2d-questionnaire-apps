@@ -1094,6 +1094,7 @@
               <button id="validateWorkflowAppButton" type="button">Validate workflow</button>
               <button id="auditHandoffReadinessButton" type="button">Audit readiness</button>
               <button id="manualSignoffAppButton" type="button">Prepare manual signoff</button>
+              <button id="physicalGatePacketAppButton" type="button">Prepare physical packet</button>
               <button id="downloadEvidenceBundleButton" type="button" disabled>Download evidence bundle</button>
             </div>
             <pre id="appBackendLog" style="margin-top: 10px; max-height: 280px;"></pre>
@@ -1211,6 +1212,7 @@
       { id: "2d-first-launcher-preflight", label: "2D-first launcher preflight" },
       { id: "handoff-readiness-audit", label: "handoff readiness audit" },
       { id: "direct-handoff-manual-signoff", label: "manual headset signoff" },
+      { id: "physical-gate-packet", label: "physical gate packet" },
       { id: "runner-job-receipts", label: "runner job receipts" }
     ];
 
@@ -3433,7 +3435,7 @@
     function manualSignoffReceiptText(data) {
       const receipt = data?.manualSignoffReceipt;
       if (!receipt) {
-        return "";
+        return physicalGatePacketReceiptText(data);
       }
       const checks = receipt.checks || {};
       const counts = receipt.counts || {};
@@ -3473,6 +3475,49 @@
       return `${pieces.join("; ")}.`;
     }
 
+    function physicalGatePacketReceiptText(data) {
+      const receipt = data?.physicalGatePacketReceipt;
+      if (!receipt) {
+        return "";
+      }
+      const checks = receipt.checks || {};
+      const counts = receipt.counts || {};
+      const artifacts = receipt.artifacts || {};
+      const pieces = [`Evidence receipt: physical gate packet ${receipt.status || "unknown"}`];
+      const proven = Number(counts.proven || 0);
+      const total = Number(counts.requirements || 0);
+      const physicalPending = Number(counts.physicalPending || 0);
+      const failed = Number(counts.failedOrMissing || 0);
+      if (total > 0) {
+        pieces.push(`${proven}/${total} requirements proven`);
+      }
+      if (physicalPending > 0) {
+        pieces.push(`${physicalPending} physical gates pending`);
+      }
+      if (failed > 0) {
+        pieces.push(`${failed} missing`);
+      }
+      if (checks.runbookWritten) {
+        pieces.push("runbook written");
+      }
+      if (checks.manualSignoffTemplateWritten) {
+        pieces.push("manual template written");
+      }
+      if (receipt.remainingGateCount > 0) {
+        pieces.push(`${receipt.remainingGateCount} remaining gates listed`);
+      }
+      if (receipt.physicalQuestProductPathPending) {
+        pieces.push("operator session still required");
+      }
+      if (artifacts.runbookPath) {
+        pieces.push(`runbook: ${artifacts.runbookPath}`);
+      }
+      if (artifacts.summaryPath) {
+        pieces.push(`summary: ${artifacts.summaryPath}`);
+      }
+      return `${pieces.join("; ")}.`;
+    }
+
     function evidenceBundleSummaryPath(data) {
       return String(
         data?.workflowReceipt?.artifacts?.summaryPath ||
@@ -3480,6 +3525,7 @@
         data?.jobReceipt?.artifacts?.summaryPath ||
         data?.auditReceipt?.artifacts?.summaryPath ||
         data?.manualSignoffReceipt?.artifacts?.summaryPath ||
+        data?.physicalGatePacketReceipt?.artifacts?.summaryPath ||
         data?.summaryPath ||
         ""
       ).trim();
@@ -3507,7 +3553,7 @@
         return;
       }
       target.hidden = false;
-      target.className = `issue ${workflowReceiptLevel(data?.workflowReceipt || data?.generationReceipt || data?.jobReceipt || data?.auditReceipt || data?.manualSignoffReceipt)}`;
+      target.className = `issue ${workflowReceiptLevel(data?.workflowReceipt || data?.generationReceipt || data?.jobReceipt || data?.auditReceipt || data?.manualSignoffReceipt || data?.physicalGatePacketReceipt)}`;
       target.textContent = text;
     }
 
@@ -4534,6 +4580,30 @@
       }
     }
 
+    async function preparePhysicalGatePacketWithApp() {
+      const button = byId("physicalGatePacketAppButton");
+      const wasDisabled = button.disabled;
+      button.disabled = true;
+      try {
+        const payload = {
+          questSerial: byId("workflowQuestSerial").value.trim()
+        };
+        setAppBackendStatus("Preparing Universal Handoff physical gate packet...", "");
+        setWorkflowReceiptStatus(null);
+        const data = await callAppBackend("/api/physical-gate-packet", payload);
+        setAppBackendStatus(physicalGatePacketReceiptText(data), workflowReceiptLevel(data?.physicalGatePacketReceipt));
+        setWorkflowReceiptStatus(data);
+        setAppBackendLog(data);
+      } catch (error) {
+        setAppBackendStatus(error.message || String(error), "error");
+        setWorkflowReceiptStatus(error.backendData || null);
+        setAppBackendLog(error.backendData || error.message || String(error));
+      } finally {
+        button.disabled = wasDisabled;
+        updateWorkflowGate();
+      }
+    }
+
     async function runHeadsetSequenceWithApp() {
       const button = byId("headsetSequenceAppButton");
       const wasDisabled = button.disabled;
@@ -4705,6 +4775,7 @@
     byId("validateWorkflowAppButton").addEventListener("click", validateWorkflowWithApp);
     byId("auditHandoffReadinessButton").addEventListener("click", auditHandoffReadinessWithApp);
     byId("manualSignoffAppButton").addEventListener("click", prepareManualSignoffWithApp);
+    byId("physicalGatePacketAppButton").addEventListener("click", preparePhysicalGatePacketWithApp);
     byId("downloadEvidenceBundleButton").addEventListener("click", downloadEvidenceBundleWithApp);
     byId("questionnaireFirstDefaultsButton").addEventListener("click", () => applyQuestionnaireFirstDefaults());
     byId("chainStartMode").addEventListener("change", () => {

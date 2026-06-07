@@ -353,6 +353,13 @@ summary under `artifacts\direct-handoff-manual-signoff\`. With a filled
 real direct-handoff summary and returns a `manualSignoffReceipt`. This keeps
 the manual headset pass in the same website/companion evidence surface as the
 other gates while preserving that only a human observation can close it.
+The GUI's `Prepare physical packet` control calls `/api/physical-gate-packet`.
+It writes a packet under
+`artifacts\universal-handoff-physical-gate-packet\` containing the latest
+readiness audit, a physical-session runbook, remaining headset gates, and a
+manual signoff template. This packet is a handoff to the operator physically
+at the headset. It must not be treated as install, launch, wake, product-path
+pass, or manual signoff evidence.
 The workflow polling endpoint returns a compact `workflowReceipt`, while the
 install, replay/export, 2D-first launcher, and direct handoff polling endpoints
 return compact `jobReceipt` objects. The GUI displays these beside the job status so the
@@ -365,9 +372,9 @@ The companion `/api/status` health payload advertises `apiVersion`,
 `generate-apk-receipt`, `artifact-preview`, `workflow-render-previews`,
 `evidence-bundle`, `workflow-receipt`, `direct-handoff-preflight`,
 `2d-first-launcher-preflight`, `handoff-readiness-audit`,
-`direct-handoff-manual-signoff`, and `runner-job-receipts`; the hosted GUI
-should warn if a user connects an older local companion that lacks those
-capabilities. The
+`direct-handoff-manual-signoff`, `physical-gate-packet`, and
+`runner-job-receipts`; the hosted GUI should warn if a user connects an older
+local companion that lacks those capabilities. The
 `artifact-preview` capability means the companion can serve generation-receipt
 and workflow-receipt sample PNGs through the token-protected
 `/api/artifact-preview` route. That route is only for generated local PNG

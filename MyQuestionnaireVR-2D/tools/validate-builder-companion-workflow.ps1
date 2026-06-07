@@ -36,6 +36,7 @@ $RequiredCompanionCapabilities = @(
     '2d-first-launcher-preflight',
     'handoff-readiness-audit',
     'direct-handoff-manual-signoff',
+    'physical-gate-packet',
     'runner-job-receipts'
 )
 
@@ -663,6 +664,16 @@ try {
         $unauthorizedManualSignoffStatus = Get-HttpErrorStatusCode -Exception $_.Exception
         if ($unauthorizedManualSignoffStatus -ne 401) {
             throw "Unauthorized direct-handoff-manual-signoff expected 401, got $unauthorizedManualSignoffStatus"
+        }
+    }
+    try {
+        Invoke-Json -Method POST -Uri "$baseUrl/api/physical-gate-packet" -Body @{} | Out-Null
+        throw "Unauthorized physical-gate-packet call unexpectedly succeeded."
+    }
+    catch {
+        $unauthorizedPhysicalGatePacketStatus = Get-HttpErrorStatusCode -Exception $_.Exception
+        if ($unauthorizedPhysicalGatePacketStatus -ne 401) {
+            throw "Unauthorized physical-gate-packet expected 401, got $unauthorizedPhysicalGatePacketStatus"
         }
     }
     try {
@@ -1393,6 +1404,7 @@ try {
             unauthorizedTwoDFirstLauncherStatus = $unauthorizedTwoDFirstLauncherStatus
             unauthorizedHandoffReadinessAuditStatus = $unauthorizedHandoffReadinessAuditStatus
             unauthorizedManualSignoffStatus = $unauthorizedManualSignoffStatus
+            unauthorizedPhysicalGatePacketStatus = $unauthorizedPhysicalGatePacketStatus
             unauthorizedArtifactPreviewStatus = $unauthorizedArtifactPreviewStatus
             unauthorizedEvidenceBundleStatus = $unauthorizedEvidenceBundleStatus
         }
@@ -1563,6 +1575,31 @@ try {
         auditReceipt = $handoffReadinessAudit.auditReceipt
         counts = if ($handoffReadinessAuditSummary -and $handoffReadinessAuditSummary.counts) { $handoffReadinessAuditSummary.counts } else { $null }
         nextPhysicalGates = if ($handoffReadinessAuditSummary -and $handoffReadinessAuditSummary.nextPhysicalGates) { $handoffReadinessAuditSummary.nextPhysicalGates } else { $null }
+    }
+
+    Write-Host "== Universal handoff physical gate packet through companion =="
+    $physicalGatePacketBody = @{
+        auditSummaryPath = $handoffReadinessAudit.summaryPath
+    }
+    if (-not [string]::IsNullOrWhiteSpace([string]$questReadiness.targetSerial)) {
+        $physicalGatePacketBody.questSerial = [string]$questReadiness.targetSerial
+    }
+    $physicalGatePacket = Invoke-Json -Method POST -Uri "$baseUrl/api/physical-gate-packet" -Headers $headers -Body $physicalGatePacketBody -TimeoutSec 180
+    Add-Progress "physical-gate-packet-complete status=$($physicalGatePacket.packetStatus) summary=$($physicalGatePacket.summaryPath)"
+    if ($physicalGatePacket.status -ne 'ok' -or [string]::IsNullOrWhiteSpace([string]$physicalGatePacket.summaryPath) -or -not (Test-Path -LiteralPath $physicalGatePacket.summaryPath)) {
+        throw "Companion physical-gate-packet did not produce a usable packet summary."
+    }
+    $physicalGatePacketReceipt = if ($physicalGatePacket.PSObject.Properties.Name -contains 'physicalGatePacketReceipt') { $physicalGatePacket.physicalGatePacketReceipt } else { $null }
+    if ($null -eq $physicalGatePacketReceipt -or [string]$physicalGatePacketReceipt.kind -ne 'universal-handoff-physical-gate-packet' -or -not [bool]$physicalGatePacketReceipt.checks.runbookWritten -or -not [bool]$physicalGatePacketReceipt.checks.auditSummaryPresent -or -not [bool]$physicalGatePacketReceipt.checks.manualSignoffTemplateWritten -or [string]$physicalGatePacketReceipt.status -eq 'needs-offline-attention') {
+        throw "Companion physical-gate-packet did not return a valid operator-ready receipt."
+    }
+    $summary['endToEndReceipt']['checks']['physicalGatePacketPass'] = $true
+    $summary['endToEndReceipt']['artifacts']['physicalGatePacketSummaryPath'] = [string]$physicalGatePacket.summaryPath
+    $summary['physicalGatePacket'] = [ordered]@{
+        status = $physicalGatePacket.packetStatus
+        runId = $physicalGatePacket.runId
+        summaryPath = $physicalGatePacket.summaryPath
+        physicalGatePacketReceipt = $physicalGatePacketReceipt
     }
     $summary['completedAt'] = (Get-Date).ToString('o')
     $summary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $summaryPath -Encoding UTF8

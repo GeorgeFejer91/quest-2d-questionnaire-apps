@@ -805,6 +805,47 @@ prepare and validate human signoff artifacts. Keep the actual physical gate
 human-owned, but make the artifact creation, receipt, and audit path
 operator-visible.
 
+## Physical Gate Packets Prevent Last-Mile Drift
+
+Problem: once the offline workflow is green, the remaining work can still be
+spread across an audit summary, a 2D-first launcher command, a direct handoff
+trial command, a manual signoff template, and chat context. That is fragile
+when the next operator is physically at the headset and needs to run the live
+gates without re-deriving the sequence.
+
+Solution: add a Universal Handoff physical gate packet helper and expose it as
+`/api/physical-gate-packet` plus `Prepare physical packet` in the builder GUI.
+It runs or consumes the readiness audit, prepares the manual signoff template,
+and writes a packet summary plus `physical-gate-runbook.txt` under
+`artifacts\universal-handoff-physical-gate-packet\`. The receipt proves the
+runbook, audit, and signoff template exist while still reporting the live Quest
+gates as pending.
+
+Generalizable rule: after a requirement-first audit reaches
+`pass-with-physical-pending`, generate a typed operator packet for the physical
+session. Package the latest evidence paths and exact gate commands, but do not
+let the packet itself close any device, product-path, or human-observation
+gate.
+
+## Operator Artifacts Need Long-Path-Safe Writers
+
+Problem: physical gate packets nest audit outputs, manual signoff summaries,
+runbooks, and descriptive run ids under artifact folders. On Windows, a valid
+path can hit the 260-character boundary and make `Set-Content` or `Test-Path`
+report that an existing directory or file is missing. In this workflow the
+manual signoff summary existed in intent but disappeared from the packet
+receipt because the path landed exactly on that boundary.
+
+Solution: write and read operator artifacts through long-path-safe .NET file
+helpers using the `\\?\` prefix on Windows. Apply that to packet summaries,
+runbooks, child stdout files, manual signoff templates, and summary JSON, and
+stress it with a deliberately descriptive run id before trusting the endpoint.
+
+Generalizable rule: any validator or GUI endpoint that creates nested evidence
+under human-readable run ids should use long-path-safe file IO for both writes
+and receipt checks. Otherwise a valid evidence packet can be misclassified as
+missing on the machine where the operator needs it most.
+
 ## Unity Must Own Panel-Focus Media Pause
 
 Problem: launching a 2D questionnaire or tracer over a Unity Quest app does not

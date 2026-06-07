@@ -384,6 +384,13 @@ run, fill that template as `operator-signoff.json`, enter that path in the
 runner, and click the same button to validate it. A prepared template is still
 pending evidence; only a filled signoff tied to a real non-dry-run direct
 handoff summary can close the manual gate.
+Use `Prepare physical packet` when offline evidence is ready but headset gates
+remain. It runs or consumes the readiness audit, prepares a manual signoff
+template, and writes a runbook plus
+`universal-handoff-physical-gate-packet-summary.json` under
+`artifacts\universal-handoff-physical-gate-packet\`. The packet is not a live
+Quest pass; it is the operator handoff for the 2D-first front-door trial, 10
+clean direct handoff trials, manual signoff, and final completion audit.
 
 Run the full local ladder from builder smoke test through generated APK and
 Android render preview:

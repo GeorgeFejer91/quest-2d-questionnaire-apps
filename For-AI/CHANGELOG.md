@@ -84,6 +84,14 @@ Use absolute dates.
   manual signoff`, returning a `manualSignoffReceipt`. The companion stress
   validator now checks auth and template generation while keeping the actual
   physical signoff pending until a filled operator JSON is validated.
+- Added a Universal Handoff physical gate packet helper and GUI action as
+  `/api/physical-gate-packet` and `Prepare physical packet`. Future agents
+  should use it after `pass-with-physical-pending` audits to package the
+  latest audit, remaining headset gates, manual signoff template, and operator
+  runbook without claiming any live Quest gate has passed.
+- Hardened manual signoff and physical gate packet artifact writers for
+  Windows long paths after the companion stress ladder exposed missing-summary
+  false negatives at the 260-character boundary.
 
 ## 2026-06-07
 

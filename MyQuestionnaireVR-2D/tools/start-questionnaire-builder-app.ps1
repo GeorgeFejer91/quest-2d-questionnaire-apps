@@ -65,6 +65,8 @@ if ([string]::IsNullOrWhiteSpace($PairingToken)) {
 
 $script:WorkflowJobs = @{}
 $script:WorkflowJobOrder = New-Object 'System.Collections.Generic.List[string]'
+$script:InstallApkJobs = @{}
+$script:InstallApkJobOrder = New-Object 'System.Collections.Generic.List[string]'
 
 function New-Utf8NoBomEncoding {
     return [System.Text.UTF8Encoding]::new($false)
@@ -518,6 +520,160 @@ function Invoke-QuestReadinessCheck {
     }
 }
 
+function Get-InstallApkJobStatus {
+    param([string]$RunId)
+
+    if ([string]::IsNullOrWhiteSpace($RunId) -or -not $script:InstallApkJobs.ContainsKey($RunId)) {
+        return $null
+    }
+
+    $job = $script:InstallApkJobs[$RunId]
+    $process = $job['process']
+    $hasExited = $false
+    $exitCode = $null
+    $processError = ''
+    if ($null -ne $process) {
+        try {
+            $process.Refresh()
+            $hasExited = [bool]$process.HasExited
+            if ($hasExited) {
+                $exitCode = [int]$process.ExitCode
+                if ([string]::IsNullOrWhiteSpace([string]$job['completedAt'])) {
+                    $job['completedAt'] = (Get-Date).ToString('o')
+                }
+            }
+        }
+        catch {
+            $hasExited = $true
+            $processError = $_.Exception.Message
+            if ([string]::IsNullOrWhiteSpace([string]$job['completedAt'])) {
+                $job['completedAt'] = (Get-Date).ToString('o')
+            }
+        }
+    }
+
+    $summary = Read-JsonFileIfExists -Path ([string]$job['summaryPath'])
+    $jobStatus = 'running'
+    $installStatus = 'running'
+    if ($hasExited) {
+        $jobStatus = if ($null -ne $exitCode -and $exitCode -eq 0) { 'completed' } else { 'failed' }
+        if ($summary) {
+            $installStatus = [string]$summary.status
+        }
+        elseif ($jobStatus -eq 'completed') {
+            $installStatus = 'missing-summary'
+        }
+        else {
+            $installStatus = 'error'
+        }
+    }
+    elseif ($summary -and $summary.PSObject.Properties.Name -contains 'status') {
+        $installStatus = [string]$summary.status
+    }
+
+    return [ordered]@{
+        status = 'ok'
+        jobId = $RunId
+        runId = $RunId
+        jobStatus = $jobStatus
+        installStatus = $installStatus
+        exitCode = $exitCode
+        processError = $processError
+        apk = $job['apk']
+        questSerial = $job['questSerial']
+        dryRun = [bool]$job['dryRun']
+        artifactDir = $job['artifactDir']
+        summaryPath = $job['summaryPath']
+        stdoutPath = $job['stdoutPath']
+        stderrPath = $job['stderrPath']
+        stdout = Get-TailText -Path ([string]$job['stdoutPath'])
+        stderr = Get-TailText -Path ([string]$job['stderrPath'])
+        summary = $summary
+        startedAt = $job['startedAt']
+        completedAt = $job['completedAt']
+    }
+}
+
+function Start-InstallApkJob {
+    param([object]$Payload)
+
+    $runId = 'builder-install-apk-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    $jobDir = Join-Path $ProjectPath ("artifacts\builder-app-install-apk\$runId")
+    New-Item -ItemType Directory -Force -Path $jobDir | Out-Null
+
+    $apk = if ($Payload.PSObject.Properties.Name -contains 'apk') { [string]$Payload.apk } else { '' }
+    $serial = if ($Payload.PSObject.Properties.Name -contains 'questSerial') { [string]$Payload.questSerial } else { '' }
+    $dryRun = ($Payload.PSObject.Properties.Name -contains 'dryRun' -and [bool]$Payload.dryRun)
+    $waitSeconds = if ($Payload.PSObject.Properties.Name -contains 'waitSeconds') { [int]$Payload.waitSeconds } else { 0 }
+
+    $stdoutPath = Join-Path $jobDir 'install-stdout.txt'
+    $stderrPath = Join-Path $jobDir 'install-stderr.txt'
+    $summaryPath = Join-Path $jobDir 'install-questionnaire-apk-summary.json'
+    $script = Join-Path $ProjectPath 'tools\install-questionnaire-apk-on-quest.ps1'
+    $arguments = @(
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        $script,
+        '-ProjectPath',
+        $ProjectPath,
+        '-OutputRoot',
+        $jobDir,
+        '-RunId',
+        $runId,
+        '-WaitSeconds',
+        [string][Math]::Max(0, $waitSeconds)
+    )
+    if (-not [string]::IsNullOrWhiteSpace($apk)) {
+        $arguments += @('-Apk', $apk)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($serial)) {
+        $arguments += @('-Serial', $serial)
+    }
+    if ($dryRun) {
+        $arguments += '-DryRun'
+    }
+
+    $process = Start-Process `
+        -FilePath 'powershell' `
+        -ArgumentList $arguments `
+        -WorkingDirectory $ProjectPath `
+        -PassThru `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput $stdoutPath `
+        -RedirectStandardError $stderrPath
+
+    $script:InstallApkJobs[$runId] = [ordered]@{
+        process = $process
+        runId = $runId
+        apk = $apk
+        questSerial = $serial
+        dryRun = [bool]$dryRun
+        artifactDir = $jobDir
+        stdoutPath = $stdoutPath
+        stderrPath = $stderrPath
+        summaryPath = $summaryPath
+        startedAt = (Get-Date).ToString('o')
+        completedAt = ''
+    }
+    $script:InstallApkJobOrder.Add($runId) | Out-Null
+
+    while ($script:InstallApkJobOrder.Count -gt 20) {
+        $oldest = $script:InstallApkJobOrder[0]
+        $script:InstallApkJobOrder.RemoveAt(0)
+        if ($script:InstallApkJobs.ContainsKey($oldest)) {
+            $oldJob = $script:InstallApkJobs[$oldest]
+            $oldProcess = $oldJob['process']
+            if ($oldProcess -and $oldProcess.HasExited) {
+                $script:InstallApkJobs.Remove($oldest)
+            }
+        }
+    }
+
+    return Get-InstallApkJobStatus -RunId $runId
+}
+
 function Receive-JsonPayload {
     param([System.Net.HttpListenerRequest]$Request)
 
@@ -666,6 +822,8 @@ function New-StatusPayload {
             'validate-workflow',
             'workflow-job-status',
             'quest-readiness',
+            'install-apk',
+            'install-apk-job-status',
             'dependency-status',
             'install-dependencies'
         )
@@ -743,6 +901,24 @@ function Handle-Request {
         return
     }
 
+    if ($request.HttpMethod -eq 'GET' -and $path -eq '/api/install-apk-job') {
+        Assert-OriginAndToken -Request $request
+        $runId = [string]$request.QueryString['runId']
+        if ([string]::IsNullOrWhiteSpace($runId)) {
+            $runId = [string]$request.QueryString['jobId']
+        }
+        $status = Get-InstallApkJobStatus -RunId $runId
+        if ($null -eq $status) {
+            Write-JsonResponse -Context $Context -StatusCode 404 -Value ([ordered]@{
+                status = 'error'
+                message = "Unknown install APK job: $runId"
+            })
+            return
+        }
+        Write-JsonResponse -Context $Context -StatusCode 200 -Value $status
+        return
+    }
+
     if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/install-dependencies') {
         Assert-OriginAndToken -Request $request
         $result = Handle-DependencyInstall
@@ -755,6 +931,14 @@ function Handle-Request {
         $payload = Receive-JsonPayload -Request $request
         $result = Invoke-QuestReadinessCheck -Payload $payload
         Write-JsonResponse -Context $Context -StatusCode ($(if ($result.status -eq 'ok') { 200 } else { 500 })) -Value $result
+        return
+    }
+
+    if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/install-apk') {
+        Assert-OriginAndToken -Request $request
+        $payload = Receive-JsonPayload -Request $request
+        $job = Start-InstallApkJob -Payload $payload
+        Write-JsonResponse -Context $Context -StatusCode 202 -Value $job
         return
     }
 

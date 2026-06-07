@@ -122,6 +122,26 @@ function Wait-WorkflowJob {
     throw "Workflow job did not finish before timeout: $RunId"
 }
 
+function Wait-InstallApkJob {
+    param(
+        [string]$BaseUrl,
+        [hashtable]$Headers,
+        [string]$RunId,
+        [int]$TimeoutSec = 600
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    $encodedRunId = [System.Uri]::EscapeDataString($RunId)
+    while ((Get-Date) -lt $deadline) {
+        $job = Invoke-Json -Method GET -Uri "$BaseUrl/api/install-apk-job?runId=$encodedRunId" -Headers $Headers -TimeoutSec 30
+        if ($job.jobStatus -ne 'running') {
+            return $job
+        }
+        Start-Sleep -Seconds 2
+    }
+    throw "Install APK job did not finish before timeout: $RunId"
+}
+
 if ($Port -le 0) {
     $Port = Get-FreeLoopbackPort
 }
@@ -181,6 +201,7 @@ try {
 
     $unauthorizedDependencyStatus = $null
     $unauthorizedQuestReadinessStatus = $null
+    $unauthorizedInstallApkStatus = $null
     try {
         Invoke-Json -Method GET -Uri "$baseUrl/api/dependency-status" | Out-Null
         throw "Unauthorized dependency-status call unexpectedly succeeded."
@@ -201,6 +222,16 @@ try {
             throw "Unauthorized quest-readiness expected 401, got $unauthorizedQuestReadinessStatus"
         }
     }
+    try {
+        Invoke-Json -Method POST -Uri "$baseUrl/api/install-apk" -Body @{ apk = "missing.apk"; dryRun = $true } | Out-Null
+        throw "Unauthorized install-apk call unexpectedly succeeded."
+    }
+    catch {
+        $unauthorizedInstallApkStatus = Get-HttpErrorStatusCode -Exception $_.Exception
+        if ($unauthorizedInstallApkStatus -ne 401) {
+            throw "Unauthorized install-apk expected 401, got $unauthorizedInstallApkStatus"
+        }
+    }
 
     Write-Host "== Dependency status =="
     $dependency = Invoke-Json -Method GET -Uri "$baseUrl/api/dependency-status" -Headers $headers
@@ -214,6 +245,30 @@ try {
     Add-Progress "quest-readiness-complete readiness=$($questReadiness.readiness) status=$($questReadiness.readinessStatus)"
     if ($questReadiness.status -ne 'ok' -or [string]::IsNullOrWhiteSpace([string]$questReadiness.summaryPath) -or -not (Test-Path -LiteralPath $questReadiness.summaryPath)) {
         throw "Companion quest-readiness did not produce a usable readiness summary."
+    }
+
+    Write-Host "== Install APK dry run through companion =="
+    $installDryRunApk = Join-Path $artifactDir 'install-dry-run-placeholder.apk'
+    Set-Content -LiteralPath $installDryRunApk -Value 'dry-run placeholder for companion install endpoint validation' -Encoding UTF8
+    $installStart = Invoke-Json -Method POST -Uri "$baseUrl/api/install-apk" -Headers $headers -Body @{
+        apk = $installDryRunApk
+        questSerial = [string]$questReadiness.targetSerial
+        waitSeconds = 0
+        dryRun = $true
+    } -TimeoutSec 60
+    Add-Progress "install-apk-started=$($installStart.runId)"
+    if ($installStart.status -ne 'ok' -or [string]::IsNullOrWhiteSpace([string]$installStart.runId)) {
+        throw "Companion install-apk did not start an install job."
+    }
+    $installApk = if ($installStart.jobStatus -eq 'running') {
+        Wait-InstallApkJob -BaseUrl $baseUrl -Headers $headers -RunId $installStart.runId -TimeoutSec 600
+    }
+    else {
+        $installStart
+    }
+    Add-Progress "install-apk-complete jobStatus=$($installApk.jobStatus) installStatus=$($installApk.installStatus)"
+    if ($installApk.installStatus -eq 'fail' -or [string]::IsNullOrWhiteSpace([string]$installApk.summaryPath) -or -not (Test-Path -LiteralPath $installApk.summaryPath)) {
+        throw "Companion install-apk dry run did not produce a usable install summary."
     }
 
     Write-Host "== Save config through companion =="
@@ -287,6 +342,7 @@ try {
             withTokenAuthorized = [bool]$statusWithToken.authorized
             unauthorizedDependencyStatus = $unauthorizedDependencyStatus
             unauthorizedQuestReadinessStatus = $unauthorizedQuestReadinessStatus
+            unauthorizedInstallApkStatus = $unauthorizedInstallApkStatus
         }
         dependency = $dependency
         questReadiness = [ordered]@{
@@ -295,6 +351,12 @@ try {
             targetSerial = $questReadiness.targetSerial
             onlineCount = $questReadiness.onlineCount
             summaryPath = $questReadiness.summaryPath
+        }
+        installApkDryRun = [ordered]@{
+            jobStatus = $installApk.jobStatus
+            installStatus = $installApk.installStatus
+            runId = $installApk.runId
+            summaryPath = $installApk.summaryPath
         }
         builder = [ordered]@{
             outputDir = $builderOut

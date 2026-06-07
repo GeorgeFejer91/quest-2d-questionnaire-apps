@@ -171,3 +171,21 @@ settings.
 Generalizable rule: make the next irreversible or physical validation gate
 visible by placing a read-only readiness probe immediately before it in the
 dashboard workflow.
+
+## Device-Changing GUI Actions Need Dry-Run Coverage
+
+Problem: the builder could generate a 2D panel APK, but there was no explicit
+GUI action for the next user-facing pipeline step: loading that APK onto the
+Quest. Hiding install inside larger validators made the happy path less
+legible and harder to test without changing headset state.
+
+Solution: add a narrow `install-questionnaire-apk-on-quest.ps1` helper and a
+token-protected `/api/install-apk` companion job. The GUI starts the install
+job only when the user clicks `Install APK on Quest`, while the companion
+workflow validator exercises the same endpoint with `dryRun=true` and a
+placeholder `.apk` so auth, job polling, and artifacts are tested without
+performing an install.
+
+Generalizable rule: for dashboard buttons that change device state, separate
+the command contract from the live side effect. Validate the command contract
+with a dry run, and reserve the real side effect for explicit operator action.

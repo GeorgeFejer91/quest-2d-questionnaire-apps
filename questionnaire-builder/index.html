@@ -978,6 +978,7 @@
               <button id="saveConfigAppButton" type="button">Save config</button>
               <button id="validateConfigAppButton" type="button">Validate config</button>
               <button id="generateApkAppButton" class="primary" type="button">Generate APK</button>
+              <button id="installApkAppButton" type="button">Install APK on Quest</button>
               <button id="validateWorkflowAppButton" type="button">Validate workflow</button>
             </div>
             <pre id="appBackendLog" style="margin-top: 10px; max-height: 280px;"></pre>
@@ -1076,6 +1077,7 @@
     let blocks = structuredClone(blockDefaults);
     let triggerCatalog = null;
     let triggerMappings = [];
+    let lastGeneratedApkPath = "";
     const exampleApkFolderUrl = "https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/tree/main/example-scenario-apk";
     const exampleTriggerCatalogUrlCandidates = [
       "../example-scenario-apk/questionnaire-trigger-catalog.json",
@@ -3129,6 +3131,46 @@
       throw new Error(`Timed out waiting for workflow job ${runId}.`);
     }
 
+    function expectedGeneratedApkPath() {
+      return `.\\Builds\\${apkFileName(buildConfig())}`;
+    }
+
+    function installJobLevel(data) {
+      if (data?.jobStatus === "failed" || data?.installStatus === "fail" || data?.installStatus === "error") {
+        return "error";
+      }
+      if (data?.jobStatus === "completed" && data?.installStatus === "pass") {
+        return "ok";
+      }
+      if (data?.jobStatus === "completed") {
+        return "warn";
+      }
+      return "";
+    }
+
+    function installJobText(data) {
+      const runId = data?.runId || data?.jobId || "install";
+      if (data?.jobStatus === "running") {
+        return `Installing APK on Quest: ${runId}.`;
+      }
+      return `Quest APK install ${data?.installStatus || data?.jobStatus}; summary: ${data?.summaryPath || "not written yet"}`;
+    }
+
+    async function pollInstallApkJob(runId) {
+      const startedAt = Date.now();
+      const timeoutMs = 10 * 60 * 1000;
+      while (Date.now() - startedAt < timeoutMs) {
+        const data = await callAppBackend(`/api/install-apk-job?runId=${encodeURIComponent(runId)}`);
+        setAppBackendStatus(installJobText(data), installJobLevel(data));
+        setAppBackendLog(data);
+        if (data.jobStatus !== "running") {
+          return data;
+        }
+        await delay(2000);
+      }
+      throw new Error(`Timed out waiting for APK install job ${runId}.`);
+    }
+
     function formatMissingDependencies(data) {
       const missing = Array.isArray(data?.missingRequired) ? data.missingRequired : [];
       if (missing.length === 0) {
@@ -3236,11 +3278,40 @@
           runTests: byId("appRunTests").checked,
           renderPreview: byId("appRenderPreview").checked
         });
+        lastGeneratedApkPath = data.apk || expectedGeneratedApkPath();
         setAppBackendStatus(data.apk ? `Generated APK: ${data.apk}` : `APK generation finished for ${data.configPath}.`, "ok");
         setAppBackendLog(data);
       } catch (error) {
         setAppBackendStatus(error.message || String(error), "error");
         setAppBackendLog(error.backendData || error.message || String(error));
+      }
+    }
+
+    async function installGeneratedApkWithApp() {
+      const button = byId("installApkAppButton");
+      const wasDisabled = button.disabled;
+      button.disabled = true;
+      try {
+        const apkPath = lastGeneratedApkPath || expectedGeneratedApkPath();
+        setAppBackendStatus("Starting Quest APK install...", "");
+        const data = await callAppBackend("/api/install-apk", {
+          apk: apkPath,
+          questSerial: byId("workflowQuestSerial").value.trim(),
+          waitSeconds: 0
+        });
+        setAppBackendStatus(installJobText(data), installJobLevel(data));
+        setAppBackendLog(data);
+        if (data.jobStatus === "running" && (data.runId || data.jobId)) {
+          const finalData = await pollInstallApkJob(data.runId || data.jobId);
+          setAppBackendStatus(installJobText(finalData), installJobLevel(finalData));
+          setAppBackendLog(finalData);
+        }
+      } catch (error) {
+        setAppBackendStatus(error.message || String(error), "error");
+        setAppBackendLog(error.backendData || error.message || String(error));
+      } finally {
+        button.disabled = wasDisabled;
+        updateWorkflowGate();
       }
     }
 
@@ -3295,6 +3366,7 @@
     byId("saveConfigAppButton").addEventListener("click", saveConfigWithApp);
     byId("validateConfigAppButton").addEventListener("click", validateConfigWithApp);
     byId("generateApkAppButton").addEventListener("click", generateApkWithApp);
+    byId("installApkAppButton").addEventListener("click", installGeneratedApkWithApp);
     byId("validateWorkflowAppButton").addEventListener("click", validateWorkflowWithApp);
     byId("includeMaia").addEventListener("change", () => {
       blocks = normalizeBlocks(blocks);

@@ -86,3 +86,6 @@ Use absolute dates.
 - Added a paired `Detect Quest` runner-panel action and `/api/quest-readiness`
   companion endpoint that performs a read-only ADB readiness probe and fills the
   Quest serial field before install/launch/direct-handoff gates.
+- Added an explicit generated-APK install path: `Install APK on Quest` in the
+  builder, `/api/install-apk` plus `/api/install-apk-job` in the companion, and
+  `tools/install-questionnaire-apk-on-quest.ps1` for the reusable install gate.

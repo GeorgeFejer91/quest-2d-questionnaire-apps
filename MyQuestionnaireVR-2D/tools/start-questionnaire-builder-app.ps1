@@ -158,6 +158,30 @@ function Write-JsonResponse {
     Write-Response -Context $Context -StatusCode $StatusCode -ContentType 'application/json; charset=utf-8' -Body (($Value | ConvertTo-Json -Depth 60) + "`n")
 }
 
+function Write-BinaryFileResponse {
+    param(
+        [System.Net.HttpListenerContext]$Context,
+        [int]$StatusCode,
+        [string]$ContentType,
+        [string]$Path
+    )
+
+    Set-CorsHeaders -Context $Context
+    $stream = [System.IO.File]::Open($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+    try {
+        $Context.Response.StatusCode = $StatusCode
+        $Context.Response.ContentType = $ContentType
+        $Context.Response.ContentLength64 = $stream.Length
+        $Context.Response.Headers['Cache-Control'] = 'no-store'
+        $Context.Response.Headers['X-Content-Type-Options'] = 'nosniff'
+        $stream.CopyTo($Context.Response.OutputStream)
+    }
+    finally {
+        $stream.Dispose()
+        $Context.Response.OutputStream.Close()
+    }
+}
+
 function Write-EmptyResponse {
     param(
         [System.Net.HttpListenerContext]$Context,
@@ -308,6 +332,61 @@ function Get-JsonProperty {
         return $Default
     }
     return $Object.PSObject.Properties[$Name].Value
+}
+
+function Get-NormalizedDirectoryPrefix {
+    param([string]$Path)
+
+    $full = [System.IO.Path]::GetFullPath($Path)
+    $directorySeparator = [string][System.IO.Path]::DirectorySeparatorChar
+    $altDirectorySeparator = [string][System.IO.Path]::AltDirectorySeparatorChar
+    if (-not $full.EndsWith($directorySeparator) -and -not $full.EndsWith($altDirectorySeparator)) {
+        $full += [System.IO.Path]::DirectorySeparatorChar
+    }
+    return $full
+}
+
+function Get-ArtifactPreviewRoots {
+    $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $ProjectPath '..'))
+    $roots = @(
+        (Join-Path $ProjectPath 'artifacts'),
+        (Join-Path $ReferenceProjectPath 'artifacts'),
+        (Join-Path $repoRoot 'TemporalExperienceTracerVR-2D\artifacts')
+    )
+    return @($roots | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | ForEach-Object { [System.IO.Path]::GetFullPath([string]$_) } | Select-Object -Unique)
+}
+
+function Resolve-ArtifactPreviewPath {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        throw 'Artifact preview path is required.'
+    }
+
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    $extension = [System.IO.Path]::GetExtension($fullPath)
+    if (-not $extension.Equals('.png', [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Artifact preview only supports PNG files.'
+    }
+
+    $allowed = $false
+    foreach ($root in Get-ArtifactPreviewRoots) {
+        $rootPrefix = Get-NormalizedDirectoryPrefix -Path $root
+        if ($fullPath.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $allowed = $true
+            break
+        }
+    }
+    if (-not $allowed) {
+        throw "Artifact preview path is not allowed: $fullPath"
+    }
+    if (-not (Test-Path -LiteralPath $fullPath)) {
+        throw "Artifact preview path not found: $fullPath"
+    }
+    if ((Get-Item -LiteralPath $fullPath).PSIsContainer) {
+        throw "Artifact preview path is a directory: $fullPath"
+    }
+    return $fullPath
 }
 
 function Get-WorkflowCount {
@@ -1727,6 +1806,7 @@ function New-StatusPayload {
             'validate-config',
             'generate-apk',
             'generate-apk-receipt',
+            'artifact-preview',
             'validate-workflow',
             'workflow-job-status',
             'workflow-receipt',
@@ -1789,6 +1869,13 @@ function Handle-Request {
 
     if ($request.HttpMethod -eq 'GET' -and $path -eq '/api/status') {
         Write-JsonResponse -Context $Context -StatusCode 200 -Value (New-StatusPayload -Authorized (Test-Authorized -Request $request))
+        return
+    }
+
+    if ($request.HttpMethod -eq 'GET' -and $path -eq '/api/artifact-preview') {
+        Assert-OriginAndToken -Request $request
+        $artifactPath = Resolve-ArtifactPreviewPath -Path ([string]$request.QueryString['path'])
+        Write-BinaryFileResponse -Context $Context -StatusCode 200 -ContentType 'image/png' -Path $artifactPath
         return
     }
 
@@ -2082,6 +2169,18 @@ try {
             }
             elseif ($message -like 'Origin is not allowed*') {
                 $statusCode = 403
+            }
+            elseif ($message -like 'Artifact preview path is required*') {
+                $statusCode = 400
+            }
+            elseif ($message -like 'Artifact preview path is not allowed*') {
+                $statusCode = 403
+            }
+            elseif ($message -like 'Artifact preview path not found*') {
+                $statusCode = 404
+            }
+            elseif ($message -like 'Artifact preview only supports*') {
+                $statusCode = 415
             }
             Write-JsonResponse -Context $context -StatusCode $statusCode -Value ([ordered]@{
                 status = 'error'

@@ -464,3 +464,24 @@ advertises them.
 Generalizable rule: any hosted static dashboard that depends on a local
 companion should treat API capabilities as part of the health check, especially
 for user-visible evidence fields.
+
+## Local Artifact Preview Is Not Local File Browsing
+
+Problem: `generationReceipt` can name useful local render PNGs, but a hosted
+static page cannot display arbitrary Windows paths directly. Serving those
+paths naively through localhost would risk turning the companion into a
+general local file server, and putting the pairing token in image URLs would
+leave credential-shaped crumbs in browser history and logs.
+
+Solution: the companion exposes a narrow `GET /api/artifact-preview?path=...`
+route and advertises the `artifact-preview` capability. The route requires the
+pairing token header, honors the same CORS boundary as other privileged local
+actions, serves only PNG files, and accepts only paths under generated artifact
+roots. The GUI fetches the PNG bytes with `X-MQ-Builder-Token` and renders
+object URLs, while the companion validator downloads a sample PNG from
+`generationReceipt` and checks that it is a valid non-empty PNG.
+
+Generalizable rule: receipt paths are evidence references, not browser
+permissions. When a local companion serves artifact bytes to a hosted GUI,
+keep the endpoint typed, authenticated, path-scoped, and covered by the same
+stress ladder as the receipt that produced the paths.

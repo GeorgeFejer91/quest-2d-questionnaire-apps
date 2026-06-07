@@ -162,3 +162,7 @@ Use absolute dates.
 - Added GUI-visible `generationReceipt` evidence to `/api/generate-apk` so the
   hosted/offline builder can show generated APK byte/hash evidence and local
   render-preview artifact status immediately after the APK-generation step.
+- Added token-protected `/api/artifact-preview` support to the local companion
+  and GUI so render-preview PNGs referenced by `generationReceipt` can be
+  visually inspected from the hosted/offline builder without exposing a generic
+  local file server.

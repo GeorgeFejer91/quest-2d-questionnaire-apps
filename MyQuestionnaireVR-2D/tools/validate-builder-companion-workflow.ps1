@@ -26,6 +26,7 @@ New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
 $ExpectedCompanionReceiptApiVersion = '2026-06-07.receipts.v1'
 $RequiredCompanionCapabilities = @(
     'generate-apk-receipt',
+    'artifact-preview',
     'workflow-receipt',
     'runner-job-receipts'
 )
@@ -81,6 +82,20 @@ function Invoke-Json {
         $arguments.Body = ($Body | ConvertTo-Json -Depth 100)
     }
     return Invoke-RestMethod @arguments
+}
+
+function Invoke-ArtifactPreview {
+    param(
+        [string]$BaseUrl,
+        [hashtable]$Headers,
+        [string]$Path,
+        [string]$OutFile,
+        [int]$TimeoutSec = 60
+    )
+
+    $encodedPath = [System.Uri]::EscapeDataString($Path)
+    Invoke-WebRequest -Method GET -Uri "$BaseUrl/api/artifact-preview?path=$encodedPath" -Headers $Headers -OutFile $OutFile -TimeoutSec $TimeoutSec -UseBasicParsing | Out-Null
+    return Get-PngEvidence -Path $OutFile
 }
 
 function Read-JsonIfExists {
@@ -439,6 +454,7 @@ try {
     $unauthorizedInstallApkStatus = $null
     $unauthorizedQuestReplayStatus = $null
     $unauthorizedDirectHandoffStatus = $null
+    $unauthorizedArtifactPreviewStatus = $null
     try {
         Invoke-Json -Method GET -Uri "$baseUrl/api/dependency-status" | Out-Null
         throw "Unauthorized dependency-status call unexpectedly succeeded."
@@ -487,6 +503,16 @@ try {
         $unauthorizedDirectHandoffStatus = Get-HttpErrorStatusCode -Exception $_.Exception
         if ($unauthorizedDirectHandoffStatus -ne 401) {
             throw "Unauthorized direct-handoff expected 401, got $unauthorizedDirectHandoffStatus"
+        }
+    }
+    try {
+        Invoke-WebRequest -Method GET -Uri "$baseUrl/api/artifact-preview?path=missing.png" -UseBasicParsing | Out-Null
+        throw "Unauthorized artifact-preview call unexpectedly succeeded."
+    }
+    catch {
+        $unauthorizedArtifactPreviewStatus = Get-HttpErrorStatusCode -Exception $_.Exception
+        if ($unauthorizedArtifactPreviewStatus -ne 401) {
+            throw "Unauthorized artifact-preview expected 401, got $unauthorizedArtifactPreviewStatus"
         }
     }
 
@@ -698,6 +724,25 @@ try {
     if ($renderPreviewRequested -and -not [bool]$generateReceipt.checks.renderArtifactGatePass) {
         throw "Companion generate-apk generationReceipt did not prove the render artifact gate."
     }
+    $artifactPreviewSourcePath = ''
+    $artifactPreviewCopy = ''
+    $artifactPreviewEvidence = $null
+    if ($renderPreviewRequested) {
+        $receiptSamplePngs = @()
+        if ($generateReceipt.artifacts -and $generateReceipt.artifacts.render -and $generateReceipt.artifacts.render.PSObject.Properties.Name -contains 'samplePngs') {
+            $receiptSamplePngs = @($generateReceipt.artifacts.render.samplePngs | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
+        }
+        if ($receiptSamplePngs.Count -eq 0) {
+            throw "Companion generate-apk generationReceipt did not expose render sample PNG paths."
+        }
+        $artifactPreviewSourcePath = [string]$receiptSamplePngs[0]
+        $artifactPreviewCopy = Join-Path $artifactDir 'artifact-preview-sample.png'
+        $artifactPreviewEvidence = Invoke-ArtifactPreview -BaseUrl $baseUrl -Headers $headers -Path $artifactPreviewSourcePath -OutFile $artifactPreviewCopy
+        Add-Progress "artifact-preview-complete bytes=$($artifactPreviewEvidence.bytes) validPng=$($artifactPreviewEvidence.validPng)"
+        if (-not [bool]$artifactPreviewEvidence.exists -or -not [bool]$artifactPreviewEvidence.validPng -or [int64]$artifactPreviewEvidence.bytes -le 0) {
+            throw "Companion artifact-preview endpoint did not return a valid PNG from $artifactPreviewSourcePath."
+        }
+    }
 
     Write-Host "== Validate builder-to-Quest workflow through companion =="
     $workflowBody = @{
@@ -782,7 +827,8 @@ try {
         $unauthorizedQuestReadinessStatus -eq 401 -and
         $unauthorizedInstallApkStatus -eq 401 -and
         $unauthorizedQuestReplayStatus -eq 401 -and
-        $unauthorizedDirectHandoffStatus -eq 401
+        $unauthorizedDirectHandoffStatus -eq 401 -and
+        $unauthorizedArtifactPreviewStatus -eq 401
     )
     $saveValidatePass = (
         [string]$save.status -eq 'ok' -and
@@ -801,6 +847,10 @@ try {
         $generateRenderEvidence -and
         [bool]$generateRenderEvidence.exists -and
         [bool]$generateRenderEvidence.passesArtifactGate
+    )
+    $artifactPreviewPass = (
+        (-not $renderPreviewRequested) -or
+        ($artifactPreviewEvidence -and [bool]$artifactPreviewEvidence.exists -and [bool]$artifactPreviewEvidence.validPng -and [int64]$artifactPreviewEvidence.bytes -gt 0)
     )
     $workflowMatrixInspectable = (
         $workflowSummary -and
@@ -846,6 +896,7 @@ try {
         $saveValidatePass -and
         $generatedApkHashPass -and
         $renderPreviewPass -and
+        $artifactPreviewPass -and
         [string]$generateReceipt.status -eq 'pass' -and
         $workflowMatrixInspectable -and
         [string]$installApk.installStatus -eq 'pass' -and
@@ -865,6 +916,7 @@ try {
         [string]$dependency.status -eq 'ok' -and
         $saveValidatePass -and
         $generateReceipt -and
+        $artifactPreviewPass -and
         $workflowMatrixInspectable -and
         [string]$installApk.installStatus -eq 'pass' -and
         [string]$questReplay.replayStatus -ne 'fail' -and
@@ -900,6 +952,7 @@ try {
             generateApkHashPass = $generatedApkHashPass
             generationReceiptInspectable = ($generateReceipt -and ([string]$generateReceipt.status -eq 'pass' -or [string]$generateReceipt.status -eq 'partial-skipped-evidence'))
             renderPreviewArtifactGatePass = $renderPreviewPass
+            artifactPreviewEndpointPass = $artifactPreviewPass
             workflowMatrixInspectable = $workflowMatrixInspectable
             workflowReceiptInspectable = [bool]$workflowReceipt.offlineEvidenceReady
             runnerJobReceiptsInspectable = $stepJobReceiptsInspectable
@@ -912,6 +965,12 @@ try {
             generationReceipt = $generateReceipt
             renderSummaryPath = $generateRenderSummaryPath
             renderEvidence = $generateRenderEvidence
+            artifactPreview = [ordered]@{
+                requested = $renderPreviewRequested
+                sourcePath = $artifactPreviewSourcePath
+                copiedPath = $artifactPreviewCopy
+                png = $artifactPreviewEvidence
+            }
             workflowSummaryPath = $workflow.summaryPath
             workflowCounts = $workflowCounts
             workflowReceipt = $workflowReceipt
@@ -952,6 +1011,7 @@ try {
             unauthorizedInstallApkStatus = $unauthorizedInstallApkStatus
             unauthorizedQuestReplayStatus = $unauthorizedQuestReplayStatus
             unauthorizedDirectHandoffStatus = $unauthorizedDirectHandoffStatus
+            unauthorizedArtifactPreviewStatus = $unauthorizedArtifactPreviewStatus
         }
         companionApi = [ordered]@{
             schemaVersion = $statusWithToken.schemaVersion
@@ -1034,6 +1094,12 @@ try {
             renderPreview = $renderPreviewRequested
             renderSummaryPath = $generateRenderSummaryPath
             renderEvidence = $generateRenderEvidence
+            artifactPreview = [ordered]@{
+                requested = $renderPreviewRequested
+                sourcePath = $artifactPreviewSourcePath
+                copiedPath = $artifactPreviewCopy
+                png = $artifactPreviewEvidence
+            }
             workflowStatus = $workflow.workflowStatus
             workflowReceipt = $workflowReceipt
             workflowSummaryPath = $workflow.summaryPath

@@ -438,6 +438,51 @@
       overflow-wrap: anywhere;
     }
 
+    .artifact-preview-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .artifact-preview-item {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel-soft);
+      padding: 6px;
+    }
+
+    .artifact-preview-item img,
+    .artifact-preview-missing {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      border: 1px solid var(--line);
+      background: #ffffff;
+    }
+
+    .artifact-preview-item img {
+      object-fit: contain;
+    }
+
+    .artifact-preview-missing {
+      display: grid;
+      place-items: center;
+      color: var(--danger);
+      font-size: 12px;
+    }
+
+    .artifact-preview-item span {
+      display: block;
+      margin-top: 4px;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     pre {
       margin: 0;
       min-height: 520px;
@@ -956,6 +1001,7 @@
             </div>
             <div id="appBackendStatus" class="issue">Backend not checked.</div>
             <div id="workflowReceiptStatus" class="issue" hidden></div>
+            <div id="artifactPreviewStrip" class="artifact-preview-strip" hidden></div>
             <div class="compact-grid">
               <label class="toggle-row">
                 <input id="appRunTests" type="checkbox" checked>
@@ -1094,6 +1140,7 @@
     let triggerCatalog = null;
     let triggerMappings = [];
     let lastGeneratedApkPath = "";
+    let artifactPreviewObjectUrls = [];
     const exampleApkFolderUrl = "https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/tree/main/example-scenario-apk";
     const exampleTriggerCatalogUrlCandidates = [
       "../example-scenario-apk/questionnaire-trigger-catalog.json",
@@ -1102,6 +1149,7 @@
     ];
     const requiredAppBackendCapabilities = [
       { id: "generate-apk-receipt", label: "APK generation receipts" },
+      { id: "artifact-preview", label: "local render previews" },
       { id: "workflow-receipt", label: "workflow receipts" },
       { id: "runner-job-receipts", label: "runner job receipts" }
     ];
@@ -2967,7 +3015,7 @@
         return "";
       }
       if (!Array.isArray(data?.capabilities)) {
-        return "update the local companion because this older API cannot show APK generation, workflow, or runner receipts";
+        return "update the local companion because this older API cannot show APK generation, local render previews, workflow, or runner receipts";
       }
       return `update the local companion to enable ${missing.map(item => item.label).join(" and ")}`;
     }
@@ -3184,6 +3232,9 @@
     function setWorkflowReceiptStatus(data) {
       const target = byId("workflowReceiptStatus");
       const text = workflowReceiptText(data);
+      if (!data?.generationReceipt) {
+        clearArtifactPreviews();
+      }
       if (!text) {
         target.hidden = true;
         target.textContent = "";
@@ -3192,6 +3243,70 @@
       target.hidden = false;
       target.className = `issue ${workflowReceiptLevel(data?.workflowReceipt || data?.generationReceipt || data?.jobReceipt)}`;
       target.textContent = text;
+    }
+
+    function clearArtifactPreviews() {
+      artifactPreviewObjectUrls.forEach(url => URL.revokeObjectURL(url));
+      artifactPreviewObjectUrls = [];
+      const target = byId("artifactPreviewStrip");
+      if (!target) {
+        return;
+      }
+      target.hidden = true;
+      target.replaceChildren();
+    }
+
+    function artifactPreviewFileName(path) {
+      return String(path || "").split(/[\\/]/).filter(Boolean).pop() || "preview.png";
+    }
+
+    function artifactPreviewPaths(data) {
+      const samplePngs = data?.generationReceipt?.artifacts?.render?.samplePngs;
+      if (!Array.isArray(samplePngs)) {
+        return [];
+      }
+      return samplePngs.map(path => String(path || "").trim()).filter(Boolean).slice(0, 3);
+    }
+
+    function renderArtifactPreviewError(target, path) {
+      const item = document.createElement("div");
+      item.className = "artifact-preview-item";
+      const missing = document.createElement("div");
+      missing.className = "artifact-preview-missing";
+      missing.textContent = "unavailable";
+      const caption = document.createElement("span");
+      caption.textContent = artifactPreviewFileName(path);
+      item.append(missing, caption);
+      target.append(item);
+    }
+
+    async function showArtifactPreviews(data) {
+      clearArtifactPreviews();
+      const paths = artifactPreviewPaths(data);
+      const target = byId("artifactPreviewStrip");
+      if (!target || paths.length === 0) {
+        return;
+      }
+      target.hidden = false;
+      for (const path of paths) {
+        try {
+          const blob = await callAppBackendArtifact(path);
+          const objectUrl = URL.createObjectURL(blob);
+          artifactPreviewObjectUrls.push(objectUrl);
+
+          const item = document.createElement("div");
+          item.className = "artifact-preview-item";
+          const image = document.createElement("img");
+          image.src = objectUrl;
+          image.alt = artifactPreviewFileName(path);
+          const caption = document.createElement("span");
+          caption.textContent = artifactPreviewFileName(path);
+          item.append(image, caption);
+          target.append(item);
+        } catch (error) {
+          renderArtifactPreviewError(target, path);
+        }
+      }
     }
 
     function appendAppBackendLog(value) {
@@ -3328,6 +3443,35 @@
         throw error;
       }
       return data;
+    }
+
+    async function callAppBackendArtifact(path) {
+      const base = appBackendAvailableUrl();
+      if (!base) {
+        throw new Error("Local companion URL is required.");
+      }
+      const token = appBackendToken();
+      const headers = {};
+      if (token) {
+        headers["X-MQ-Builder-Token"] = token;
+      }
+      const response = await fetch(`${base}/api/artifact-preview?path=${encodeURIComponent(path)}`, {
+        method: "GET",
+        headers,
+        cache: "no-store"
+      });
+      if (!response.ok) {
+        let message = `Artifact preview failed: ${response.status}`;
+        const text = await response.text();
+        try {
+          const data = text ? JSON.parse(text) : {};
+          message = data.message || message;
+        } catch (error) {
+          message = text || message;
+        }
+        throw new Error(message);
+      }
+      return response.blob();
     }
 
     function delay(ms) {
@@ -3657,6 +3801,7 @@
         lastGeneratedApkPath = data.apk || expectedGeneratedApkPath();
         setAppBackendStatus(data.apk ? `Generated APK: ${data.apk}` : `APK generation finished for ${data.configPath}.`, "ok");
         setWorkflowReceiptStatus(data);
+        await showArtifactPreviews(data);
         setAppBackendLog(data);
       } catch (error) {
         setAppBackendStatus(error.message || String(error), "error");

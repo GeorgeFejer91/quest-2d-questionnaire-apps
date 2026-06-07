@@ -176,6 +176,18 @@ Add `-Serial <quest-serial>` to that command to install the builder-generated
 APK on Quest, run English/Deutsch command replay/export, and attach a
 foreground-linked Android render pack.
 
+Prove the hosted/offline GUI's local companion API path itself. This starts the
+companion, checks pairing-token enforcement, saves and validates the generated
+handoff config through HTTP, and drives `/api/generate-apk` so the PC software
+creates the APK and local render evidence:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-builder-companion-workflow.ps1
+```
+
+Use `-SkipApkBuild` only for faster diagnostics when APK assembly has already
+been covered by another gate.
+
 Run the full local ladder from builder smoke test through generated APK and
 Android render preview:
 

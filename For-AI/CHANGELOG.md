@@ -47,3 +47,10 @@ Use absolute dates.
 - Added `MyQuestionnaireVR-2D/tools/validate-universal-handoff-workflow.ps1`;
   the local no-headset pass on 2026-06-07 was
   `universal-handoff-20260607T010957Z`.
+- Added `MyQuestionnaireVR-2D/tools/validate-builder-companion-workflow.ps1`;
+  the full local companion pass on 2026-06-07 was
+  `builder-companion-20260607T013607Z`, producing
+  `Builds/viscereality-maia2-1.0.0.apk` through `/api/generate-apk`.
+- Fixed the local companion for Windows PowerShell compatibility:
+  pairing-token generation no longer requires `RandomNumberGenerator.Fill()`,
+  and child-process stderr is captured as text before exit-code evaluation.

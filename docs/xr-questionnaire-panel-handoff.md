@@ -138,3 +138,15 @@ The 2026-06-07 local pass wrote
 This proves the builder/compiler, generated handoff config, questionnaire
 local render, temporal tracer assets, and temporal tracer local render. It does
 not replace the required headset focus trials.
+
+The local GUI-to-companion API stress ladder is:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\validate-builder-companion-workflow.ps1
+```
+
+The 2026-06-07 full companion pass wrote
+`MyQuestionnaireVR-2D\artifacts\builder-companion-workflow\builder-companion-20260607T013607Z\builder-companion-workflow-summary.json`
+and generated
+`MyQuestionnaireVR-2D\Builds\viscereality-maia2-1.0.0.apk` through the local
+`/api/generate-apk` endpoint.

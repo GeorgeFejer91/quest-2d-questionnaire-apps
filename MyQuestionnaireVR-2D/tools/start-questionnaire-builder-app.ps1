@@ -53,7 +53,13 @@ if (-not (Test-Path -LiteralPath $EditorPath)) {
 
 if ([string]::IsNullOrWhiteSpace($PairingToken)) {
     $bytes = New-Object byte[] 18
-    [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        $rng.GetBytes($bytes)
+    }
+    finally {
+        $rng.Dispose()
+    }
     $PairingToken = [Convert]::ToBase64String($bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_')
 }
 
@@ -213,8 +219,10 @@ function Invoke-ProjectPowerShell {
     param([string[]]$Arguments)
 
     Push-Location $ProjectPath
+    $previousErrorActionPreference = $ErrorActionPreference
     try {
-        $output = & powershell @Arguments 2>&1 | Out-String
+        $ErrorActionPreference = 'Continue'
+        $output = & powershell @Arguments 2>&1 | ForEach-Object { $_.ToString() } | Out-String
         $exitCode = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
         return [ordered]@{
             exitCode = $exitCode
@@ -222,6 +230,7 @@ function Invoke-ProjectPowerShell {
         }
     }
     finally {
+        $ErrorActionPreference = $previousErrorActionPreference
         Pop-Location
     }
 }
@@ -506,6 +515,9 @@ function Handle-Request {
         }
         if (-not $runTests) {
             $arguments += '-SkipTests'
+        }
+        if ($payload.PSObject.Properties.Name -contains 'skipBuild' -and [bool]$payload.skipBuild) {
+            $arguments += '-SkipBuild'
         }
         if ($payload.PSObject.Properties.Name -contains 'renderPreview' -and [bool]$payload.renderPreview) {
             $arguments += '-RenderPreview'

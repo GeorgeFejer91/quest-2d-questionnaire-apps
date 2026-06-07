@@ -51,3 +51,44 @@ gate before trusting headset screenshots.
 
 Generalizable rule: use local renderers to catch visual and layout regressions
 before device-facing evidence collection.
+
+## Companion APIs Need Real HTTP Stress Tests
+
+Problem: a builder smoke test can prove that browser JavaScript emits the right
+JSON, while still missing failures in the local companion path used by the
+hosted GUI.
+
+Solution: add a validator that starts the companion, checks pairing-token
+authorization, saves the generated handoff config through `/api/save-config`,
+validates it through `/api/validate-config`, and generates/render-previews it
+through `/api/generate-apk`.
+
+Generalizable rule: when a static web GUI delegates work to local software,
+stress the HTTP boundary itself, including auth failures and long-running
+commands.
+
+## Native stderr Is Not Failure By Itself
+
+Problem: Gradle can write harmless notes to stderr while exiting successfully.
+Capturing child output with `2>&1` under `$ErrorActionPreference = 'Stop'` can
+turn those notes into terminating PowerShell errors and make a healthy endpoint
+return 500.
+
+Solution: companion child-process wrappers should capture stderr as text under
+a local `Continue` error preference, then decide success only from the child
+exit code and required artifacts.
+
+Generalizable rule: distinguish process exit status from output stream class;
+stderr is evidence to record, not automatically a failure.
+
+## Token Generators Must Match The Runtime
+
+Problem: `RandomNumberGenerator.Fill()` is not available in the Windows
+PowerShell/.NET runtime on this development machine, even though it exists in
+newer .NET APIs.
+
+Solution: use `RandomNumberGenerator.Create().GetBytes(...)` for companion
+pairing tokens and validation tokens.
+
+Generalizable rule: local Windows automation scripts should use APIs available
+in the target PowerShell runtime, not only modern .NET examples.

@@ -7,6 +7,7 @@
 # Quest validation and generated app evidence
 **/artifacts/
 **/Builds/
+**/QuestionnaireConfigs/generated/
 
 # Unity generated state for the demo scenario project
 AweGreatDictatorUnity/Library/

@@ -141,3 +141,8 @@ Use absolute dates.
   records generated APK file evidence, verifies the APK SHA-256 against the
   generator summary when builds are enabled, and records the render preview
   artifact gate produced by the same endpoint.
+- Added `endToEndReceipt` to the companion workflow summary. Full runs now
+  report `pass-with-physical-pending` only when GUI smoke, companion
+  authorization, config save/validate, APK hash, local render artifacts,
+  workflow matrix, and direct-handoff dry-run gates all pass; fast runs with
+  intentionally skipped APK/render evidence report `partial-skipped-evidence`.

@@ -398,3 +398,25 @@ pass, approval remains false while the manual headset pass is pending.
 Generalizable rule: separate automation-health evidence from architecture
 decision evidence. A dry-run can approve the runner contract, but only physical
 product-path evidence should approve the handoff strategy.
+
+## One Receipt Beats Scattered Green Checks
+
+Problem: the GUI-to-companion-to-APK stress ladder can generate many useful
+artifacts: builder smoke JSON, companion auth checks, generated config paths,
+APK hashes, local render summaries, workflow matrices, and direct handoff
+dry-run summaries. When those facts are scattered, a reviewer can miss that a
+run skipped APK generation or render previews while still seeing many green
+subchecks.
+
+Solution: the companion workflow summary now includes
+`endToEndReceipt`. A full run reports `pass-with-physical-pending` only when
+the GUI smoke path, token-protected companion endpoints, config save/validate,
+generated APK hash, render-preview artifact gate, workflow matrix, and
+non-physical direct handoff gates all pass. Fast runs that intentionally skip
+APK build or render preview are classified as `partial-skipped-evidence`
+instead of failure or full proof.
+
+Generalizable rule: multi-stage builder pipelines need a single top-level
+receipt that distinguishes full evidence, skipped evidence, and physical
+evidence still pending. Keep detailed artifacts, but promote the audit-critical
+facts into one reviewer-facing object.

@@ -719,12 +719,148 @@ try {
         throw "Companion validate-workflow clamp summary missing dry-run direct handoff facts."
     }
 
+    $workflowSummary = Read-JsonIfExists -Path ([string]$workflow.summaryPath)
+    $workflowCounts = if ($workflowSummary -and $workflowSummary.PSObject.Properties.Name -contains 'counts') { $workflowSummary.counts } else { $null }
+    $authorizationPass = (
+        -not [bool]$statusNoToken.authorized -and
+        [bool]$statusWithToken.authorized -and
+        $unauthorizedDependencyStatus -eq 401 -and
+        $unauthorizedQuestReadinessStatus -eq 401 -and
+        $unauthorizedInstallApkStatus -eq 401 -and
+        $unauthorizedQuestReplayStatus -eq 401 -and
+        $unauthorizedDirectHandoffStatus -eq 401
+    )
+    $saveValidatePass = (
+        [string]$save.status -eq 'ok' -and
+        (Test-Path -LiteralPath $save.configPath) -and
+        [string]$validate.status -eq 'ok' -and
+        [int]$validate.exitCode -eq 0
+    )
+    $generatedApkHashPass = (
+        -not [bool]$SkipApkBuild -and
+        [bool]$generatedApkEvidence.exists -and
+        -not [string]::IsNullOrWhiteSpace([string]$generateSummary.apkSha256) -and
+        [string]$generatedApkEvidence.sha256 -eq [string]$generateSummary.apkSha256
+    )
+    $renderPreviewPass = (
+        $renderPreviewRequested -and
+        $generateRenderEvidence -and
+        [bool]$generateRenderEvidence.exists -and
+        [bool]$generateRenderEvidence.passesArtifactGate
+    )
+    $workflowMatrixInspectable = (
+        $workflowSummary -and
+        $workflowCounts -and
+        [int]$workflowCounts.failed -eq 0 -and
+        [int]$workflowCounts.blocked -eq 0
+    )
+    $directHandoffDryRunGatePass = (
+        [string]$directHandoff.handoffStatus -eq 'pass' -and
+        $directHandoff.decisionGate -and
+        [string]$directHandoff.decisionGate.candidateAStatus -eq 'dry-run-only' -and
+        -not [bool]$directHandoff.decisionGate.defaultDirectPendingIntentApproved
+    )
+    $directHandoffClampGatePass = (
+        [int]$directHandoffClamp.trialCount -eq 10 -and
+        [int]$directHandoffClamp.waitForReadySeconds -eq 28800 -and
+        $directHandoffClamp.decisionGate -and
+        [string]$directHandoffClamp.decisionGate.candidateAStatus -eq 'dry-run-only' -and
+        -not [bool]$directHandoffClamp.decisionGate.defaultDirectPendingIntentApproved
+    )
+    $workflowClampGatePass = (
+        $workflowClampDirectFacts -and
+        [bool]$workflowClampDirectFacts.dryRun -and
+        [int]$workflowClampDirectFacts.requestedQuestTrials -eq 10 -and
+        [int]$workflowClampDirectFacts.requestedWaitForReadySeconds -eq 28800 -and
+        $workflowClampDirectFacts.decisionGate -and
+        [string]$workflowClampDirectFacts.decisionGate.candidateAStatus -eq 'dry-run-only' -and
+        -not [bool]$workflowClampDirectFacts.decisionGate.defaultDirectPendingIntentApproved
+    )
+    $offlineWorkflowReady = (
+        $authorizationPass -and
+        [string]$dependency.status -eq 'ok' -and
+        $saveValidatePass -and
+        $generatedApkHashPass -and
+        $renderPreviewPass -and
+        $workflowMatrixInspectable -and
+        [string]$installApk.installStatus -eq 'pass' -and
+        [string]$questReplay.replayStatus -ne 'fail' -and
+        $directHandoffDryRunGatePass -and
+        $directHandoffClampGatePass -and
+        $workflowClampGatePass
+    )
+    $skippedEvidence = [ordered]@{
+        apkBuild = [bool]$SkipApkBuild
+        renderPreview = (-not $renderPreviewRequested)
+    }
+    $nonSkippedReceiptChecksPass = (
+        $authorizationPass -and
+        [string]$dependency.status -eq 'ok' -and
+        $saveValidatePass -and
+        $workflowMatrixInspectable -and
+        [string]$installApk.installStatus -eq 'pass' -and
+        [string]$questReplay.replayStatus -ne 'fail' -and
+        $directHandoffDryRunGatePass -and
+        $directHandoffClampGatePass -and
+        $workflowClampGatePass
+    )
+    $receiptStatus = 'fail'
+    if ($offlineWorkflowReady) {
+        $receiptStatus = 'pass-with-physical-pending'
+    } elseif ($nonSkippedReceiptChecksPass -and ([bool]$SkipApkBuild -or -not $renderPreviewRequested)) {
+        $receiptStatus = 'partial-skipped-evidence'
+    }
+    $endToEndReceipt = [ordered]@{
+        schemaVersion = 'my-questionnaire-2d.end_to_end_workflow_receipt.v1'
+        status = $receiptStatus
+        offlineWorkflowReady = $offlineWorkflowReady
+        skippedEvidence = $skippedEvidence
+        physicalQuestProductPathPending = $true
+        proofBoundary = 'Direct PendingIntent cannot become the production default until 10 clean real Quest trials plus one manual headset pass prove the product path.'
+        checks = [ordered]@{
+            guiSmokeProducedHandoffConfig = (Test-Path -LiteralPath $handoffConfigPath)
+            companionTokenAuthorization = $authorizationPass
+            dependencyStatusOk = ([string]$dependency.status -eq 'ok')
+            questReadinessProbed = (-not [string]::IsNullOrWhiteSpace([string]$questReadiness.summaryPath) -and (Test-Path -LiteralPath $questReadiness.summaryPath))
+            installEndpointDryRunPass = ([string]$installApk.installStatus -eq 'pass')
+            replayEndpointDryRunContractPass = ([string]$questReplay.replayStatus -ne 'fail')
+            directHandoffDryRunContractPass = $directHandoffDryRunGatePass
+            directHandoffClampContractPass = $directHandoffClampGatePass
+            saveAndValidateConfigPass = $saveValidatePass
+            generateApkHashPass = $generatedApkHashPass
+            renderPreviewArtifactGatePass = $renderPreviewPass
+            workflowMatrixInspectable = $workflowMatrixInspectable
+            workflowDirectHandoffClampGatePass = $workflowClampGatePass
+        }
+        artifacts = [ordered]@{
+            generatedConfigPath = $save.configPath
+            generatedApk = $generatedApkEvidence
+            generateSummaryPath = $generate.summaryPath
+            renderSummaryPath = $generateRenderSummaryPath
+            renderEvidence = $generateRenderEvidence
+            workflowSummaryPath = $workflow.summaryPath
+            workflowCounts = $workflowCounts
+            directHandoffSummaryPath = $directHandoff.summaryPath
+            workflowClampSummaryPath = $workflowClamp.summaryPath
+        }
+        physicalEvidenceStillNeeded = [ordered]@{
+            directPendingIntentQuestTrials = '10 clean product-path trials'
+            manualHeadsetPass = 'pending'
+            currentTransportReadiness = $questReadiness.readiness
+            currentProductPathStatus = $questReadiness.productPathStatus
+            currentProductPathReady = [bool]$questReadiness.productPathReady
+            blockedReasons = if ($questReadiness.productPath -and $questReadiness.productPath.PSObject.Properties.Name -contains 'blockedReasons') { @($questReadiness.productPath.blockedReasons) } else { @() }
+            defaultDirectPendingIntentApproved = $false
+        }
+    }
+
     $summaryStatus = 'pass'
     $summary = [ordered]@{
         schemaVersion = 'my-questionnaire-2d.builder-companion-workflow.v1'
         status = $summaryStatus
         runId = $RunId
         artifactDir = $artifactDir
+        endToEndReceipt = $endToEndReceipt
         baseUrl = $baseUrl
         authorization = [ordered]@{
             withoutTokenAuthorized = [bool]$statusNoToken.authorized

@@ -172,7 +172,10 @@ and generated
 `/api/generate-apk` endpoint. The companion validator also dry-runs the
 standalone `/api/direct-handoff` job with real questionnaire, temporal tracer,
 and Unity APKs so the direct PendingIntent package/activity/catalog preflight
-is covered without launching the headset.
+is covered without launching the headset. Inspect the summary's
+`endToEndReceipt`: full runs should report `pass-with-physical-pending`, while
+fast runs with intentionally skipped APK or render evidence should report
+`partial-skipped-evidence`.
 
 The end-to-end builder-to-Quest evidence matrix is:
 

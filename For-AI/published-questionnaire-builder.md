@@ -55,6 +55,11 @@ Privileged local actions require the `X-MQ-Builder-Token` header. The companion
 generates the token locally on each PC. It is not tied to one machine, user
 profile, or repository path.
 
+`GET /api/status` is also the compatibility check. It advertises the companion
+`apiVersion`, `receiptSchemaVersion`, and capabilities such as
+`workflow-receipt` and `runner-job-receipts` so the hosted GUI can warn when a
+user connects an older local companion package.
+
 ## Important Files
 
 Source GUI:

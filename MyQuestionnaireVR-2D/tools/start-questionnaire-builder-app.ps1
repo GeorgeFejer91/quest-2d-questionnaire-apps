@@ -1490,6 +1490,8 @@ function New-StatusPayload {
     $payload = [ordered]@{
         status = 'ok'
         schemaVersion = 'my-questionnaire-2d.builder-app.v1'
+        apiVersion = '2026-06-07.receipts.v1'
+        receiptSchemaVersion = 'my-questionnaire-2d.builder-receipts.v1'
         mode = $Mode
         url = "http://127.0.0.1:$Port/"
         requiresToken = $true
@@ -1497,11 +1499,14 @@ function New-StatusPayload {
         allowedOrigins = $EffectiveAllowedOrigins
         onlinePageUrl = $OnlinePageUrl
         capabilities = @(
+            'public-status',
+            'token-auth',
             'save-config',
             'validate-config',
             'generate-apk',
             'validate-workflow',
             'workflow-job-status',
+            'workflow-receipt',
             'quest-readiness',
             'install-apk',
             'install-apk-job-status',
@@ -1509,6 +1514,7 @@ function New-StatusPayload {
             'quest-replay-job-status',
             'direct-handoff',
             'direct-handoff-job-status',
+            'runner-job-receipts',
             'dependency-status',
             'install-dependencies'
         )

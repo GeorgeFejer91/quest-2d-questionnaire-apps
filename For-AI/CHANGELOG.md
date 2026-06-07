@@ -155,3 +155,7 @@ Use absolute dates.
   handoff runner jobs. Future local companion job endpoints should expose a
   compact receipt beside raw logs and summary paths so every dashboard step can
   be audited without spelunking nested artifacts.
+- Added receipt API compatibility metadata to the local companion `/api/status`
+  response. Future hosted/offline builder changes that depend on new companion
+  response fields should advertise explicit capabilities and warn when a user
+  connects an older local companion.

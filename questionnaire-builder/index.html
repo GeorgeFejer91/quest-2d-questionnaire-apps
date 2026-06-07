@@ -1100,6 +1100,10 @@
       "../../../example-scenario-apk/questionnaire-trigger-catalog.json",
       "https://raw.githubusercontent.com/GeorgeFejer91/quest-2d-questionnaire-apps/main/example-scenario-apk/questionnaire-trigger-catalog.json"
     ];
+    const requiredAppBackendCapabilities = [
+      { id: "workflow-receipt", label: "workflow receipts" },
+      { id: "runner-job-receipts", label: "runner job receipts" }
+    ];
 
     const triggerCatalogPaths = [
       "assets/mq/questionnaire-trigger-catalog.json",
@@ -2948,6 +2952,25 @@
       return String(byId("appBackendToken")?.value || window.MQ_LOCAL_BACKEND_TOKEN || "").trim();
     }
 
+    function missingAppBackendCapabilities(data) {
+      if (!Array.isArray(data?.capabilities)) {
+        return requiredAppBackendCapabilities;
+      }
+      const capabilities = new Set(data.capabilities.map(value => String(value)));
+      return requiredAppBackendCapabilities.filter(item => !capabilities.has(item.id));
+    }
+
+    function appBackendCompatibilityWarning(data) {
+      const missing = missingAppBackendCapabilities(data);
+      if (missing.length === 0) {
+        return "";
+      }
+      if (!Array.isArray(data?.capabilities)) {
+        return "update the local companion because this older API cannot show workflow or runner receipts";
+      }
+      return `update the local companion to enable ${missing.map(item => item.label).join(" and ")}`;
+    }
+
     function initializeAppBackendControls() {
       const urlInput = byId("appBackendUrl");
       const tokenInput = byId("appBackendToken");
@@ -3501,7 +3524,15 @@
       try {
         const data = await callAppBackend("/api/status");
         const tokenState = data.authorized ? "pairing token accepted" : "pairing token needed for local actions";
-        setAppBackendStatus(`Connected to local app backend on ${data.url}; ${tokenState}.`, data.authorized ? "ok" : "warn");
+        const apiLabel = data.apiVersion ? ` API ${data.apiVersion}` : "";
+        const compatibilityWarning = appBackendCompatibilityWarning(data);
+        const pieces = [`Connected to local app backend${apiLabel} on ${data.url || appBackendAvailableUrl()}`, tokenState];
+        if (compatibilityWarning) {
+          pieces.push(compatibilityWarning);
+        } else {
+          pieces.push("receipt API ready");
+        }
+        setAppBackendStatus(`${pieces.join("; ")}.`, data.authorized && !compatibilityWarning ? "ok" : "warn");
         setAppBackendLog(data);
       } catch (error) {
         setAppBackendStatus(error.message || String(error), "error");

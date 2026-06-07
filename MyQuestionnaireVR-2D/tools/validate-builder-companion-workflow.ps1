@@ -23,6 +23,12 @@ $serverErr = Join-Path $artifactDir 'companion-stderr.txt'
 $progressLog = Join-Path $artifactDir 'validator-progress.txt'
 New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
 
+$ExpectedCompanionReceiptApiVersion = '2026-06-07.receipts.v1'
+$RequiredCompanionCapabilities = @(
+    'workflow-receipt',
+    'runner-job-receipts'
+)
+
 function Add-Progress {
     param([string]$Message)
 
@@ -413,6 +419,19 @@ try {
     if (-not $statusWithToken.authorized) {
         throw "Companion status did not accept the pairing token."
     }
+    $companionApiVersion = if ($statusWithToken.PSObject.Properties.Name -contains 'apiVersion') { [string]$statusWithToken.apiVersion } else { '' }
+    if ([string]::IsNullOrWhiteSpace($companionApiVersion)) {
+        throw "Companion status did not advertise apiVersion."
+    }
+    $companionCapabilities = @()
+    if ($statusWithToken.PSObject.Properties.Name -contains 'capabilities') {
+        $companionCapabilities = @($statusWithToken.capabilities | ForEach-Object { [string]$_ })
+    }
+    $missingCompanionCapabilities = @($RequiredCompanionCapabilities | Where-Object { $companionCapabilities -notcontains $_ })
+    if ($missingCompanionCapabilities.Count -gt 0) {
+        throw "Companion status missing required capabilities: $($missingCompanionCapabilities -join ', ')."
+    }
+    Add-Progress 'companion-api-capability-contract-complete'
 
     $unauthorizedDependencyStatus = $null
     $unauthorizedQuestReadinessStatus = $null
@@ -918,6 +937,15 @@ try {
             unauthorizedInstallApkStatus = $unauthorizedInstallApkStatus
             unauthorizedQuestReplayStatus = $unauthorizedQuestReplayStatus
             unauthorizedDirectHandoffStatus = $unauthorizedDirectHandoffStatus
+        }
+        companionApi = [ordered]@{
+            schemaVersion = $statusWithToken.schemaVersion
+            apiVersion = $companionApiVersion
+            expectedReceiptApiVersion = $ExpectedCompanionReceiptApiVersion
+            receiptSchemaVersion = $statusWithToken.receiptSchemaVersion
+            requiredCapabilities = $RequiredCompanionCapabilities
+            advertisedCapabilities = $companionCapabilities
+            missingCapabilities = $missingCompanionCapabilities
         }
         dependency = $dependency
         questReadiness = [ordered]@{

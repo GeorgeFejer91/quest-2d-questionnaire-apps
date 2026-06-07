@@ -443,3 +443,20 @@ Generalizable rule: if a dashboard button launches a long evidence-producing
 job, its polling endpoint should return both raw artifact paths and a compact
 human-readable receipt. Do not make users open nested JSON to learn whether the
 button proved the promised workflow.
+
+## Hosted GUIs Need Companion Capability Checks
+
+Problem: the hosted builder can update before a user's locally installed
+companion launcher. If the page silently assumes newer response fields such as
+`workflowReceipt` or `jobReceipt`, an older companion can make the runner panel
+look weaker or broken even though the connection itself succeeds.
+
+Solution: `/api/status` now advertises `apiVersion`, `receiptSchemaVersion`,
+and receipt-specific capabilities: `workflow-receipt` and
+`runner-job-receipts`. The GUI warns when those capabilities are missing, and
+the companion workflow validator fails fast if the current companion no longer
+advertises them.
+
+Generalizable rule: any hosted static dashboard that depends on a local
+companion should treat API capabilities as part of the health check, especially
+for user-visible evidence fields.

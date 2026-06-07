@@ -194,6 +194,10 @@ reviewer can see whether offline gates are inspectable, how many
 failures/blocks/pending physical gates remain, which APK/render artifacts were
 produced, whether product-path readiness blocked a live rung, and whether
 direct PendingIntent is still awaiting product-path evidence.
+The companion `/api/status` health payload advertises `apiVersion`,
+`receiptSchemaVersion`, and the receipt capabilities `workflow-receipt` and
+`runner-job-receipts`; the hosted GUI should warn if a user connects an older
+local companion that lacks those capabilities.
 The runner's `Ready wait (s)` field controls how long these jobs wait for
 product-path readiness before classifying the attempt as blocked; the companion
 clamps it to 0-28800 seconds. A pre-product-path readiness block records one

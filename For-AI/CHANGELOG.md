@@ -159,3 +159,6 @@ Use absolute dates.
   response. Future hosted/offline builder changes that depend on new companion
   response fields should advertise explicit capabilities and warn when a user
   connects an older local companion.
+- Added GUI-visible `generationReceipt` evidence to `/api/generate-apk` so the
+  hosted/offline builder can show generated APK byte/hash evidence and local
+  render-preview artifact status immediately after the APK-generation step.

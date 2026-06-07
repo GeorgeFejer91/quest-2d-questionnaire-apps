@@ -187,6 +187,9 @@ The hosted/offline GUI exposes the same gate through the companion
 `/api/validate-workflow` endpoint. It also exposes the direct handoff gate as a
 dedicated `Run direct handoff` action backed by `/api/direct-handoff` and
 `/api/direct-handoff-job`, placed after replay/export in the sequential runner.
+The `/api/generate-apk` endpoint returns a `generationReceipt` so the GUI's
+APK-generation step can immediately show the generated APK byte/hash evidence
+and local render-preview artifact gate.
 The workflow polling endpoint returns a compact `workflowReceipt`, while the
 install, replay/export, and direct handoff polling endpoints return compact
 `jobReceipt` objects. The GUI displays these beside the job status so the
@@ -195,9 +198,10 @@ failures/blocks/pending physical gates remain, which APK/render artifacts were
 produced, whether product-path readiness blocked a live rung, and whether
 direct PendingIntent is still awaiting product-path evidence.
 The companion `/api/status` health payload advertises `apiVersion`,
-`receiptSchemaVersion`, and the receipt capabilities `workflow-receipt` and
-`runner-job-receipts`; the hosted GUI should warn if a user connects an older
-local companion that lacks those capabilities.
+`receiptSchemaVersion`, and receipt capabilities such as
+`generate-apk-receipt`, `workflow-receipt`, and `runner-job-receipts`; the
+hosted GUI should warn if a user connects an older local companion that lacks
+those capabilities.
 The runner's `Ready wait (s)` field controls how long these jobs wait for
 product-path readiness before classifying the attempt as blocked; the companion
 clamps it to 0-28800 seconds. A pre-product-path readiness block records one

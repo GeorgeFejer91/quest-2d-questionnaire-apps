@@ -1101,6 +1101,7 @@
       "https://raw.githubusercontent.com/GeorgeFejer91/quest-2d-questionnaire-apps/main/example-scenario-apk/questionnaire-trigger-catalog.json"
     ];
     const requiredAppBackendCapabilities = [
+      { id: "generate-apk-receipt", label: "APK generation receipts" },
       { id: "workflow-receipt", label: "workflow receipts" },
       { id: "runner-job-receipts", label: "runner job receipts" }
     ];
@@ -2966,7 +2967,7 @@
         return "";
       }
       if (!Array.isArray(data?.capabilities)) {
-        return "update the local companion because this older API cannot show workflow or runner receipts";
+        return "update the local companion because this older API cannot show APK generation, workflow, or runner receipts";
       }
       return `update the local companion to enable ${missing.map(item => item.label).join(" and ")}`;
     }
@@ -3022,7 +3023,7 @@
     function workflowReceiptText(data) {
       const receipt = data?.workflowReceipt;
       if (!receipt) {
-        return jobReceiptText(data);
+        return generationReceiptText(data);
       }
       const counts = receipt.counts || {};
       const artifacts = receipt.artifacts || {};
@@ -3071,6 +3072,43 @@
       }
       if (artifacts.summaryPath) {
         pieces.push(`summary: ${artifacts.summaryPath}`);
+      }
+      return `${pieces.join("; ")}.`;
+    }
+
+    function generationReceiptText(data) {
+      const receipt = data?.generationReceipt;
+      if (!receipt) {
+        return jobReceiptText(data);
+      }
+      const artifacts = receipt.artifacts || {};
+      const checks = receipt.checks || {};
+      const pieces = [`Evidence receipt: APK generation ${receipt.status || "unknown"}`];
+      if (receipt.buildSkipped) {
+        pieces.push("APK build skipped");
+      }
+      if (receipt.renderPreviewRequested) {
+        pieces.push(checks.renderArtifactGatePass ? "local render artifact gate pass" : "local render artifact gate not passed");
+      } else {
+        pieces.push("render preview skipped");
+      }
+      const apkBytes = formatReceiptBytes(artifacts.apk?.bytes);
+      if (checks.apkExists && apkBytes) {
+        pieces.push(`questionnaire APK ${apkBytes}`);
+      }
+      if (checks.apkHashMatchesSummary) {
+        pieces.push("APK hash matches summary");
+      }
+      const render = artifacts.render || {};
+      const renderCount = Number(render.renderCount || 0);
+      if (renderCount > 0) {
+        pieces.push(`${renderCount} local renders`);
+      }
+      if (artifacts.summaryPath) {
+        pieces.push(`summary: ${artifacts.summaryPath}`);
+      }
+      if (artifacts.renderSummaryPath) {
+        pieces.push(`render summary: ${artifacts.renderSummaryPath}`);
       }
       return `${pieces.join("; ")}.`;
     }
@@ -3152,7 +3190,7 @@
         return;
       }
       target.hidden = false;
-      target.className = `issue ${workflowReceiptLevel(data?.workflowReceipt || data?.jobReceipt)}`;
+      target.className = `issue ${workflowReceiptLevel(data?.workflowReceipt || data?.generationReceipt || data?.jobReceipt)}`;
       target.textContent = text;
     }
 
@@ -3610,6 +3648,7 @@
     async function generateApkWithApp() {
       try {
         setAppBackendStatus("Generating questionnaire APK. This can take several minutes...", "");
+        setWorkflowReceiptStatus(null);
         const data = await callAppBackend("/api/generate-apk", {
           config: buildConfig(),
           runTests: byId("appRunTests").checked,
@@ -3617,9 +3656,11 @@
         });
         lastGeneratedApkPath = data.apk || expectedGeneratedApkPath();
         setAppBackendStatus(data.apk ? `Generated APK: ${data.apk}` : `APK generation finished for ${data.configPath}.`, "ok");
+        setWorkflowReceiptStatus(data);
         setAppBackendLog(data);
       } catch (error) {
         setAppBackendStatus(error.message || String(error), "error");
+        setWorkflowReceiptStatus(error.backendData || null);
         setAppBackendLog(error.backendData || error.message || String(error));
       }
     }

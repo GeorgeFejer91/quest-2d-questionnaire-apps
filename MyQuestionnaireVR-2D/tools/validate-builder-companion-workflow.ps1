@@ -25,6 +25,7 @@ New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
 
 $ExpectedCompanionReceiptApiVersion = '2026-06-07.receipts.v1'
 $RequiredCompanionCapabilities = @(
+    'generate-apk-receipt',
     'workflow-receipt',
     'runner-job-receipts'
 )
@@ -687,6 +688,16 @@ try {
     if ($renderPreviewRequested -and ($null -eq $generateRenderEvidence -or -not $generateRenderEvidence.exists -or -not $generateRenderEvidence.passesArtifactGate)) {
         throw "Companion generate-apk render preview did not produce a usable render artifact gate."
     }
+    $generateReceipt = if ($generate.PSObject.Properties.Name -contains 'generationReceipt') { $generate.generationReceipt } else { $null }
+    if ($null -eq $generateReceipt -or [string]::IsNullOrWhiteSpace([string]$generateReceipt.status)) {
+        throw "Companion generate-apk did not return a generationReceipt."
+    }
+    if (-not $SkipApkBuild -and (-not [bool]$generateReceipt.checks.apkExists -or -not [bool]$generateReceipt.checks.apkHashMatchesSummary)) {
+        throw "Companion generate-apk generationReceipt did not prove APK existence and hash match."
+    }
+    if ($renderPreviewRequested -and -not [bool]$generateReceipt.checks.renderArtifactGatePass) {
+        throw "Companion generate-apk generationReceipt did not prove the render artifact gate."
+    }
 
     Write-Host "== Validate builder-to-Quest workflow through companion =="
     $workflowBody = @{
@@ -835,6 +846,7 @@ try {
         $saveValidatePass -and
         $generatedApkHashPass -and
         $renderPreviewPass -and
+        [string]$generateReceipt.status -eq 'pass' -and
         $workflowMatrixInspectable -and
         [string]$installApk.installStatus -eq 'pass' -and
         [string]$questReplay.replayStatus -ne 'fail' -and
@@ -852,6 +864,7 @@ try {
         $authorizationPass -and
         [string]$dependency.status -eq 'ok' -and
         $saveValidatePass -and
+        $generateReceipt -and
         $workflowMatrixInspectable -and
         [string]$installApk.installStatus -eq 'pass' -and
         [string]$questReplay.replayStatus -ne 'fail' -and
@@ -885,6 +898,7 @@ try {
             directHandoffClampContractPass = $directHandoffClampGatePass
             saveAndValidateConfigPass = $saveValidatePass
             generateApkHashPass = $generatedApkHashPass
+            generationReceiptInspectable = ($generateReceipt -and ([string]$generateReceipt.status -eq 'pass' -or [string]$generateReceipt.status -eq 'partial-skipped-evidence'))
             renderPreviewArtifactGatePass = $renderPreviewPass
             workflowMatrixInspectable = $workflowMatrixInspectable
             workflowReceiptInspectable = [bool]$workflowReceipt.offlineEvidenceReady
@@ -895,6 +909,7 @@ try {
             generatedConfigPath = $save.configPath
             generatedApk = $generatedApkEvidence
             generateSummaryPath = $generate.summaryPath
+            generationReceipt = $generateReceipt
             renderSummaryPath = $generateRenderSummaryPath
             renderEvidence = $generateRenderEvidence
             workflowSummaryPath = $workflow.summaryPath
@@ -1012,6 +1027,7 @@ try {
             generateRunId = $generate.runId
             generateSummaryPath = $generate.summaryPath
             generateStatus = if ($generateSummary) { $generateSummary.status } else { '' }
+            generationReceipt = $generateReceipt
             apk = $generate.apk
             apkEvidence = $generatedApkEvidence
             skipBuild = [bool]$SkipApkBuild

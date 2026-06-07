@@ -57,8 +57,8 @@ profile, or repository path.
 
 `GET /api/status` is also the compatibility check. It advertises the companion
 `apiVersion`, `receiptSchemaVersion`, and capabilities such as
-`workflow-receipt` and `runner-job-receipts` so the hosted GUI can warn when a
-user connects an older local companion package.
+`generate-apk-receipt`, `workflow-receipt`, and `runner-job-receipts` so the
+hosted GUI can warn when a user connects an older local companion package.
 
 ## Important Files
 

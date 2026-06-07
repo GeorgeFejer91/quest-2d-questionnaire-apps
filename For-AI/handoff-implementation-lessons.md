@@ -94,11 +94,15 @@ is too indirect for the user-facing promise "the website tells the PC software
 to create an APK"; reviewers should not have to open multiple nested JSON files
 to know whether an APK and render pack actually exist.
 
-Solution: the companion workflow validator now reads the `/api/generate-apk`
-generator summary immediately, verifies the generated APK exists and matches
-the recorded SHA-256 when a build is requested, and verifies the endpoint's
-render-preview PNG artifact gate when previews are requested. The companion
-summary promotes those facts as `apkEvidence` and `renderEvidence`.
+Solution: `/api/generate-apk` now returns a compact `generationReceipt` beside
+the raw generator summary. The receipt proves the generated APK exists, records
+bytes and SHA-256, checks the summary hash, and promotes the local render PNG
+artifact gate when previews are requested. The companion workflow validator
+also reads the generator summary immediately, verifies the generated APK exists
+and matches the recorded SHA-256 when a build is requested, verifies the
+endpoint's render-preview PNG artifact gate when previews are requested, and
+promotes those facts as `apkEvidence`, `renderEvidence`, and
+`generationReceipt`.
 
 Generalizable rule: every trusted local endpoint that produces a user-visible
 artifact should return or promote a compact receipt for that artifact: path,

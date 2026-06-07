@@ -868,6 +868,27 @@ Generalizable rule: physical gate packets should include stop conditions and
 failure meanings, not only success commands. If an operator action would mask
 the app-owned product path, make it a false signoff rather than a workaround.
 
+## Stop Conditions Need Validator Coverage
+
+Problem: writing controller-dialog and frozen-video stop conditions into a
+manual signoff template is useful, but future GUI or companion edits can
+accidentally drop those fields while the broad "template exists" receipt still
+passes. That recreates the same headset ambiguity at the worst possible time:
+when an operator is already inside the Quest.
+
+Solution: the companion workflow validator now opens the generated manual
+signoff template and instruction text from `/api/direct-handoff-manual-signoff`.
+It requires fields for the controller-required launch dialog, Unity Start
+experiment gate, resumed video, no Meta menu navigation, and no ADB foreground
+switching, and it requires matching instruction text for
+`LaunchCheckControllerRequiredDialogActivity`, controller-required prompts,
+frozen Unity video, and recovery actions that would mask the product path.
+
+Generalizable rule: operator stop conditions should be tested as artifact
+content, not only trusted as documentation. A physical-gate validator should
+fail if the packet loses the exact observations needed to classify a live
+headset problem.
+
 ## Operator Packets Should Follow Visible Evidence
 
 Problem: a dashboard can show the operator a specific readiness audit and then

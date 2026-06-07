@@ -113,6 +113,10 @@ Use absolute dates.
   signoff template: no controller-required launch dialog for generic
   demo/stimulus APKs, no Meta menu or ADB foreground recovery, and frozen Unity
   video after panel return is a Unity panel-focus/media-resume failure.
+- Hardened the companion workflow validator so manual signoff prep must emit
+  the controller-dialog, Unity Start experiment, frozen-video, Meta menu, and
+  ADB foreground-switching guardrails before the offline stress ladder can
+  pass.
 
 ## 2026-06-07
 

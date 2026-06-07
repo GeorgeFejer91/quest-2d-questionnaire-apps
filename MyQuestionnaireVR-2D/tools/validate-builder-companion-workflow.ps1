@@ -964,6 +964,35 @@ try {
     if ($null -eq $manualSignoffReceipt -or [string]$manualSignoffReceipt.kind -ne 'direct-handoff-manual-signoff' -or -not [bool]$manualSignoffReceipt.checks.instructionsWritten -or -not [bool]$manualSignoffReceipt.checks.operatorTemplateWritten -or -not [bool]$manualSignoffReceipt.physicalQuestProductPathPending) {
         throw "Companion direct-handoff-manual-signoff did not return a valid pending manual signoff receipt."
     }
+    $manualSignoffArtifacts = Get-JsonProperty -Object $manualSignoffReceipt -Name 'artifacts' -Default ([pscustomobject]@{})
+    $manualSignoffTemplatePath = [string](Get-JsonProperty -Object $manualSignoffArtifacts -Name 'operatorSignoffTemplatePath' -Default '')
+    $manualSignoffInstructionsPath = [string](Get-JsonProperty -Object $manualSignoffArtifacts -Name 'instructionsPath' -Default '')
+    $manualSignoffTemplate = Read-JsonIfExists -Path $manualSignoffTemplatePath
+    $manualSignoffTemplateFields = if ($manualSignoffTemplate) { @($manualSignoffTemplate.PSObject.Properties.Name) } else { @() }
+    $manualSignoffInstructionsText = if (-not [string]::IsNullOrWhiteSpace($manualSignoffInstructionsPath) -and (Test-Path -LiteralPath $manualSignoffInstructionsPath)) {
+        Get-Content -LiteralPath $manualSignoffInstructionsPath -Raw
+    }
+    else {
+        ''
+    }
+    $manualSignoffGuardrailsPass = (
+        $manualSignoffTemplateFields -contains 'observedNoControllerRequiredLaunchDialog' -and
+        $manualSignoffTemplateFields -contains 'observedUnityStartGate' -and
+        $manualSignoffTemplateFields -contains 'clickedStartExperimentInUnity' -and
+        $manualSignoffTemplateFields -contains 'observedVideoResumedAfterQuestionnaire' -and
+        $manualSignoffTemplateFields -contains 'observedNoMetaMenuNavigation' -and
+        $manualSignoffTemplateFields -contains 'observedNoAdbForegroundSwitchAfterInitialLaunch' -and
+        $manualSignoffInstructionsText.Contains('LaunchCheckControllerRequiredDialogActivity') -and
+        $manualSignoffInstructionsText.Contains('controller-required launch prompt') -and
+        $manualSignoffInstructionsText.Contains('Start experiment') -and
+        $manualSignoffInstructionsText.Contains('Unity video stays frozen') -and
+        $manualSignoffInstructionsText.Contains('Meta menu navigation') -and
+        $manualSignoffInstructionsText.Contains('ADB foreground switching')
+    )
+    if (-not $manualSignoffGuardrailsPass) {
+        throw "Companion direct-handoff-manual-signoff omitted required controller/start-gate/frozen-video stop-condition guardrails."
+    }
+    Add-Progress 'manual-signoff-guardrails=pass'
 
     Write-Host "== Save config through companion =="
     $save = Invoke-Json -Method POST -Uri "$baseUrl/api/save-config" -Headers $headers -Body @{ config = $handoffConfig }
@@ -1265,7 +1294,8 @@ try {
         [string]$manualSignoffReceipt.kind -eq 'direct-handoff-manual-signoff' -and
         [bool]$manualSignoffReceipt.checks.instructionsWritten -and
         [bool]$manualSignoffReceipt.checks.operatorTemplateWritten -and
-        [bool]$manualSignoffReceipt.physicalQuestProductPathPending
+        [bool]$manualSignoffReceipt.physicalQuestProductPathPending -and
+        $manualSignoffGuardrailsPass
     )
     $offlineWorkflowReady = (
         $authorizationPass -and
@@ -1340,6 +1370,7 @@ try {
             directHandoffClampContractPass = $directHandoffClampGatePass
             twoDFirstLauncherDryRunContractPass = $twoDFirstLauncherDryRunGatePass
             manualSignoffTemplatePass = $manualSignoffTemplatePass
+            manualSignoffGuardrailsPass = $manualSignoffGuardrailsPass
             saveAndValidateConfigPass = $saveValidatePass
             generateApkHashPass = $generatedApkHashPass
             generationReceiptInspectable = ($generateReceipt -and ([string]$generateReceipt.status -eq 'pass' -or [string]$generateReceipt.status -eq 'partial-skipped-evidence'))
@@ -1494,6 +1525,9 @@ try {
             status = $manualSignoff.manualSignoffStatus
             runId = $manualSignoff.runId
             summaryPath = $manualSignoff.summaryPath
+            instructionsPath = $manualSignoffInstructionsPath
+            operatorSignoffTemplatePath = $manualSignoffTemplatePath
+            guardrailsPass = $manualSignoffGuardrailsPass
             manualSignoffReceipt = $manualSignoffReceipt
         }
         directHandoffClampDryRun = [ordered]@{

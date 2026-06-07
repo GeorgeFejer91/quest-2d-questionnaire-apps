@@ -100,6 +100,11 @@ Use absolute dates.
   the readiness audit and preparing the physical gate packet from that audit.
   Future sequence buttons should end with an auditable completion/packet
   boundary, not just the last launch or preflight job.
+- Clarified the recommended demographics-before-video flow:
+  `2D demographics -> Unity Start experiment gate -> Unity video/stimulus`.
+  Future agents should not make the first demographics block depend on
+  launching a panel over an already-playing Unity video when the study can
+  start cleanly from the 2D questionnaire APK.
 
 ## 2026-06-07
 

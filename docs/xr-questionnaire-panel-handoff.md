@@ -111,6 +111,19 @@ config-driven through the builder. Do not hard-code a single Unity APK into the
 reusable Android source, and do not use this as a substitute for Unity
 hand/controller support or later Unity-owned trigger handling.
 
+For demographics-before-video studies, combine the 2D-first front door with the
+Unity start gate:
+
+```text
+Meta Home -> 2D demographics -> Unity Start experiment gate -> video/stimulus
+```
+
+That removes the first "questionnaire over a running Unity video" transition.
+Unity should consume the demographics completion extras, show the foreground
+start target, and start media only after real input inside Unity. Later
+Unity-triggered questionnaire/tracer panels still need the explicit
+panel-focus pause/resume and result-clearing behavior below.
+
 Demo and stimulus Unity APKs should advertise both hands and controllers unless
 the experiment explicitly requires controller-only input. In Unity/OpenXR that
 means enabling the Quest controller interaction profiles and the hand

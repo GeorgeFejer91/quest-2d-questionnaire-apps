@@ -31,6 +31,12 @@ Use it for:
   The generated study APK may be config-pinned to one Unity package/activity,
   but the reusable Android source must stay builder/config driven rather than
   hard-coded to one Unity app. Keep later trigger/input ownership in Unity.
+- The cleanest demographics-before-video flow is:
+  `2D demographics -> Unity Start experiment gate -> Unity video/stimulus`.
+  In this shape, the first questionnaire is not launched over a running Unity
+  video at all. Unity should consume the demographics completion extras, show a
+  foreground start target, and only begin video after participant/operator
+  input inside Unity.
 - Background 2D apps, Android shell helpers, and ADB do not own raw controller
   input while a foreground immersive Unity/XR app owns focus.
 - The questionnaire owns questionnaire state and exports. ChainLink or the

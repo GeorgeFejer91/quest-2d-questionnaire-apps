@@ -134,6 +134,11 @@ Use the simplest reliable hook for each target APK:
   this builder/config driven so each generated study APK can be pinned to its
   Unity target without hard-coding one Unity app into reusable Android source.
   Keep later raw input and triggers inside Unity.
+- For demographics-before-video studies, pair that 2D-first front door with a
+  Unity `Start experiment` gate. The participant launches the questionnaire,
+  completes demographics, enters Unity, clicks the foreground start target, and
+  only then starts the video. This avoids making the first demographics block
+  depend on Unity background pause/resume behavior.
 - Manual gate: when a closed scenario cannot emit a real completion event, log
   that a human operator witnessed the transition before accepting the chain.
 

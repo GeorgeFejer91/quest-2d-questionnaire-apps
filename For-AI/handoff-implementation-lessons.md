@@ -486,6 +486,26 @@ Generalizable rule: any hosted static dashboard that depends on a local
 companion should treat API capabilities as part of the health check, especially
 for user-visible evidence fields.
 
+## Hosted Publication Needs A Live Parity Gate
+
+Problem: source/staged GUI parity can pass locally while the public GitHub
+Pages site is still stale, unreachable, or missing the newest workflow buttons.
+For this project, that would weaken the website-based GUI claim even if the
+local companion and APK generator are healthy.
+
+Solution: add `validate-hosted-questionnaire-builder.ps1`. The validator
+normalizes and hashes the editable builder HTML, the staged
+`questionnaire-builder/index.html`, and the live hosted URL, then checks for
+the expected runner controls and companion endpoints such as `Run headset
+sequence`, `Preflight only`, `Wake before readiness`, `Download evidence
+bundle`, `/api/generate-apk`, `/api/direct-handoff`, and
+`X-MQ-Builder-Token`. The companion workflow stress ladder includes that
+publication gate in its end-to-end receipt unless explicitly skipped.
+
+Generalizable rule: hosted dashboards need a publication gate that checks the
+actual URL users open, not only the local source tree. Treat hosted parity as a
+separate proof from local browser smoke tests and companion API stress tests.
+
 ## Local Artifact Preview Is Not Local File Browsing
 
 Problem: `generationReceipt` can name useful local render PNGs, but a hosted

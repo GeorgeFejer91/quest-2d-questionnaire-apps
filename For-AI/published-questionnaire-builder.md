@@ -121,6 +121,12 @@ Pages staging script:
 MyQuestionnaireVR-2D/tools/publish-questionnaire-builder-github-pages.ps1
 ```
 
+Hosted publication validator:
+
+```text
+MyQuestionnaireVR-2D/tools/validate-hosted-questionnaire-builder.ps1
+```
+
 ## Update Workflow
 
 When changing the builder GUI:
@@ -142,6 +148,16 @@ When changing the builder GUI:
    https://georgefejer91.github.io/quest-2d-questionnaire-apps/questionnaire-builder/
    ```
 
+   Prefer the repeatable validator:
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\validate-hosted-questionnaire-builder.ps1
+   ```
+
+   It checks that the editable source HTML, staged `questionnaire-builder`
+   HTML, and hosted Pages HTML have matching normalized hashes and contain the
+   expected runner controls/endpoints.
+
 Do not manually edit only the staged `questionnaire-builder/index.html` copy;
 that creates drift.
 
@@ -150,6 +166,7 @@ that creates drift.
 During publication, these checks passed:
 
 - `validate-questionnaire-builder.ps1`
+- `validate-hosted-questionnaire-builder.ps1`
 - PowerShell parser checks for the connector/build/publish scripts
 - Local companion smoke test:
   - public `/api/status`

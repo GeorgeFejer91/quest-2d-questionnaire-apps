@@ -36,6 +36,10 @@ Do not treat `questionnaire-builder/index.html` as the primary source of truth.
 It is the staged static Pages copy. Update the source GUI in
 `MyQuestionnaireVR-2D/tools/questionnaire-config-editor/index.html`, then run
 the publish script documented in `published-questionnaire-builder.md`.
+After pushing hosted GUI changes, run
+`MyQuestionnaireVR-2D/tools/validate-hosted-questionnaire-builder.ps1` to prove
+the live GitHub Pages URL matches the staged copy and still exposes the runner
+controls.
 
 Keep this folder documentation-only. Do not store generated outputs, APKs,
 experiment exports, logs, screenshots, or private participant data here.

@@ -165,6 +165,13 @@ at:
 https://georgefejer91.github.io/quest-2d-questionnaire-apps/questionnaire-builder/
 ```
 
+After pushing a hosted GUI change, prove that the source GUI, staged Pages copy,
+and live GitHub Pages URL still match and expose the runner controls:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-hosted-questionnaire-builder.ps1
+```
+
 Prove the browser builder can emit a config that goes directly through APK
 generation and Android render validation:
 
@@ -176,10 +183,11 @@ Add `-Serial <quest-serial>` to that command to install the builder-generated
 APK on Quest, run English/Deutsch command replay/export, and attach a
 foreground-linked Android render pack.
 
-Prove the hosted/offline GUI's local companion API path itself. This starts the
-companion, checks pairing-token enforcement, saves and validates the generated
-handoff config through HTTP, and drives `/api/generate-apk` so the PC software
-creates the APK and local render evidence. It also proves
+Prove the hosted/offline GUI's publication and local companion API path itself.
+This checks source/staged/live GitHub Pages parity, starts the companion,
+checks pairing-token enforcement, saves and validates the generated handoff
+config through HTTP, and drives `/api/generate-apk` so the PC software creates
+the APK and local render evidence. It also proves
 `/api/artifact-preview` can return token-protected sample render PNGs from both
 the APK-generation receipt and the full workflow receipt for GUI inspection.
 It proves `/api/evidence-bundle` can package the workflow summary, nested JSON

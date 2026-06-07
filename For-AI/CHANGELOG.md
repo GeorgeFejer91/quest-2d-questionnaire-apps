@@ -28,6 +28,11 @@ Use absolute dates.
   markers, APK-internal video diagnostics, Unity batchmode pitfalls, APK
   manifest inspection, XR Simulation generated-file cleanup, and Horizon OS
   controller-required launch gate classification.
+- Added `MyQuestionnaireVR-2D/tools/validate-hosted-questionnaire-builder.ps1`
+  so hosted GUI changes can prove source/staged/live GitHub Pages parity and
+  required runner controls/endpoints after publication. The companion workflow
+  validator now includes this hosted publication gate in its end-to-end
+  receipt unless explicitly skipped.
 
 ## 2026-06-07
 

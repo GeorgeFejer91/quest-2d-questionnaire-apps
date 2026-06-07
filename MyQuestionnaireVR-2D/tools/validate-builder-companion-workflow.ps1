@@ -4,7 +4,9 @@ param(
     [string]$RunId = "",
     [int]$Port = 0,
     [switch]$SkipApkBuild,
-    [switch]$SkipRenderPreview
+    [switch]$SkipRenderPreview,
+    [switch]$SkipHostedBuilderValidation,
+    [switch]$AllowHostedBuilderLag
 )
 
 $ErrorActionPreference = 'Stop'
@@ -451,6 +453,36 @@ if ($LASTEXITCODE -ne 0) {
     throw "Builder smoke output failed with exit code $LASTEXITCODE"
 }
 Add-Progress 'builder-smoke-complete'
+
+$hostedBuilderValidation = [ordered]@{
+    status = 'skipped'
+    skipped = [bool]$SkipHostedBuilderValidation
+}
+if (-not $SkipHostedBuilderValidation) {
+    Write-Host "== Hosted builder publication validation =="
+    Add-Progress 'hosted-builder-validation-start'
+    $hostedBuilderOut = Join-Path $artifactDir 'hosted-builder'
+    $hostedArgs = @(
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', (Join-Path $ProjectPath 'tools\validate-hosted-questionnaire-builder.ps1'),
+        '-ProjectPath', $ProjectPath,
+        '-OutputDir', $hostedBuilderOut
+    )
+    if ($AllowHostedBuilderLag) {
+        $hostedArgs += '-AllowHostedLag'
+    }
+    & powershell @hostedArgs | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw "Hosted builder validation failed with exit code $LASTEXITCODE"
+    }
+    $hostedSummaryPath = Join-Path $hostedBuilderOut 'hosted-questionnaire-builder-validation-summary.json'
+    $hostedBuilderValidation = Read-JsonIfExists -Path $hostedSummaryPath
+    if (-not $hostedBuilderValidation) {
+        throw "Hosted builder validation did not write a usable summary: $hostedSummaryPath"
+    }
+    Add-Progress "hosted-builder-validation-complete status=$($hostedBuilderValidation.status)"
+}
 
 $handoffConfigPath = Join-Path $builderOut 'awe-great-dictator-handoff.config.json'
 if (-not (Test-Path -LiteralPath $handoffConfigPath)) {
@@ -942,7 +974,12 @@ try {
         $unauthorizedInstallApkStatus -eq 401 -and
         $unauthorizedQuestReplayStatus -eq 401 -and
         $unauthorizedDirectHandoffStatus -eq 401 -and
-        $unauthorizedArtifactPreviewStatus -eq 401
+        $unauthorizedArtifactPreviewStatus -eq 401 -and
+        $unauthorizedEvidenceBundleStatus -eq 401
+    )
+    $hostedBuilderValidationPass = (
+        [bool]$SkipHostedBuilderValidation -or
+        ($hostedBuilderValidation -and [string]$hostedBuilderValidation.status -eq 'pass')
     )
     $saveValidatePass = (
         [string]$save.status -eq 'ok' -and
@@ -1017,6 +1054,8 @@ try {
     )
     $offlineWorkflowReady = (
         $authorizationPass -and
+        $hostedBuilderValidationPass -and
+        (-not [bool]$SkipHostedBuilderValidation) -and
         [string]$dependency.status -eq 'ok' -and
         $saveValidatePass -and
         $generatedApkHashPass -and
@@ -1035,11 +1074,13 @@ try {
         $workflowClampGatePass
     )
     $skippedEvidence = [ordered]@{
+        hostedBuilderValidation = [bool]$SkipHostedBuilderValidation
         apkBuild = [bool]$SkipApkBuild
         renderPreview = (-not $renderPreviewRequested)
     }
     $nonSkippedReceiptChecksPass = (
         $authorizationPass -and
+        $hostedBuilderValidationPass -and
         [string]$dependency.status -eq 'ok' -and
         $saveValidatePass -and
         $generateReceipt -and
@@ -1070,6 +1111,7 @@ try {
         proofBoundary = 'Direct PendingIntent cannot become the production default until 10 clean real Quest trials plus one manual headset pass prove the product path.'
         checks = [ordered]@{
             guiSmokeProducedHandoffConfig = (Test-Path -LiteralPath $handoffConfigPath)
+            hostedBuilderValidationPass = $hostedBuilderValidationPass
             companionTokenAuthorization = $authorizationPass
             dependencyStatusOk = ([string]$dependency.status -eq 'ok')
             questReadinessProbed = (-not [string]::IsNullOrWhiteSpace([string]$questReadiness.summaryPath) -and (Test-Path -LiteralPath $questReadiness.summaryPath))
@@ -1090,6 +1132,7 @@ try {
             workflowDirectHandoffClampGatePass = $workflowClampGatePass
         }
         artifacts = [ordered]@{
+            hostedBuilderValidation = $hostedBuilderValidation
             generatedConfigPath = $save.configPath
             generatedApk = $generatedApkEvidence
             generateSummaryPath = $generate.summaryPath
@@ -1135,6 +1178,7 @@ try {
         runId = $RunId
         artifactDir = $artifactDir
         endToEndReceipt = $endToEndReceipt
+        hostedBuilderValidation = $hostedBuilderValidation
         baseUrl = $baseUrl
         authorization = [ordered]@{
             withoutTokenAuthorized = [bool]$statusNoToken.authorized

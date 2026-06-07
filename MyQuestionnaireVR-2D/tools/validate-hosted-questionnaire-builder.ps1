@@ -140,6 +140,8 @@ $requirements = @(
     [ordered]@{ id = 'run-readiness-audit'; text = 'Audit readiness' },
     [ordered]@{ id = 'prepare-manual-signoff'; text = 'Prepare manual signoff' },
     [ordered]@{ id = 'prepare-physical-packet'; text = 'Prepare physical packet' },
+    [ordered]@{ id = 'physical-packet-visible-audit-payload'; text = 'auditSummaryPath' },
+    [ordered]@{ id = 'physical-packet-source-text'; text = 'visible readiness audit' },
     [ordered]@{ id = 'direct-handoff-preflight-toggle'; text = 'Preflight only' },
     [ordered]@{ id = 'wake-before-readiness-toggle'; text = 'Wake before readiness' },
     [ordered]@{ id = 'evidence-bundle-control'; text = 'Download evidence bundle' },

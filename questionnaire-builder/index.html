@@ -3509,6 +3509,9 @@
       if (receipt.physicalQuestProductPathPending) {
         pieces.push("operator session still required");
       }
+      if (artifacts.auditSummaryPath) {
+        pieces.push(`audit: ${artifacts.auditSummaryPath}`);
+      }
       if (artifacts.runbookPath) {
         pieces.push(`runbook: ${artifacts.runbookPath}`);
       }
@@ -3516,6 +3519,41 @@
         pieces.push(`summary: ${artifacts.summaryPath}`);
       }
       return `${pieces.join("; ")}.`;
+    }
+
+    function physicalGatePacketPayloadFromEvidence(data) {
+      const payload = {
+        questSerial: byId("workflowQuestSerial").value.trim()
+      };
+      const auditSummaryPath = String(
+        data?.auditReceipt?.artifacts?.summaryPath ||
+        data?.physicalGatePacketReceipt?.artifacts?.auditSummaryPath ||
+        data?.summary?.audit?.summaryPath ||
+        data?.summary?.artifacts?.auditSummaryPath ||
+        ""
+      ).trim();
+      if (auditSummaryPath) {
+        payload.auditSummaryPath = auditSummaryPath;
+      }
+      const companionSummaryPath = String(
+        data?.endToEndReceipt?.artifacts?.summaryPath ||
+        data?.summary?.endToEndReceipt?.artifacts?.summaryPath ||
+        ""
+      ).trim();
+      if (!auditSummaryPath && companionSummaryPath) {
+        payload.companionSummaryPath = companionSummaryPath;
+      }
+      return payload;
+    }
+
+    function physicalGatePacketSourceText(payload) {
+      if (payload.auditSummaryPath) {
+        return "from the visible readiness audit";
+      }
+      if (payload.companionSummaryPath) {
+        return "from the visible companion workflow receipt";
+      }
+      return "from the latest local evidence";
     }
 
     function evidenceBundleSummaryPath(data) {
@@ -4585,10 +4623,8 @@
       const wasDisabled = button.disabled;
       button.disabled = true;
       try {
-        const payload = {
-          questSerial: byId("workflowQuestSerial").value.trim()
-        };
-        setAppBackendStatus("Preparing Universal Handoff physical gate packet...", "");
+        const payload = physicalGatePacketPayloadFromEvidence(lastEvidenceData);
+        setAppBackendStatus(`Preparing Universal Handoff physical gate packet ${physicalGatePacketSourceText(payload)}...`, "");
         setWorkflowReceiptStatus(null);
         const data = await callAppBackend("/api/physical-gate-packet", payload);
         setAppBackendStatus(physicalGatePacketReceiptText(data), workflowReceiptLevel(data?.physicalGatePacketReceipt));

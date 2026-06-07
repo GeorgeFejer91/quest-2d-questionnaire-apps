@@ -390,7 +390,9 @@ template, and writes a runbook plus
 `universal-handoff-physical-gate-packet-summary.json` under
 `artifacts\universal-handoff-physical-gate-packet\`. The packet is not a live
 Quest pass; it is the operator handoff for the 2D-first front-door trial, 10
-clean direct handoff trials, manual signoff, and final completion audit.
+clean direct handoff trials, manual signoff, and final completion audit. If an
+audit or physical packet receipt is already visible in the runner, the button
+uses that visible audit summary path for the packet.
 
 Run the full local ladder from builder smoke test through generated APK and
 Android render preview:

@@ -92,6 +92,10 @@ Use absolute dates.
 - Hardened manual signoff and physical gate packet artifact writers for
   Windows long paths after the companion stress ladder exposed missing-summary
   false negatives at the 260-character boundary.
+- Updated `Prepare physical packet` so it passes the currently visible
+  readiness audit path when available, keeping operator packets tied to the
+  evidence displayed in the GUI rather than silently rediscovering the latest
+  artifact on disk.
 
 ## 2026-06-07
 

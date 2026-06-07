@@ -359,7 +359,9 @@ It writes a packet under
 readiness audit, a physical-session runbook, remaining headset gates, and a
 manual signoff template. This packet is a handoff to the operator physically
 at the headset. It must not be treated as install, launch, wake, product-path
-pass, or manual signoff evidence.
+pass, or manual signoff evidence. When the dashboard is already rendering an
+audit or existing packet receipt, it should pass that visible audit summary to
+the packet endpoint so the packet matches the evidence the operator reviewed.
 The workflow polling endpoint returns a compact `workflowReceipt`, while the
 install, replay/export, 2D-first launcher, and direct handoff polling endpoints
 return compact `jobReceipt` objects. The GUI displays these beside the job status so the

@@ -827,6 +827,24 @@ session. Package the latest evidence paths and exact gate commands, but do not
 let the packet itself close any device, product-path, or human-observation
 gate.
 
+## Operator Packets Should Follow Visible Evidence
+
+Problem: a dashboard can show the operator a specific readiness audit and then
+prepare a packet by asking the backend to rediscover "latest" evidence. If a
+newer diagnostic run exists on disk, the generated packet can silently point at
+evidence different from what the operator just reviewed.
+
+Solution: the builder now sends the visible `auditSummaryPath` to
+`/api/physical-gate-packet` when the last rendered receipt is an audit or an
+existing physical packet. The packet still falls back to latest local evidence
+when no explicit visible path exists, but the preferred path is tied to the
+dashboard state.
+
+Generalizable rule: when a GUI prepares a handoff or signoff packet from
+previous evidence, prefer explicit summary paths from the currently visible
+receipt over backend "latest file" discovery. Use fallback discovery only when
+the browser genuinely has no current evidence path.
+
 ## Operator Artifacts Need Long-Path-Safe Writers
 
 Problem: physical gate packets nest audit outputs, manual signoff summaries,

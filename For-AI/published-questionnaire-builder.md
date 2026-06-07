@@ -105,7 +105,9 @@ the current readiness audit, remaining headset gates, manual signoff template,
 and operator runbook under
 `artifacts\universal-handoff-physical-gate-packet\`. This is the GUI handoff
 for the next person physically in the headset; it must not install, launch,
-wake, or mark physical evidence as passed.
+wake, or mark physical evidence as passed. When the GUI is already showing an
+audit or physical packet receipt, it should pass that visible `auditSummaryPath`
+instead of relying on backend latest-file discovery.
 `Wake before readiness` should remain opt-in, ignored for `Preflight only`, and
 passed through to `/api/direct-handoff` or `/api/validate-workflow` only for
 live direct-handoff attempts so wake-assisted evidence stays explicit.

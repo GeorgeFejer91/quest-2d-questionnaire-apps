@@ -402,6 +402,123 @@ function Test-PanelReturnContracts {
     }
 }
 
+function Test-TriggerBlockMapping {
+    param([object]$Config, [string]$OutputDir)
+
+    New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
+    $checks = New-Object 'System.Collections.Generic.List[object]'
+
+    function Add-Check {
+        param([string]$Name, [bool]$Pass, [string]$Detail)
+        $checks.Add([ordered]@{
+            name = $Name
+            pass = $Pass
+            detail = $Detail
+        }) | Out-Null
+    }
+
+    function Get-Prop {
+        param([object]$Object, [string]$Name, [object]$Default = $null)
+        if ($null -ne $Object -and $Object.PSObject.Properties.Name -contains $Name) {
+            return $Object.PSObject.Properties[$Name].Value
+        }
+        return $Default
+    }
+
+    function Test-Unique {
+        param([object[]]$Values)
+        $usable = @($Values | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | ForEach-Object { [string]$_ })
+        return $usable.Count -gt 0 -and @($usable | Select-Object -Unique).Count -eq $usable.Count
+    }
+
+    $mapping = Get-Prop -Object $Config -Name 'triggerQuestionnaireMapping'
+    $registry = Get-Prop -Object $Config -Name 'experimentBlockRegistry'
+    $mappingTriggers = if ($mapping) { @($mapping.triggers) } else { @() }
+    $enabledMappings = @($mappingTriggers | Where-Object { [bool]$_.enabled -and [string]$_.questionnaireMode -ne 'none' })
+    $registryBlocks = if ($registry) { @($registry.blocks) } else { @() }
+    $sourceCatalog = if ($registry) { Get-Prop -Object $registry -Name 'sourceTriggerCatalog' } else { $null }
+    $scenario = if ($registry) { Get-Prop -Object $registry -Name 'scenario' } else { $null }
+
+    Add-Check -Name 'trigger mapping present' -Pass ($null -ne $mapping) -Detail 'Config must include triggerQuestionnaireMapping from the APK trigger catalog.'
+    Add-Check -Name 'trigger mapping schema' -Pass ([string](Get-Prop $mapping 'schemaVersion') -eq 'mq.quest_questionnaire_trigger_mapping.v1') -Detail 'triggerQuestionnaireMapping.schemaVersion'
+    Add-Check -Name 'trigger mapping has enabled blocks' -Pass ($enabledMappings.Count -gt 0) -Detail "enabledTriggerCount=$($enabledMappings.Count)"
+    Add-Check -Name 'trigger ids unique' -Pass (Test-Unique -Values @($mappingTriggers | ForEach-Object { $_.triggerId })) -Detail 'Each manifest trigger id must map once.'
+    Add-Check -Name 'block numbers unique and three digit' -Pass ((Test-Unique -Values @($enabledMappings | ForEach-Object { $_.blockNumber })) -and @($enabledMappings | Where-Object { [string]$_.blockNumber -notmatch '^\d{3}$' }).Count -eq 0) -Detail 'Each enabled trigger must have a unique 001-style block number.'
+    Add-Check -Name 'block ids unique' -Pass (Test-Unique -Values @($enabledMappings | ForEach-Object { $_.blockId })) -Detail 'Each enabled trigger must have a stable block id.'
+    Add-Check -Name 'registry has one block per enabled trigger' -Pass ($registryBlocks.Count -eq $enabledMappings.Count) -Detail "registryBlocks=$($registryBlocks.Count); enabledTriggers=$($enabledMappings.Count)"
+    Add-Check -Name 'source catalog count matches mapping' -Pass ($null -ne $sourceCatalog -and [int](Get-Prop $sourceCatalog 'triggerCount' 0) -eq $mappingTriggers.Count) -Detail 'experimentBlockRegistry.sourceTriggerCatalog.triggerCount'
+    Add-Check -Name 'scenario package/activity propagated' -Pass (
+        -not [string]::IsNullOrWhiteSpace([string](Get-Prop $mapping 'scenarioPackage')) -and
+        [string](Get-Prop $mapping 'scenarioPackage') -eq [string](Get-Prop $scenario 'package') -and
+        [string](Get-Prop $mapping 'scenarioActivity') -eq [string](Get-Prop $scenario 'activity')
+    ) -Detail 'Scenario package/activity must be shared by mapping, registry, and caller return extras.'
+
+    foreach ($trigger in $enabledMappings) {
+        $triggerId = [string]$trigger.triggerId
+        $mode = [string]$trigger.questionnaireMode
+        $block = @($registryBlocks | Where-Object { [string]$_.id -eq [string]$trigger.blockId } | Select-Object -First 1)
+        $block = if ($block.Count -gt 0) { $block[0] } else { $null }
+        Add-Check -Name "block exists for $triggerId" -Pass ($null -ne $block) -Detail "blockId=$($trigger.blockId)"
+        if ($null -eq $block) {
+            continue
+        }
+
+        $expectedPackage = if ($mode -eq 'temporalTracer') { 'org.viscereality.temporaltracer2d' } else { 'org.viscereality.questionnaires2d' }
+        $expectedAction = if ($mode -eq 'temporalTracer') { 'org.viscereality.temporaltracer2d.RUN' } else { 'org.viscereality.questionnaires2d.RUN' }
+        $expectedActivity = if ($mode -eq 'temporalTracer') { 'org.viscereality.temporaltracer2d.MainActivity' } else { 'org.viscereality.questionnaires2d.MainActivity' }
+        $expectedType = if ($mode -eq 'temporalTracer') { 'temporalTracer' } else { 'questionnaire' }
+        $extras = Get-Prop -Object $block -Name 'extras'
+
+        Add-Check -Name "block number/id match $triggerId" -Pass ([string]$block.number -eq [string]$trigger.blockNumber -and [string]$block.id -eq [string]$trigger.blockId) -Detail "block=$($block.number)/$($block.id); trigger=$($trigger.blockNumber)/$($trigger.blockId)"
+        Add-Check -Name "block trigger id match $triggerId" -Pass ([string](Get-Prop $block.trigger 'triggerId') -eq $triggerId) -Detail "blockTrigger=$((Get-Prop $block.trigger 'triggerId'))"
+        Add-Check -Name "block panel target match $triggerId" -Pass ([string]$block.type -eq $expectedType -and [string]$block.package -eq $expectedPackage -and [string]$block.activity -eq $expectedActivity -and [string]$block.action -eq $expectedAction) -Detail "mode=$mode package=$($block.package) action=$($block.action)"
+        Add-Check -Name "block mode match $triggerId" -Pass ([string]$block.questionnaireMode -eq $mode) -Detail "mode=$mode"
+        Add-Check -Name "handoff extras match $triggerId" -Pass (
+            [string](Get-Prop $extras 'mq.handoffSchema') -eq 'mq.handoff.v1' -and
+            [string](Get-Prop $extras 'mq.triggerId') -eq $triggerId -and
+            [string](Get-Prop $extras 'mq.finishBehavior') -eq 'resumeCaller' -and
+            [string](Get-Prop $extras 'mq.callerPackage') -eq [string](Get-Prop $mapping 'scenarioPackage') -and
+            [string](Get-Prop $extras 'mq.callerActivity') -eq [string](Get-Prop $mapping 'scenarioActivity')
+        ) -Detail 'Blocks must carry mq.handoff.v1 trigger and caller-return extras.'
+    }
+
+    $exampleCatalogPath = Join-Path $RepoRoot 'example-scenario-apk\questionnaire-trigger-catalog.json'
+    $exampleCatalog = Read-JsonIfExists -Path $exampleCatalogPath
+    if ($null -ne $exampleCatalog -and [string](Get-Prop $mapping 'scenarioId') -eq [string]$exampleCatalog.scenarioId) {
+        $exampleTriggers = @($exampleCatalog.triggers)
+        Add-Check -Name 'example catalog trigger count match' -Pass ($exampleTriggers.Count -eq $mappingTriggers.Count) -Detail $exampleCatalogPath
+        foreach ($exampleTrigger in $exampleTriggers) {
+            $mapped = @($mappingTriggers | Where-Object { [string]$_.triggerId -eq [string]$exampleTrigger.triggerId } | Select-Object -First 1)
+            $mapped = if ($mapped.Count -gt 0) { $mapped[0] } else { $null }
+            Add-Check -Name "example trigger mapped $($exampleTrigger.triggerId)" -Pass ($null -ne $mapped -and [string]$mapped.questionnaireMode -eq [string]$exampleTrigger.recommendedMode) -Detail "recommendedMode=$($exampleTrigger.recommendedMode)"
+        }
+    } else {
+        Add-Check -Name 'example catalog available for comparison' -Pass ($null -ne $exampleCatalog) -Detail $exampleCatalogPath
+    }
+
+    $checkArray = @($checks.ToArray())
+    $failed = @($checkArray | Where-Object { -not $_.pass })
+    $summary = [ordered]@{
+        schemaVersion = 'mq.trigger_block_mapping_static.v1'
+        status = if ($failed.Count -eq 0) { 'pass' } else { 'fail' }
+        checkCount = $checkArray.Count
+        failedCount = $failed.Count
+        scenarioId = if ($mapping) { Get-Prop $mapping 'scenarioId' } else { '' }
+        sourceApkName = if ($mapping) { Get-Prop $mapping 'sourceApkName' } else { '' }
+        enabledTriggerCount = $enabledMappings.Count
+        registryBlockCount = $registryBlocks.Count
+        checks = $checkArray
+        completedAt = (Get-Date).ToUniversalTime().ToString('o')
+    }
+    $summaryPath = Join-Path $OutputDir 'trigger-block-mapping-static-summary.json'
+    Write-Json -Value $summary -Path $summaryPath -Depth 12
+    return [pscustomobject]@{
+        Status = $summary.status
+        SummaryPath = $summaryPath
+        Summary = $summary
+    }
+}
+
 $config = Get-Content -LiteralPath $ConfigPath -Encoding UTF8 -Raw | ConvertFrom-Json
 $questionnaireId = ConvertTo-SafeName -Value $config.questionnaireId -Fallback 'questionnaire'
 $questionnaireVersion = ConvertTo-SafeName -Value $config.questionnaireVersion -Fallback '0.0.0'
@@ -411,6 +528,23 @@ Add-Requirement `
     -Requirement 'The website GUI must hand trusted actions to local PC software instead of doing builds in browser JavaScript.' `
     -Status ($(if ($InvokedByCompanion) { 'pass' } else { 'not-applicable' })) `
     -Evidence ($(if ($InvokedByCompanion) { 'Companion invoked this validator through /api/validate-workflow.' } else { 'Run through CLI; companion boundary is covered by validate-builder-companion-workflow.ps1.' }))
+
+$triggerBlockMapping = Test-TriggerBlockMapping -Config $config -OutputDir $staticDir
+$steps.Add([ordered]@{
+    name = 'trigger-block-mapping-static'
+    status = [string]$triggerBlockMapping.Status
+    exitCode = if ($triggerBlockMapping.Status -eq 'pass') { 0 } else { 1 }
+    started = $null
+    completed = (Get-Date).ToUniversalTime().ToString('o')
+    log = $null
+    summaryPath = $triggerBlockMapping.SummaryPath
+    summary = $triggerBlockMapping.Summary
+}) | Out-Null
+Add-Requirement `
+    -Id 'trigger-block-mapping-contract' `
+    -Requirement 'The APK trigger catalog must compile into one enabled block per trigger, with stable block ids/numbers, correct questionnaire or tracer targets, and mq.handoff.v1 caller-return extras.' `
+    -Status ([string]$triggerBlockMapping.Status) `
+    -Evidence $triggerBlockMapping.SummaryPath
 
 $validateSummaryPath = Join-Path $artifactRoot 'validate-config-summary.expected.json'
 $validateStep = Invoke-ToolStep `
@@ -797,6 +931,7 @@ $summary = [ordered]@{
         unityApk = Get-FileEvidence -Path $UnityApk
         questionnaireRender = $questionnaireRenderFacts
         temporalTracerRender = $temporalRenderFacts
+        triggerBlockMapping = $triggerBlockMapping.Summary
         panelReturnContracts = $panelReturnContracts.Summary
         directHandoffPreflight = $dryRunFacts
         questAdb = $questAdbFacts

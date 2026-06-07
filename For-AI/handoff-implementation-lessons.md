@@ -266,6 +266,24 @@ in the handoff, not just the foreground XR bridge. Static gates should prove
 the panel export-and-return contract before physical Quest trials are treated
 as architecture evidence.
 
+## Trigger Mapping Deserves Its Own Evidence Row
+
+Problem: a config validator can say the generated questionnaire JSON is valid
+while hiding the central product promise: loading an APK/catalog creates one
+clear block per trigger, routes questionnaire and temporal-tracer blocks to the
+right packages/actions, and carries caller-return extras for each block.
+
+Solution: `validate-builder-to-quest-workflow.ps1` now writes
+`trigger-block-mapping-static-summary.json` and adds the
+`trigger-block-mapping-contract` requirement. The gate checks mapping schema,
+unique trigger ids, three-digit block numbers, stable block ids, registry block
+coverage, package/action targets, `mq.handoff.v1` extras, and the repository
+demo catalog's demographics then temporal-tracer assignments.
+
+Generalizable rule: APK-first builder workflows need an auditable
+catalog-to-block compiler gate. Do not let trigger discovery and block
+assignment disappear inside a broader "config valid" status.
+
 ## Physical Gates Need Operator-Controlled Wait Windows
 
 Problem: direct handoff and replay/export trials can be validly blocked by

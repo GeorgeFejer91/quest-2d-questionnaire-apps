@@ -118,3 +118,9 @@ Use absolute dates.
   path so the companion stress ladder can prove direct-handoff trial/wait
   clamps without launching Unity or treating dry-run preflight as physical
   headset evidence.
+- Added a dedicated trigger-catalog-to-block mapping gate to the aggregate
+  builder-to-Quest matrix. Future agents should treat
+  `trigger-block-mapping-contract` as the evidence row proving that the
+  APK-first builder discovered triggers, created stable blocks, assigned
+  questionnaire/tracer targets, and preserved `mq.handoff.v1` caller-return
+  extras.

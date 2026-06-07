@@ -111,6 +111,78 @@ function Get-FileEvidence {
     return $evidence
 }
 
+function ConvertFrom-PngBigEndianUInt32 {
+    param([byte[]]$Bytes, [int]$Offset)
+
+    return (
+        ([uint32]$Bytes[$Offset] -shl 24) -bor
+        ([uint32]$Bytes[$Offset + 1] -shl 16) -bor
+        ([uint32]$Bytes[$Offset + 2] -shl 8) -bor
+        [uint32]$Bytes[$Offset + 3]
+    )
+}
+
+function Get-PngEvidence {
+    param([string]$Path, [object]$Render = $null)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return [ordered]@{
+            exists = $false
+            path = $Path
+            validPng = $false
+        }
+    }
+
+    $evidence = Get-FileEvidence -Path $Path
+    $evidence.validPng = $false
+    $evidence.width = 0
+    $evidence.height = 0
+
+    if (-not $evidence.exists) {
+        return $evidence
+    }
+
+    try {
+        $buffer = New-Object byte[] 24
+        $stream = [System.IO.File]::OpenRead($Path)
+        try {
+            $read = $stream.Read($buffer, 0, $buffer.Length)
+        } finally {
+            $stream.Dispose()
+        }
+        $signature = [byte[]](137, 80, 78, 71, 13, 10, 26, 10)
+        $signatureMatches = $read -ge 24
+        for ($i = 0; $i -lt $signature.Length -and $signatureMatches; $i++) {
+            if ($buffer[$i] -ne $signature[$i]) {
+                $signatureMatches = $false
+            }
+        }
+        if ($signatureMatches) {
+            $evidence.validPng = $true
+            $evidence.width = [int](ConvertFrom-PngBigEndianUInt32 -Bytes $buffer -Offset 16)
+            $evidence.height = [int](ConvertFrom-PngBigEndianUInt32 -Bytes $buffer -Offset 20)
+        }
+    } catch {
+        $evidence.pngReadError = $_.Exception.Message
+    }
+
+    if ($null -ne $Render) {
+        $expectedBytes = if ($Render.PSObject.Properties.Name -contains 'byteLength') { [int64]$Render.byteLength } else { 0 }
+        $expectedHash = if ($Render.PSObject.Properties.Name -contains 'sha256') { [string]$Render.sha256 } else { "" }
+        $expectedWidth = if ($Render.PSObject.Properties.Name -contains 'widthDp') { [int]$Render.widthDp } else { 0 }
+        $expectedHeight = if ($Render.PSObject.Properties.Name -contains 'heightDp') { [int]$Render.heightDp } else { 0 }
+
+        $evidence.matchesSummaryByteLength = ($expectedBytes -le 0 -or [int64]$evidence.bytes -eq $expectedBytes)
+        $evidence.matchesSummarySha256 = ([string]::IsNullOrWhiteSpace($expectedHash) -or [string]$evidence.sha256 -eq $expectedHash)
+        $evidence.matchesRenderDimensions = (
+            ($expectedWidth -le 0 -or [int]$evidence.width -eq $expectedWidth) -and
+            ($expectedHeight -le 0 -or [int]$evidence.height -eq $expectedHeight)
+        )
+    }
+
+    return $evidence
+}
+
 function Get-RenderEvidence {
     param([string]$SummaryPath)
 
@@ -124,6 +196,34 @@ function Get-RenderEvidence {
 
     $renders = @($summary.renders)
     $pngs = @($renders | ForEach-Object { $_.png } | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
+    $pngFiles = @($renders | ForEach-Object {
+        $pngEvidence = Get-PngEvidence -Path ([string]$_.png) -Render $_
+        [pscustomobject][ordered]@{
+            stageName = [string]$_.stageName
+            language = [string]$_.language
+            size = "$($_.widthDp)x$($_.heightDp)"
+            status = [string]$_.status
+            png = $pngEvidence
+        }
+    })
+    $missingPngs = @($pngFiles | Where-Object { -not $_.png.exists })
+    $invalidPngs = @($pngFiles | Where-Object { $_.png.exists -and -not $_.png.validPng })
+    $zeroBytePngs = @($pngFiles | Where-Object { $_.png.exists -and [int64]$_.png.bytes -le 0 })
+    $dimensionMismatches = @($pngFiles | Where-Object { $_.png.exists -and ($_.png.PSObject.Properties.Name -contains 'matchesRenderDimensions') -and -not $_.png.matchesRenderDimensions })
+    $byteMismatches = @($pngFiles | Where-Object { $_.png.exists -and ($_.png.PSObject.Properties.Name -contains 'matchesSummaryByteLength') -and -not $_.png.matchesSummaryByteLength })
+    $hashMismatches = @($pngFiles | Where-Object { $_.png.exists -and ($_.png.PSObject.Properties.Name -contains 'matchesSummarySha256') -and -not $_.png.matchesSummarySha256 })
+    $artifactGatePass = (
+        $renders.Count -gt 0 -and
+        $pngs.Count -gt 0 -and
+        @($renders | Where-Object { $_.status -eq 'fail' }).Count -eq 0 -and
+        $missingPngs.Count -eq 0 -and
+        $invalidPngs.Count -eq 0 -and
+        $zeroBytePngs.Count -eq 0 -and
+        $dimensionMismatches.Count -eq 0 -and
+        $byteMismatches.Count -eq 0 -and
+        $hashMismatches.Count -eq 0
+    )
+
     return [ordered]@{
         exists = $true
         summaryPath = $SummaryPath
@@ -135,10 +235,20 @@ function Get-RenderEvidence {
         warnCount = @($renders | Where-Object { $_.status -eq 'warn' }).Count
         failCount = @($renders | Where-Object { $_.status -eq 'fail' }).Count
         pngCount = $pngs.Count
+        pngFileCount = @($pngFiles | Where-Object { $_.png.exists }).Count
+        missingPngCount = $missingPngs.Count
+        invalidPngCount = $invalidPngs.Count
+        zeroBytePngCount = $zeroBytePngs.Count
+        dimensionMismatchCount = $dimensionMismatches.Count
+        byteLengthMismatchCount = $byteMismatches.Count
+        sha256MismatchCount = $hashMismatches.Count
+        uniquePngHashes = @($pngFiles | Where-Object { $_.png.exists -and $_.png.sha256 } | ForEach-Object { $_.png.sha256 } | Select-Object -Unique).Count
+        passesArtifactGate = $artifactGatePass
         stages = @($renders | ForEach-Object { $_.stageName } | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Select-Object -Unique)
         sizes = @($renders | ForEach-Object { "$($_.widthDp)x$($_.heightDp)" } | Where-Object { $_ -notmatch '^x$' } | Select-Object -Unique)
         languages = @($renders | ForEach-Object { $_.language } | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Select-Object -Unique)
         samplePngs = @($pngs | Select-Object -First 3)
+        samplePngEvidence = @($pngFiles | Select-Object -First 3)
     }
 }
 
@@ -623,7 +733,7 @@ $questionnaireRenderFacts = $null
 if (-not $SkipQuestionnaireRender -and $null -ne $generatorSummary -and $generatorSummary.renderSummary) {
     $renderEvidence = [string]$generatorSummary.renderSummary
     $questionnaireRenderFacts = Get-RenderEvidence -SummaryPath $renderEvidence
-    $renderStatus = if ($questionnaireRenderFacts.exists) { 'pass' } else { 'fail' }
+    $renderStatus = if ($questionnaireRenderFacts.exists -and $questionnaireRenderFacts.passesArtifactGate) { 'pass' } else { 'fail' }
 }
 Add-Requirement `
     -Id 'questionnaire-local-render-pack' `
@@ -673,7 +783,7 @@ $temporalRenderFacts = if ($temporalRenderSummaryPath) { Get-RenderEvidence -Sum
 Add-Requirement `
     -Id 'temporal-tracer-local-render-pack' `
     -Requirement 'Temporal tracer blocks must have local render evidence for layout, labels, and start/end gates.' `
-    -Status ($(if ($SkipTemporalRender) { 'skipped' } else { Get-StepStatus $temporalRenderStep })) `
+    -Status ($(if ($SkipTemporalRender) { 'skipped' } elseif ($temporalRenderFacts -and $temporalRenderFacts.exists -and $temporalRenderFacts.passesArtifactGate) { Get-StepStatus $temporalRenderStep } else { 'fail' })) `
     -Evidence ($(if ($temporalRenderSummaryPath) { $temporalRenderSummaryPath } else { '' })) `
     -Facts $temporalRenderFacts
 

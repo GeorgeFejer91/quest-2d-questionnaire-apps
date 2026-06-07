@@ -128,3 +128,7 @@ Use absolute dates.
   `questionnaire-trigger-catalog.json` and compares it against the source
   trigger catalog. Future APK-first validation should inspect packaged
   manifests, not only project-side catalog files.
+- Tightened the builder-to-Quest local render evidence rows so questionnaire
+  and temporal tracer render packs must reference real PNG artifacts with
+  bytes, valid PNG dimensions, matching recorded hashes, and zero failed render
+  rows before the matrix marks them as pass.

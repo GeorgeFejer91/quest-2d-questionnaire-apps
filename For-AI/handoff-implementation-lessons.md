@@ -52,6 +52,25 @@ gate before trusting headset screenshots.
 Generalizable rule: use local renderers to catch visual and layout regressions
 before device-facing evidence collection.
 
+## Render Summaries Must Verify Image Artifacts
+
+Problem: a validation matrix can claim "local render pass" from the existence
+of a `render-summary.json` even when the referenced PNG files are missing,
+empty, stale, corrupt, or dimensionally inconsistent with the screen size under
+test. That weakens the workflow because local renderers are supposed to be the
+fast visual evidence before headset screenshots.
+
+Solution: the builder-to-Quest matrix now inspects every referenced
+questionnaire and temporal tracer PNG. It records file existence, byte count,
+SHA-256, PNG header dimensions, dimension mismatches, hash mismatches, and a
+compact sample of image evidence. The render requirement passes only when the
+summary exists, every render row is non-failing, and all PNG artifacts pass the
+artifact gate.
+
+Generalizable rule: whenever a summary points at evidence files, validate the
+files at the matrix level. Treat summary JSON as an index, not as the visual
+artifact itself.
+
 ## Companion APIs Need Real HTTP Stress Tests
 
 Problem: a builder smoke test can prove that browser JavaScript emits the right

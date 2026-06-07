@@ -54,6 +54,10 @@ Use absolute dates.
 - Added `QuestionnaireConfigs/examples/awe-great-dictator-2d-first-demo.config.json`
   and hardened Android tests so generated custom configs can run the full
   unit-test/APK/render/direct-handoff-preflight spine after assets are applied.
+- Updated the Universal Quest Handoff readiness audit to promote the latest
+  questionnaire-first builder-to-Quest receipt as a first-class 2D-first
+  launcher evidence row, leaving only the real headset trial/signoff gates
+  pending when offline APK, render, and dry-run preflight proof is present.
 
 ## 2026-06-07
 

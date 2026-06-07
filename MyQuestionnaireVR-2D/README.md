@@ -240,8 +240,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\audit-universal-hand
 The audit reports which original workflow requirements are proven, which
 artifact proves each one, and which physical gates still prevent completion.
 It includes the hosted GUI, local companion contract, demo Unity APK/catalog,
-generated questionnaire APK, local render evidence, evidence bundle, direct
-PendingIntent preflight, and real Quest handoff evidence.
+generated questionnaire APK, 2D-first launcher APK/render/preflight evidence,
+evidence bundle, direct PendingIntent preflight, and real Quest handoff
+evidence.
 Use `-RequireComplete` only when the 10 clean real Quest trials and manual
 headset pass are expected to be present; otherwise a
 `pass-with-physical-pending` status is the correct overnight state.

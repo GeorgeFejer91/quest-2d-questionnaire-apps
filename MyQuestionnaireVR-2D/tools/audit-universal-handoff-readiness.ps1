@@ -3,6 +3,7 @@ param(
     [string]$CompanionSummaryPath = "",
     [string]$DirectHandoffRoot = "",
     [string]$ManualSignoffRoot = "",
+    [string]$BuilderToQuestRoot = "",
     [string]$OutputDir = "",
     [string]$RunId = "",
     [int]$RequiredCleanQuestTrials = 10,
@@ -87,7 +88,7 @@ function New-Requirement {
         status = $Status
         evidencePath = $EvidencePath
         evidence = $Evidence
-        missing = @($Missing)
+        missing = @($Missing | Where-Object { $null -ne $_ -and -not [string]::IsNullOrWhiteSpace([string]$_) })
     }
 }
 
@@ -117,6 +118,9 @@ if ([string]::IsNullOrWhiteSpace($DirectHandoffRoot)) {
 }
 if ([string]::IsNullOrWhiteSpace($ManualSignoffRoot)) {
     $ManualSignoffRoot = Join-Path $projectFull 'artifacts\direct-handoff-manual-signoff'
+}
+if ([string]::IsNullOrWhiteSpace($BuilderToQuestRoot)) {
+    $BuilderToQuestRoot = Join-Path $projectFull 'artifacts\builder-to-quest-workflow'
 }
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = Join-Path $projectFull ("artifacts\universal-handoff-readiness\" + $RunId)
@@ -190,6 +194,73 @@ $demoUnityCatalogPass = (
     [string]$unityEmbeddedCatalog.parseStatus -eq 'pass' -and
     $unityEmbeddedTriggerCount -ge 2
 )
+
+$latestTwoDFirstWorkflow = Resolve-LatestSummary `
+    -Root $BuilderToQuestRoot `
+    -FileName 'builder-to-quest-workflow-summary.json' `
+    -Predicate {
+        param($json)
+        if ([string]$json.schemaVersion -ne 'mq.builder_to_quest.workflow_validation.v1') {
+            return $false
+        }
+        $configPath = [string]$json.configPath
+        $config = Read-JsonIfExists -Path $configPath
+        return $config -and
+            $config.chainDefaults -and
+            [string]$config.chainDefaults.startMode -eq 'questionnaireFirst'
+    }
+$twoDFirstWorkflow = if ($latestTwoDFirstWorkflow) { $latestTwoDFirstWorkflow.json } else { $null }
+$twoDFirstConfig = if ($twoDFirstWorkflow) { Read-JsonIfExists -Path ([string]$twoDFirstWorkflow.configPath) } else { $null }
+$twoDFirstApkPath = if ($twoDFirstWorkflow -and $twoDFirstWorkflow.evidence -and $twoDFirstWorkflow.evidence.questionnaireApk) {
+    [string]$twoDFirstWorkflow.evidence.questionnaireApk.path
+} else {
+    ''
+}
+$twoDFirstApkEvidence = Get-FileEvidence -Path $twoDFirstApkPath
+$twoDFirstRender = if ($twoDFirstWorkflow -and $twoDFirstWorkflow.evidence) { $twoDFirstWorkflow.evidence.questionnaireRender } else { $null }
+$twoDFirstDirectPreflight = if ($twoDFirstWorkflow -and $twoDFirstWorkflow.evidence) { $twoDFirstWorkflow.evidence.directHandoffPreflight } else { $null }
+$twoDFirstCounts = if ($twoDFirstWorkflow -and $twoDFirstWorkflow.counts) { $twoDFirstWorkflow.counts } else { $null }
+$twoDFirstNonPass = if ($twoDFirstWorkflow -and $twoDFirstWorkflow.requirements) {
+    @($twoDFirstWorkflow.requirements | Where-Object { $_.status -ne 'pass' -and $_.status -ne 'not-applicable' })
+} else {
+    @()
+}
+$twoDFirstNonPass = @($twoDFirstNonPass)
+$twoDFirstOnlyPhysicalWarning = (
+    $twoDFirstNonPass.Count -eq 1 -and
+    [string]($twoDFirstNonPass[0].id) -eq 'direct-pendingintent-quest-trials' -and
+    [string]($twoDFirstNonPass[0].status) -eq 'warn'
+)
+$twoDFirstNoRemainingWorkflowIssue = ($twoDFirstNonPass.Count -eq 0 -or $twoDFirstOnlyPhysicalWarning)
+$twoDFirstConfigPass = $false
+if ($twoDFirstConfig -and $twoDFirstConfig.chainDefaults) {
+    $twoDFirstConfigPass = (
+        [string]$twoDFirstConfig.chainDefaults.startMode -eq 'questionnaireFirst' -and
+        [string]$twoDFirstConfig.chainDefaults.finishBehavior -eq 'openNext' -and
+        [string]$twoDFirstConfig.chainDefaults.questionnaireMode -eq 'demographics' -and
+        [string]$twoDFirstConfig.chainDefaults.triggerId -eq 'trigger_1_launch_questionnaire' -and
+        -not [string]::IsNullOrWhiteSpace([string]$twoDFirstConfig.chainDefaults.nextPackage)
+    )
+}
+$twoDFirstStatusPass = ($twoDFirstWorkflow -and (@('pass', 'warn') -contains [string]$twoDFirstWorkflow.status))
+$twoDFirstCountsPass = ($twoDFirstCounts -and [int]$twoDFirstCounts.failed -eq 0 -and [int]$twoDFirstCounts.blocked -eq 0 -and [int]$twoDFirstCounts.pending -eq 0)
+$twoDFirstApkPass = ([bool]$twoDFirstApkEvidence.exists -and [int64]$twoDFirstApkEvidence.bytes -gt 0 -and -not [string]::IsNullOrWhiteSpace([string]$twoDFirstApkEvidence.sha256))
+$twoDFirstRenderPass = ($twoDFirstRender -and [bool]$twoDFirstRender.passesArtifactGate)
+$twoDFirstPreflightPass = (
+    $twoDFirstDirectPreflight -and
+    [string]$twoDFirstDirectPreflight.status -eq 'pass' -and
+    [string]$twoDFirstDirectPreflight.preflightStatus -eq 'pass' -and
+    [int](Get-FirstPropertyValue -Object $twoDFirstDirectPreflight -Names @('triggerCount') -Default 0) -ge 2
+)
+$twoDFirstWorkflowPass = (
+    $twoDFirstStatusPass -and
+    $twoDFirstCountsPass -and
+    $twoDFirstNoRemainingWorkflowIssue -and
+    $twoDFirstApkPass -and
+    $twoDFirstRenderPass -and
+    $twoDFirstPreflightPass
+)
+$twoDFirstPass = $twoDFirstConfigPass -and $twoDFirstWorkflowPass
 
 $directSummaries = @()
 if (Test-Path -LiteralPath $DirectHandoffRoot) {
@@ -299,6 +370,13 @@ $requirements += New-Requirement `
     -EvidencePath ([string]$CompanionSummaryPath) `
     -Evidence "directHandoffDryRunContractPass=$($checks.directHandoffDryRunContractPass); workflowDirectHandoffClampGatePass=$($checks.workflowDirectHandoffClampGatePass)"
 $requirements += New-Requirement `
+    -Id '2d-first-launcher-offline-spine' `
+    -Requirement 'The 2D-first launcher variant has a generated questionnaire APK, local render evidence, and direct handoff dry-run preflight, with only physical Quest trials remaining.' `
+    -Status $(if ($twoDFirstPass) { 'proven' } else { 'missing' }) `
+    -EvidencePath $(if ($latestTwoDFirstWorkflow) { [string]$latestTwoDFirstWorkflow.path } else { '' }) `
+    -Evidence $(if ($twoDFirstWorkflow) { "config=$($twoDFirstWorkflow.configPath); status=$($twoDFirstWorkflow.status); configPass=$twoDFirstConfigPass; statusPass=$twoDFirstStatusPass; countsPass=$twoDFirstCountsPass; noRemainingWorkflowIssue=$twoDFirstNoRemainingWorkflowIssue; onlyPhysicalWarning=$twoDFirstOnlyPhysicalWarning; apkPass=$twoDFirstApkPass; renderPass=$twoDFirstRenderPass; preflightPass=$twoDFirstPreflightPass; apk=$($twoDFirstApkEvidence.path); bytes=$($twoDFirstApkEvidence.bytes); sha256=$($twoDFirstApkEvidence.sha256); renderGate=$($twoDFirstRender.passesArtifactGate); preflightStatus=$($twoDFirstDirectPreflight.preflightStatus)" } else { 'no questionnaireFirst builder-to-Quest workflow summary found' }) `
+    -Missing $(if ($twoDFirstPass) { @() } else { @('2d-first-builder-to-quest-offline-spine-pass') })
+$requirements += New-Requirement `
     -Id 'one-real-product-path-trial' `
     -Requirement 'At least one real Quest product-path trial has shown Unity -> questionnaire -> Unity video liveness -> tracer -> Unity completion without shell foreground switching after initial launch.' `
     -Status $(if ($bestRealDirect -and $bestRealDirect.passCount -ge 1 -and $bestRealDirect.failCount -eq 0) { 'proven' } else { 'missing' }) `
@@ -373,6 +451,12 @@ $summary = [ordered]@{
         demoUnityPreflightSummaryPath = $directHandoffDryRunSummaryPath
         demoUnityEmbeddedTriggerCount = $unityEmbeddedTriggerCount
         exampleTriggerCatalogPath = $exampleCatalogPath
+        twoDFirstWorkflowSummaryPath = if ($latestTwoDFirstWorkflow) { $latestTwoDFirstWorkflow.path } else { '' }
+        twoDFirstWorkflowStatus = if ($twoDFirstWorkflow) { $twoDFirstWorkflow.status } else { '' }
+        twoDFirstConfigPath = if ($twoDFirstWorkflow) { $twoDFirstWorkflow.configPath } else { '' }
+        twoDFirstQuestionnaireApk = $twoDFirstApkEvidence
+        twoDFirstRenderGatePass = if ($twoDFirstRender) { [bool]$twoDFirstRender.passesArtifactGate } else { $false }
+        twoDFirstDirectHandoffPreflightStatus = if ($twoDFirstDirectPreflight) { [string]$twoDFirstDirectPreflight.preflightStatus } else { '' }
         bestRealDirectHandoffSummaryPath = if ($bestRealDirect) { $bestRealDirect.path } else { '' }
         bestRealDirectHandoffPassCount = if ($bestRealDirect) { $bestRealDirect.passCount } else { 0 }
         latestRealDirectHandoffSummaryPath = if ($latestRealDirect) { $latestRealDirect.path } else { '' }

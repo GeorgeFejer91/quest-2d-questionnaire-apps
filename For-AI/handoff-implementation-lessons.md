@@ -851,6 +851,25 @@ Generalizable rule: build validation must test the APK as packaged, not the
 developer's favorite default assets. Make tests fixture-aware when config
 builders can change the asset set.
 
+## Variant Evidence Belongs In The Main Audit
+
+Problem: once 2D-first launcher mode existed, the strongest evidence for that
+path lived in a separate builder-to-Quest summary. Future agents could rerun the
+universal readiness audit, see only generic generated-questionnaire coverage,
+and miss that the questionnaire-first chain already had APK, render, and direct
+handoff preflight proof.
+
+Solution: `audit-universal-handoff-readiness.ps1` now finds the latest
+`mq.builder_to_quest.workflow_validation.v1` summary whose packaged config has
+`chainDefaults.startMode=questionnaireFirst`. It promotes that receipt as the
+`2d-first-launcher-offline-spine` requirement when APK build, local render gate,
+dry-run direct handoff preflight, and warning-only physical Quest pending state
+all match.
+
+Generalizable rule: when a workflow gains a supported variant, teach the main
+readiness audit to surface the variant's evidence. Otherwise the variant
+becomes real in code but invisible in operations.
+
 ## Mid-Run Headset Sleep Is A Blocker, Not A Strategy Failure
 
 Problem: a direct handoff trial can launch Unity, return from the first

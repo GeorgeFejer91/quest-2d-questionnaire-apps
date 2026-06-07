@@ -134,6 +134,76 @@ function Invoke-NativeText {
     }
 }
 
+function ConvertTo-CatalogDigest {
+    param([object]$Catalog, [string]$Entry = "", [string]$ParseStatus = "pass", [string]$ParseError = "")
+
+    $triggers = if ($Catalog -and $Catalog.PSObject.Properties.Name -contains 'triggers') { @($Catalog.triggers) } else { @() }
+    $digest = [ordered]@{
+        entry = $Entry
+        parseStatus = $ParseStatus
+        schemaVersion = if ($Catalog) { [string]$Catalog.schemaVersion } else { "" }
+        catalogVersion = if ($Catalog) { [string]$Catalog.catalogVersion } else { "" }
+        scenarioId = if ($Catalog) { [string]$Catalog.scenarioId } else { "" }
+        package = if ($Catalog) { [string]$Catalog.package } else { "" }
+        activity = if ($Catalog) { [string]$Catalog.activity } else { "" }
+        label = if ($Catalog) { [string]$Catalog.label } else { "" }
+        triggerCount = $triggers.Count
+        triggers = @($triggers | ForEach-Object {
+            [pscustomobject][ordered]@{
+                triggerId = [string]$_.triggerId
+                label = [string]$_.label
+                recommendedMode = [string]$_.recommendedMode
+            }
+        })
+    }
+    if (-not [string]::IsNullOrWhiteSpace($ParseError)) {
+        $digest.parseError = $ParseError
+    }
+    return [pscustomobject]$digest
+}
+
+function Compare-TriggerCatalogs {
+    param([object]$SourceCatalog, [object]$EmbeddedCatalog)
+
+    $issues = New-Object 'System.Collections.Generic.List[string]'
+    if ($null -eq $SourceCatalog) {
+        $issues.Add('Source trigger catalog is missing.') | Out-Null
+        return @($issues)
+    }
+    if ($null -eq $EmbeddedCatalog) {
+        $issues.Add('Embedded Unity APK trigger catalog is missing or could not be parsed.') | Out-Null
+        return @($issues)
+    }
+
+    foreach ($field in @('schemaVersion', 'catalogVersion', 'scenarioId', 'package', 'activity')) {
+        $sourceValue = if ($SourceCatalog.PSObject.Properties.Name -contains $field) { [string]$SourceCatalog.$field } else { "" }
+        $embeddedValue = if ($EmbeddedCatalog.PSObject.Properties.Name -contains $field) { [string]$EmbeddedCatalog.$field } else { "" }
+        if ($sourceValue -ne $embeddedValue) {
+            $issues.Add("Embedded trigger catalog $field mismatch: embedded='$embeddedValue' source='$sourceValue'") | Out-Null
+        }
+    }
+
+    $sourceTriggers = @($SourceCatalog.triggers)
+    $embeddedTriggers = @($EmbeddedCatalog.triggers)
+    if ($sourceTriggers.Count -ne $embeddedTriggers.Count) {
+        $issues.Add("Embedded trigger catalog trigger count mismatch: embedded=$($embeddedTriggers.Count) source=$($sourceTriggers.Count)") | Out-Null
+    }
+    foreach ($sourceTrigger in $sourceTriggers) {
+        $triggerId = [string]$sourceTrigger.triggerId
+        $embeddedTrigger = @($embeddedTriggers | Where-Object { [string]$_.triggerId -eq $triggerId } | Select-Object -First 1)
+        if ($embeddedTrigger.Count -lt 1) {
+            $issues.Add("Embedded trigger catalog missing trigger: $triggerId") | Out-Null
+            continue
+        }
+        $embeddedTrigger = $embeddedTrigger[0]
+        if ([string]$sourceTrigger.recommendedMode -ne [string]$embeddedTrigger.recommendedMode) {
+            $issues.Add("Embedded trigger $triggerId recommendedMode mismatch: embedded='$($embeddedTrigger.recommendedMode)' source='$($sourceTrigger.recommendedMode)'") | Out-Null
+        }
+    }
+
+    return @($issues)
+}
+
 function Get-ApkInfo {
     param([string]$Apk, [string]$Name, [string]$OutDir)
     if (-not (Test-Path -LiteralPath $Apk)) {
@@ -158,15 +228,40 @@ function Get-ApkInfo {
 
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $entries = @()
+    $catalogEntryNames = @()
+    $debugPayloadCount = 0
+    $embeddedCatalogs = New-Object 'System.Collections.Generic.List[object]'
     $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $Apk))
     try {
-        $entries = @($zip.Entries | Select-Object FullName, Length)
+        $zipEntries = @($zip.Entries)
+        $entries = @($zipEntries | Select-Object FullName, Length)
+        $catalogEntries = @($zipEntries | Where-Object { $_.FullName -match 'questionnaire-trigger-catalog\.json$' })
+        $debugEntries = @($zipEntries | Where-Object { $_.FullName -match '\.dbg($|\.so$)' })
+        $catalogEntryNames = @($catalogEntries | ForEach-Object { $_.FullName })
+        $debugPayloadCount = @($debugEntries).Count
+        foreach ($catalogEntry in $catalogEntries) {
+            $stream = $null
+            $reader = $null
+            try {
+                $stream = $catalogEntry.Open()
+                $reader = [System.IO.StreamReader]::new($stream, [System.Text.Encoding]::UTF8, $true)
+                $catalogText = $reader.ReadToEnd()
+                $catalog = $catalogText | ConvertFrom-Json
+                $embeddedCatalogs.Add((ConvertTo-CatalogDigest -Catalog $catalog -Entry $catalogEntry.FullName)) | Out-Null
+            } catch {
+                $embeddedCatalogs.Add((ConvertTo-CatalogDigest -Catalog $null -Entry $catalogEntry.FullName -ParseStatus 'fail' -ParseError $_.Exception.Message)) | Out-Null
+            } finally {
+                if ($reader) {
+                    $reader.Dispose()
+                } elseif ($stream) {
+                    $stream.Dispose()
+                }
+            }
+        }
     }
     finally {
         $zip.Dispose()
     }
-    $catalogEntries = @($entries | Where-Object { $_.FullName -match 'questionnaire-trigger-catalog\.json$' })
-    $debugEntries = @($entries | Where-Object { $_.FullName -match '\.dbg($|\.so$)' })
 
     return [ordered]@{
         name = $Name
@@ -177,8 +272,9 @@ function Get-ApkInfo {
         label = $label
         badging = $badgingPath
         manifest = $manifestPath
-        triggerCatalogEntries = @($catalogEntries | ForEach-Object { $_.FullName })
-        debugPayloadCount = @($debugEntries).Count
+        triggerCatalogEntries = $catalogEntryNames
+        embeddedTriggerCatalogs = @($embeddedCatalogs.ToArray())
+        debugPayloadCount = $debugPayloadCount
     }
 }
 
@@ -398,6 +494,10 @@ $triggerCatalog = $null
 if (Test-Path -LiteralPath $TriggerCatalogPath) {
     $triggerCatalog = Get-Content -LiteralPath $TriggerCatalogPath -Raw | ConvertFrom-Json
 }
+$triggerCatalogDigest = if ($triggerCatalog) { ConvertTo-CatalogDigest -Catalog $triggerCatalog -Entry $TriggerCatalogPath } else { $null }
+$unityEmbeddedCatalogs = @($apkInfo.unity.embeddedTriggerCatalogs)
+$parsedUnityEmbeddedCatalogs = @($unityEmbeddedCatalogs | Where-Object { [string]$_.parseStatus -eq 'pass' })
+$primaryUnityEmbeddedCatalog = if ($parsedUnityEmbeddedCatalogs.Count -gt 0) { $parsedUnityEmbeddedCatalogs[0] } else { $null }
 
 $preflightIssues = New-Object 'System.Collections.Generic.List[string]'
 if ($apkInfo.questionnaire.package -ne $questionnairePackage) { $preflightIssues.Add("Questionnaire package mismatch: $($apkInfo.questionnaire.package)") | Out-Null }
@@ -407,6 +507,12 @@ if ($apkInfo.temporalTracer.activity -ne $temporalTracerActivity) { $preflightIs
 if ($apkInfo.unity.package -ne $UnityPackage) { $preflightIssues.Add("Unity package mismatch: $($apkInfo.unity.package)") | Out-Null }
 if ($apkInfo.unity.activity -ne $UnityActivity) { $preflightIssues.Add("Unity activity mismatch: $($apkInfo.unity.activity), expected $UnityActivity") | Out-Null }
 if (@($apkInfo.unity.triggerCatalogEntries).Count -lt 1) { $preflightIssues.Add("Unity APK does not contain a questionnaire trigger catalog.") | Out-Null }
+if ($unityEmbeddedCatalogs.Count -gt 1) { $preflightIssues.Add("Unity APK contains multiple questionnaire trigger catalogs; expected exactly one discoverable manifest.") | Out-Null }
+foreach ($embeddedCatalog in $unityEmbeddedCatalogs) {
+    if ([string]$embeddedCatalog.parseStatus -ne 'pass') {
+        $preflightIssues.Add("Unity APK trigger catalog could not be parsed: $($embeddedCatalog.entry)") | Out-Null
+    }
+}
 if ($triggerCatalog) {
     if ($triggerCatalog.package -ne $UnityPackage) { $preflightIssues.Add("Trigger catalog package mismatch: $($triggerCatalog.package)") | Out-Null }
     if ($triggerCatalog.activity -ne $UnityActivity) { $preflightIssues.Add("Trigger catalog activity mismatch: $($triggerCatalog.activity)") | Out-Null }
@@ -415,6 +521,9 @@ if ($triggerCatalog) {
         if ($triggerIds -notcontains $requiredTrigger) {
             $preflightIssues.Add("Missing trigger in catalog: $requiredTrigger") | Out-Null
         }
+    }
+    foreach ($catalogIssue in (Compare-TriggerCatalogs -SourceCatalog $triggerCatalogDigest -EmbeddedCatalog $primaryUnityEmbeddedCatalog)) {
+        $preflightIssues.Add($catalogIssue) | Out-Null
     }
 } else {
     $preflightIssues.Add("Trigger catalog source file not found: $TriggerCatalogPath") | Out-Null
@@ -427,6 +536,8 @@ $preflightSummary = [ordered]@{
     apkInfo = $apkInfo
     triggerCatalogPath = $TriggerCatalogPath
     triggerCatalog = $triggerCatalog
+    triggerCatalogDigest = $triggerCatalogDigest
+    unityEmbeddedTriggerCatalog = $primaryUnityEmbeddedCatalog
     allowActivityMismatch = [bool]$AllowActivityMismatch
 }
 Write-Json -Value $preflightSummary -Path (Join-Path $preflightDir 'preflight-summary.json') -Depth 12

@@ -284,6 +284,23 @@ Generalizable rule: APK-first builder workflows need an auditable
 catalog-to-block compiler gate. Do not let trigger discovery and block
 assignment disappear inside a broader "config valid" status.
 
+## Inspect The Packaged Trigger Manifest
+
+Problem: source-side trigger catalogs can be correct while the built Unity APK
+contains an old, missing, duplicated, or unparsable trigger manifest. In that
+state the builder and config checks can pass, but the actual APK a participant
+launches is not discoverable in the way the product contract requires.
+
+Solution: direct handoff preflight now opens the Unity APK as a zip, parses the
+embedded `questionnaire-trigger-catalog.json`, and compares its schema,
+scenario, package/activity, trigger ids, and recommended modes against the
+source catalog. The aggregate builder-to-Quest matrix surfaces this embedded
+catalog evidence through the direct handoff preflight facts.
+
+Generalizable rule: when an APK is supposed to advertise a machine-readable
+contract, validate the packaged contract, not only the project file that should
+have produced it.
+
 ## Physical Gates Need Operator-Controlled Wait Windows
 
 Problem: direct handoff and replay/export trials can be validly blocked by

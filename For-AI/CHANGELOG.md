@@ -124,3 +124,7 @@ Use absolute dates.
   APK-first builder discovered triggers, created stable blocks, assigned
   questionnaire/tracer targets, and preserved `mq.handoff.v1` caller-return
   extras.
+- Strengthened direct handoff preflight so it parses the Unity APK's embedded
+  `questionnaire-trigger-catalog.json` and compares it against the source
+  trigger catalog. Future APK-first validation should inspect packaged
+  manifests, not only project-side catalog files.

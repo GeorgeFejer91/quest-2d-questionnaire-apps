@@ -6,6 +6,53 @@ function Write-SourceAssetSnapshotJson {
     $Value | ConvertTo-Json -Depth $Depth | Set-Content -LiteralPath $Path -Encoding UTF8
 }
 
+function ConvertTo-SourceAssetLongPath {
+    param([string]$Path)
+
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+        return $fullPath
+    }
+    if ($fullPath.StartsWith('\\?\', [System.StringComparison]::Ordinal)) {
+        return $fullPath
+    }
+    if ($fullPath.StartsWith('\\', [System.StringComparison]::Ordinal)) {
+        return '\\?\UNC\' + $fullPath.TrimStart('\')
+    }
+    return '\\?\' + $fullPath
+}
+
+function New-SourceAssetDirectory {
+    param([string]$Path)
+
+    [System.IO.Directory]::CreateDirectory((ConvertTo-SourceAssetLongPath -Path $Path)) | Out-Null
+}
+
+function Test-SourceAssetFile {
+    param([string]$Path)
+
+    return [System.IO.File]::Exists((ConvertTo-SourceAssetLongPath -Path $Path))
+}
+
+function Copy-SourceAssetFile {
+    param([string]$Source, [string]$Destination)
+
+    $parent = Split-Path -Parent $Destination
+    if (-not [string]::IsNullOrWhiteSpace($parent)) {
+        New-SourceAssetDirectory -Path $parent
+    }
+    [System.IO.File]::Copy(
+        (ConvertTo-SourceAssetLongPath -Path $Source),
+        (ConvertTo-SourceAssetLongPath -Path $Destination),
+        $true)
+}
+
+function Remove-SourceAssetFile {
+    param([string]$Path)
+
+    [System.IO.File]::Delete((ConvertTo-SourceAssetLongPath -Path $Path))
+}
+
 function Get-SourceAssetRelativePath {
     param([string]$Root, [string]$Path)
 
@@ -28,7 +75,7 @@ function New-SourceAssetDirectorySnapshot {
     )
 
     $sourceExists = Test-Path -LiteralPath $SourceRoot
-    New-Item -ItemType Directory -Force -Path $SnapshotRoot | Out-Null
+    New-SourceAssetDirectory -Path $SnapshotRoot
     $files = @()
     if ($sourceExists) {
         $sourceRootFull = [System.IO.Path]::GetFullPath($SourceRoot)
@@ -36,8 +83,7 @@ function New-SourceAssetDirectorySnapshot {
         foreach ($item in $items) {
             $relativePath = Get-SourceAssetRelativePath -Root $sourceRootFull -Path $item.FullName
             $snapshotPath = Join-Path $SnapshotRoot $relativePath
-            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $snapshotPath) | Out-Null
-            Copy-Item -LiteralPath $item.FullName -Destination $snapshotPath -Force
+            Copy-SourceAssetFile -Source $item.FullName -Destination $snapshotPath
             $files += [ordered]@{
                 relativePath = $relativePath
                 bytes = $item.Length
@@ -75,7 +121,7 @@ function Restore-SourceAssetDirectorySnapshot {
 
     $sourceRootFull = [System.IO.Path]::GetFullPath($SourceRoot)
     $snapshotRootFull = [System.IO.Path]::GetFullPath([string]$Snapshot.snapshotRoot)
-    New-Item -ItemType Directory -Force -Path $sourceRootFull | Out-Null
+    New-SourceAssetDirectory -Path $sourceRootFull
 
     $snapshotPaths = @{}
     $missingSnapshotFiles = @()
@@ -84,15 +130,14 @@ function Restore-SourceAssetDirectorySnapshot {
         $relativePath = [string]$file.relativePath
         $snapshotPaths[$relativePath.ToLowerInvariant()] = $true
         $snapshotFile = Join-Path $snapshotRootFull $relativePath
-        if (-not (Test-Path -LiteralPath $snapshotFile)) {
+        if (-not (Test-SourceAssetFile -Path $snapshotFile)) {
             $missingSnapshotFiles += $relativePath
             continue
         }
         $targetFile = Join-Path $sourceRootFull $relativePath
         $targetFull = [System.IO.Path]::GetFullPath($targetFile)
         [void](Get-SourceAssetRelativePath -Root $sourceRootFull -Path $targetFull)
-        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $targetFull) | Out-Null
-        Copy-Item -LiteralPath $snapshotFile -Destination $targetFull -Force
+        Copy-SourceAssetFile -Source $snapshotFile -Destination $targetFull
         $restoredCount += 1
     }
 
@@ -101,7 +146,7 @@ function Restore-SourceAssetDirectorySnapshot {
     foreach ($currentFile in $currentFiles) {
         $relativePath = Get-SourceAssetRelativePath -Root $sourceRootFull -Path $currentFile.FullName
         if (-not $snapshotPaths.ContainsKey($relativePath.ToLowerInvariant())) {
-            Remove-Item -LiteralPath $currentFile.FullName -Force
+            Remove-SourceAssetFile -Path $currentFile.FullName
             $removedNewFiles += $relativePath
         }
     }
@@ -111,7 +156,7 @@ function Restore-SourceAssetDirectorySnapshot {
     foreach ($file in @($Snapshot.files)) {
         $relativePath = [string]$file.relativePath
         $targetFile = Join-Path $sourceRootFull $relativePath
-        if (-not (Test-Path -LiteralPath $targetFile)) {
+        if (-not (Test-SourceAssetFile -Path $targetFile)) {
             $missingRestoredFiles += $relativePath
             continue
         }

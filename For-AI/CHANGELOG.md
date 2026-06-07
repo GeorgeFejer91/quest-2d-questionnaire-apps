@@ -230,3 +230,6 @@ Use absolute dates.
   product runs can wait for a foreground Unity `Start experiment` input before
   trigger 1, while automated direct-handoff validation bypasses that human gate
   only through explicit `mq.validationAutoStart=true` evidence markers.
+- Hardened source-asset snapshot/restore helpers for Windows long paths after
+  the companion stress ladder exposed a `Copy-Item` failure at 260 characters
+  for nested pictographic assets under descriptive artifact run ids.

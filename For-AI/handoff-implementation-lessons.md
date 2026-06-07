@@ -622,6 +622,26 @@ they should leave source assets exactly as they found them unless the user is
 explicitly running a generation command whose purpose is to rewrite those
 assets.
 
+## Snapshot Helpers Need Long-Path-Safe Copy
+
+Problem: source-asset snapshots can fail on Windows even when the source files
+are valid and the destination parent directory exists. A descriptive workflow
+run id plus nested questionnaire assets such as `PictographicScales/*.png` can
+hit the classic 260-character path boundary, causing `Copy-Item` to throw
+`DirectoryNotFoundException` and abort the companion stress ladder before the
+local companion, APK generation, and render gates run.
+
+Solution: use long-path-aware file helpers inside snapshot/restore code:
+normalize paths, add the `\\?\` prefix on Windows, create directories through
+`System.IO.Directory`, and copy/delete files through `System.IO.File`. Then
+stress the helper with the same long artifact path shape that exposed the
+failure, and rerun the full companion workflow to prove source assets are still
+restored.
+
+Generalizable rule: artifact validators should tolerate realistic long run
+ids. Source-tree hygiene gates are supposed to make stress runs safer, not
+make evidence collection depend on short folder names.
+
 ## Evidence Bundles Need Typed Local Packaging
 
 Problem: GUI-triggered workflows now produce compact receipts and preview

@@ -1679,13 +1679,14 @@ try {
         [int]$physicalGatePacketBundle.entryCount -ge 4 -and
         [int]$physicalGatePacketBundle.txtEntryCount -ge 1 -and
         @($physicalGatePacketBundleEntries | Where-Object { $_ -match 'universal-handoff-physical-gate-packet-summary\.json$' }).Count -gt 0 -and
+        @($physicalGatePacketBundleEntries | Where-Object { $_ -match 'universal-handoff-readiness-audit-summary\.json$' }).Count -gt 0 -and
         @($physicalGatePacketBundleEntries | Where-Object { $_ -match 'physical-gate-runbook\.txt$' }).Count -gt 0 -and
         @($physicalGatePacketBundleEntries | Where-Object { $_ -match 'operator-signoff-template\.json$' }).Count -gt 0 -and
         @($physicalGatePacketBundleEntries | Where-Object { $_ -match 'direct-handoff-manual-signoff-summary\.json$' }).Count -gt 0
     )
     Add-Progress "physical-gate-packet-bundle entries=$($physicalGatePacketBundle.entryCount) text=$($physicalGatePacketBundle.txtEntryCount) validZip=$($physicalGatePacketBundle.validZip)"
     if (-not $physicalGatePacketBundlePass) {
-        throw "Companion evidence-bundle endpoint did not return a portable physical gate packet bundle with runbook and manual signoff template."
+        throw "Companion evidence-bundle endpoint did not return a portable physical gate packet bundle with audit summary, runbook, and manual signoff template."
     }
     $summary['endToEndReceipt']['checks']['physicalGatePacketPass'] = $true
     $summary['endToEndReceipt']['checks']['physicalGatePacketGuardrailsPass'] = $physicalGatePacketGuardrailsPass

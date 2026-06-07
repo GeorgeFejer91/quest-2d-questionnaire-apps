@@ -129,6 +129,10 @@ Use absolute dates.
   packet summary, operator runbook, manual signoff template, and manual signoff
   summary to be present in the zip. The builder smoke test verifies that the
   GUI download target can use a visible physical packet summary.
+- Tightened the portable physical packet bundle check to require the linked
+  Universal Handoff readiness audit summary as well, so the operator zip
+  carries both the runbook/signoff artifacts and the requirement matrix it was
+  prepared from.
 
 ## 2026-06-07
 

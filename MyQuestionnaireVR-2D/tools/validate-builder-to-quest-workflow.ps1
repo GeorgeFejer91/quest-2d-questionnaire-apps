@@ -82,6 +82,8 @@ function Write-Json {
     $Value | ConvertTo-Json -Depth $Depth | Set-Content -LiteralPath $Path -Encoding UTF8
 }
 
+. (Join-Path $PSScriptRoot 'source-asset-snapshot.ps1')
+
 function Read-JsonIfExists {
     param([string]$Path)
 
@@ -678,6 +680,13 @@ Add-Requirement `
 
 $generatorRunId = "$RunId-generator"
 $generatorSummaryPath = Join-Path $ProjectPath "artifacts\apk-generator\$generatorRunId\generator-summary.json"
+$questionnaireAssetRoot = Join-Path $ProjectPath 'app\src\main\assets\questionnaire'
+$questionnaireAssetSnapshotSummaryPath = Join-Path $artifactRoot 'questionnaire-source-assets-snapshot.json'
+$questionnaireAssetRestoreSummaryPath = Join-Path $artifactRoot 'questionnaire-source-assets-restore.json'
+$questionnaireAssetSnapshot = New-SourceAssetDirectorySnapshot `
+    -SourceRoot $questionnaireAssetRoot `
+    -SnapshotRoot (Join-Path $artifactRoot 'questionnaire-source-assets-snapshot') `
+    -SummaryPath $questionnaireAssetSnapshotSummaryPath
 $generatorArgs = @(
     '-NoProfile',
     '-ExecutionPolicy',
@@ -700,6 +709,14 @@ if ($SkipQuestionnaireRender) {
     $generatorArgs += '-RenderPreview'
 }
 $generatorStep = Invoke-ToolStep -Name 'generate-questionnaire-apk-and-render' -Arguments $generatorArgs -SummaryPath $generatorSummaryPath
+$questionnaireAssetRestore = Restore-SourceAssetDirectorySnapshot -Snapshot $questionnaireAssetSnapshot -SourceRoot $questionnaireAssetRoot
+Write-Json -Value $questionnaireAssetRestore -Path $questionnaireAssetRestoreSummaryPath -Depth 8
+Add-Requirement `
+    -Id 'workflow-preserves-source-assets' `
+    -Requirement 'Workflow validation must restore packaged questionnaire source assets after temporary APK generation and render checks.' `
+    -Status ([string]$questionnaireAssetRestore.status) `
+    -Evidence $questionnaireAssetRestoreSummaryPath `
+    -Facts $questionnaireAssetRestore
 $generatorSummary = Read-JsonIfExists -Path $generatorSummaryPath
 if ([string]::IsNullOrWhiteSpace($QuestionnaireApk) -and $null -ne $generatorSummary -and $generatorSummary.apk) {
     $QuestionnaireApk = [string]$generatorSummary.apk
@@ -1042,6 +1059,10 @@ $summary = [ordered]@{
         unityApk = Get-FileEvidence -Path $UnityApk
         questionnaireRender = $questionnaireRenderFacts
         temporalTracerRender = $temporalRenderFacts
+        questionnaireSourceAssets = [ordered]@{
+            snapshot = $questionnaireAssetSnapshotSummaryPath
+            restore = $questionnaireAssetRestore
+        }
         triggerBlockMapping = $triggerBlockMapping.Summary
         panelReturnContracts = $panelReturnContracts.Summary
         directHandoffPreflight = $dryRunFacts

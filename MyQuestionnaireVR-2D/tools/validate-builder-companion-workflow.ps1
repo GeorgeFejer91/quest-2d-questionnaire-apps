@@ -109,6 +109,8 @@ function Read-JsonIfExists {
     return Get-Content -LiteralPath $Path -Encoding UTF8 -Raw | ConvertFrom-Json
 }
 
+. (Join-Path $PSScriptRoot 'source-asset-snapshot.ps1')
+
 function Get-FileEvidence {
     param([string]$Path)
 
@@ -425,6 +427,15 @@ $processArgs = @(
     '-NoOpen'
 )
 
+$questionnaireAssetRoot = Join-Path $ProjectPath 'app\src\main\assets\questionnaire'
+$questionnaireAssetSnapshotSummaryPath = Join-Path $artifactDir 'questionnaire-source-assets-snapshot.json'
+$questionnaireAssetRestoreSummaryPath = Join-Path $artifactDir 'questionnaire-source-assets-restore.json'
+$questionnaireAssetSnapshot = New-SourceAssetDirectorySnapshot `
+    -SourceRoot $questionnaireAssetRoot `
+    -SnapshotRoot (Join-Path $artifactDir 'questionnaire-source-assets-snapshot') `
+    -SummaryPath $questionnaireAssetSnapshotSummaryPath
+$questionnaireAssetRestore = $null
+
 $process = $null
 try {
     Add-Progress 'companion-start'
@@ -687,7 +698,17 @@ try {
         renderPreview = $renderPreviewRequested
         skipBuild = [bool]$SkipApkBuild
     }
-    $generate = Invoke-Json -Method POST -Uri "$baseUrl/api/generate-apk" -Headers $headers -Body $generateBody -TimeoutSec 1800
+    try {
+        $generate = Invoke-Json -Method POST -Uri "$baseUrl/api/generate-apk" -Headers $headers -Body $generateBody -TimeoutSec 1800
+    }
+    finally {
+        $questionnaireAssetRestore = Restore-SourceAssetDirectorySnapshot -Snapshot $questionnaireAssetSnapshot -SourceRoot $questionnaireAssetRoot
+        Write-SourceAssetSnapshotJson -Value $questionnaireAssetRestore -Path $questionnaireAssetRestoreSummaryPath -Depth 8
+        Add-Progress "questionnaire-source-assets-restore=$($questionnaireAssetRestore.status)"
+    }
+    if ([string]$questionnaireAssetRestore.status -ne 'pass') {
+        throw "Companion validator could not restore questionnaire source assets. See $questionnaireAssetRestoreSummaryPath"
+    }
     Add-Progress 'generate-apk-complete'
     if ($generate.status -ne 'ok') {
         throw "Companion generate-apk failed."
@@ -1114,6 +1135,11 @@ try {
         builder = [ordered]@{
             outputDir = $builderOut
             handoffConfig = $handoffConfigPath
+        }
+        sourceAssets = [ordered]@{
+            snapshot = $questionnaireAssetSnapshotSummaryPath
+            restore = $questionnaireAssetRestoreSummaryPath
+            restoreReceipt = $questionnaireAssetRestore
         }
         companion = [ordered]@{
             savedConfigPath = $save.configPath

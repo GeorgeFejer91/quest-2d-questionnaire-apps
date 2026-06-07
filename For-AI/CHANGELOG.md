@@ -184,3 +184,8 @@ Use absolute dates.
   requires a Quest serial, and the default companion launcher now discovers the
   legacy `MyQuestionnaireVR` reference project as a workspace sibling when it
   is not nested inside the repo.
+- Updated `validate-builder-to-quest-workflow.ps1` and the companion workflow
+  validator to snapshot and restore packaged questionnaire source assets around
+  temporary APK-generation checks. The matrix now includes
+  `workflow-preserves-source-assets`, so future workflow stress runs should not
+  leave tracked Android asset files dirty.

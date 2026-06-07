@@ -212,7 +212,10 @@ This validates the config, generates or locates the questionnaire APK, creates
 local questionnaire and tracer render evidence, checks the Unity
 `mq.returnPendingIntent` bridge contract, dry-runs APK package/activity/catalog
 preflight, records Quest ADB versus product-path readiness, and records which
-Quest gates remain pending or blocked.
+Quest gates remain pending or blocked. The workflow and companion validators
+snapshot and restore packaged questionnaire assets they temporarily refresh for
+APK-generation checks, so successful stress runs should not leave tracked
+Android asset files dirty.
 
 In the builder runner, `Run direct handoff` defaults to `Preflight only`. That
 mode sends `dryRun=true` and `skipInstall=true` to `/api/direct-handoff`, uses

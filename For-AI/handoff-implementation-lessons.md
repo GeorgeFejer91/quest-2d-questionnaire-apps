@@ -579,3 +579,24 @@ Generalizable rule: desktop companions launched by humans need the same
 path-resolution behavior as validators. If a workflow depends on a sibling
 reference project, discover the common workspace layout instead of relying on a
 validator-only parameter.
+
+## Validators Should Restore Source Assets
+
+Problem: the builder-to-Quest validator proves APK generation by applying a
+GUI-generated config into `app/src/main/assets/questionnaire/`, but that same
+temporary asset refresh can leave tracked source files dirty after a successful
+stress run. The evidence is valid, yet the worktree looks like there are source
+changes to review or commit.
+
+Solution: `validate-builder-to-quest-workflow.ps1` now snapshots the packaged
+questionnaire asset folder before the APK generator runs, restores that folder
+immediately after the generator/render step finishes, and writes the snapshot
+and restore receipts into the workflow artifact folder. The matrix includes
+`workflow-preserves-source-assets` so source-tree hygiene is audited beside the
+product evidence. The companion stress validator uses the same snapshot/restore
+pattern around its standalone `/api/generate-apk` endpoint check.
+
+Generalizable rule: validation scripts may build temporary runtime assets, but
+they should leave source assets exactly as they found them unless the user is
+explicitly running a generation command whose purpose is to rewrite those
+assets.

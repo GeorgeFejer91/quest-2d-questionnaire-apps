@@ -111,3 +111,6 @@ Use absolute dates.
   stops the run instead of waiting the full readiness window once per requested
   trial; GUI polling and companion job status now account for long readiness
   windows.
+- Added companion stress coverage for direct handoff safety bounds: an
+  out-of-range dry-run request must report backend-clamped `trialCount=10` and
+  `waitForReadySeconds=28800`.

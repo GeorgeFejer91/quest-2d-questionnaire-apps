@@ -396,6 +396,36 @@ try {
         throw "Companion direct-handoff dry run did not produce a usable handoff summary."
     }
 
+    Write-Host "== Direct handoff clamp dry run through companion =="
+    $directHandoffClampStart = Invoke-Json -Method POST -Uri "$baseUrl/api/direct-handoff" -Headers $headers -Body @{
+        questionnaireApk = $questionnaireApkForDirect
+        temporalTracerApk = $temporalTracerApkForDirect
+        unityApk = $unityApkForDirect
+        questSerial = [string]$questReadiness.targetSerial
+        trialCount = 999
+        waitForReadySeconds = 999999
+        waitSeconds = 1
+        dryRun = $true
+        skipInstall = $true
+    } -TimeoutSec 60
+    Add-Progress "direct-handoff-clamp-started=$($directHandoffClampStart.runId)"
+    if ($directHandoffClampStart.status -ne 'ok' -or [string]::IsNullOrWhiteSpace([string]$directHandoffClampStart.runId)) {
+        throw "Companion direct-handoff clamp check did not start a handoff job."
+    }
+    $directHandoffClamp = if ($directHandoffClampStart.jobStatus -eq 'running') {
+        Wait-DirectHandoffJob -BaseUrl $baseUrl -Headers $headers -RunId $directHandoffClampStart.runId -TimeoutSec 900
+    }
+    else {
+        $directHandoffClampStart
+    }
+    Add-Progress "direct-handoff-clamp-complete jobStatus=$($directHandoffClamp.jobStatus) trialCount=$($directHandoffClamp.trialCount) waitForReadySeconds=$($directHandoffClamp.waitForReadySeconds)"
+    if ($directHandoffClamp.handoffStatus -eq 'fail' -or $directHandoffClamp.handoffStatus -eq 'error' -or [string]::IsNullOrWhiteSpace([string]$directHandoffClamp.summaryPath) -or -not (Test-Path -LiteralPath $directHandoffClamp.summaryPath)) {
+        throw "Companion direct-handoff clamp dry run did not produce a usable handoff summary."
+    }
+    if ([int]$directHandoffClamp.trialCount -ne 10 -or [int]$directHandoffClamp.waitForReadySeconds -ne 28800) {
+        throw "Companion direct-handoff clamp mismatch. Expected trialCount=10 and waitForReadySeconds=28800, got trialCount=$($directHandoffClamp.trialCount), waitForReadySeconds=$($directHandoffClamp.waitForReadySeconds)."
+    }
+
     Write-Host "== Save config through companion =="
     $save = Invoke-Json -Method POST -Uri "$baseUrl/api/save-config" -Headers $headers -Body @{ config = $handoffConfig }
     Add-Progress 'save-config-complete'
@@ -509,6 +539,17 @@ try {
             temporalTracerApk = $temporalTracerApkForDirect
             unityApk = $unityApkForDirect
             decisionGate = $directHandoff.decisionGate
+        }
+        directHandoffClampDryRun = [ordered]@{
+            jobStatus = $directHandoffClamp.jobStatus
+            handoffStatus = $directHandoffClamp.handoffStatus
+            requestedTrialCount = 999
+            requestedWaitForReadySeconds = 999999
+            trialCount = $directHandoffClamp.trialCount
+            waitForReadySeconds = $directHandoffClamp.waitForReadySeconds
+            waitSeconds = $directHandoffClamp.waitSeconds
+            runId = $directHandoffClamp.runId
+            summaryPath = $directHandoffClamp.summaryPath
         }
         builder = [ordered]@{
             outputDir = $builderOut

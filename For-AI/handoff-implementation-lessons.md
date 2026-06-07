@@ -266,3 +266,21 @@ Generalizable rule: physical-device validation should be patient but not
 reckless. Make wait windows explicit, bounded, and visible in the evidence
 instead of baking in a magic sleep; never repeat identical physical blockers
 just to fill a trial count.
+
+## Stress Ladders Should Test Their Own Safety Bounds
+
+Problem: adding an operator-controlled readiness wait made unattended Quest
+proof attempts more practical, but an untested clamp is only a UI promise. A
+hosted page, stale frontend, or scripted caller could still send oversized
+trial or wait values if the companion contract did not prove the backend
+normalizes them.
+
+Solution: the companion workflow validator now sends an intentionally
+out-of-range direct handoff dry-run request (`trialCount=999`,
+`waitForReadySeconds=999999`) and asserts the job status reports the backend
+clamps (`trialCount=10`, `waitForReadySeconds=28800`) while still producing a
+valid preflight summary.
+
+Generalizable rule: when a safety bound matters for physical-device
+automation, cover it in the same stress ladder as the happy path. Do not rely
+on frontend constraints alone.

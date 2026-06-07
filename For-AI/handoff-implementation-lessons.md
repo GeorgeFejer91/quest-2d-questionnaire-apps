@@ -1045,6 +1045,16 @@ build/input-modality preflight issue for generic demo APKs.
 Generalizable rule: broad input modality is the default for workflow demos;
 controller-only is an explicit study constraint, not a casual Unity default.
 
+Follow-up: add a machine gate, not just a note. The reusable
+`MyQuestionnaireVR-2D/tools/validate-unity-input-modality.ps1` validator checks
+Unity source metadata and the merged APK manifest for optional hand tracking,
+hand tracking permission/metadata, Android Quest controller OpenXR profiles,
+Android hand OpenXR profiles, and build-script calls that keep those profiles
+enabled. The builder-to-Quest matrix now promotes this as
+`unity-input-modality-guardrails`, so no-headset workflow stress runs can fail
+generic demo/stimulus builds before someone discovers the controller-required
+Horizon dialog inside the headset.
+
 ## 2D-First Launcher Is The Default Demographics Front Door
 
 Problem: when Unity is the first app in the chain, Horizon controller-required

@@ -37,6 +37,10 @@ Use it for:
   video at all. Unity should consume the demographics completion extras, show a
   foreground start target, and only begin video after participant/operator
   input inside Unity.
+- Generic Unity demo/stimulus APKs should pass the input-modality guardrail
+  before headset trials: both Quest controller and hand OpenXR profiles enabled,
+  optional hand tracking in the manifest, and no Horizon controller-required
+  launch dialog unless controller-only input is an explicit study constraint.
 - Background 2D apps, Android shell helpers, and ADB do not own raw controller
   input while a foreground immersive Unity/XR app owns focus.
 - The questionnaire owns questionnaire state and exports. ChainLink or the

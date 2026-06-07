@@ -132,6 +132,14 @@ interaction profiles together, and making the Android manifest's
 `LaunchCheckControllerRequiredDialogActivity` as a build/input-modality
 preflight failure for generic demo apps, not as an acceptable live-test
 surprise.
+Use the static guardrail before headset trials:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\validate-unity-input-modality.ps1 -UnityProjectPath <UnityProjectPath> -UnityApk <UnityApk>
+```
+
+The builder-to-Quest workflow matrix also runs this guardrail as
+`unity-input-modality-guardrails`.
 
 Do not rely on Quest foreground switching alone to freeze and resume media.
 Android/OpenXR focus and pause callbacks can arrive differently across headset

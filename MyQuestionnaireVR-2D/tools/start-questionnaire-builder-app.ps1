@@ -915,6 +915,7 @@ function New-WorkflowReceipt {
     $questionnaireRender = Get-JsonProperty -Object $evidence -Name 'questionnaireRender'
     $temporalRender = Get-JsonProperty -Object $evidence -Name 'temporalTracerRender'
     $triggerBlockMapping = Get-JsonProperty -Object $evidence -Name 'triggerBlockMapping'
+    $unityInputModality = Get-JsonProperty -Object $evidence -Name 'unityInputModality'
     $panelReturnContracts = Get-JsonProperty -Object $evidence -Name 'panelReturnContracts'
     $directPreflight = Get-JsonProperty -Object $evidence -Name 'directHandoffPreflight'
     $questAdb = Get-JsonProperty -Object $evidence -Name 'questAdb'
@@ -949,6 +950,7 @@ function New-WorkflowReceipt {
             questionnaireRenderArtifactGatePass = [bool](Get-JsonProperty -Object $questionnaireRender -Name 'passesArtifactGate' -Default $false)
             temporalTracerRenderArtifactGatePass = [bool](Get-JsonProperty -Object $temporalRender -Name 'passesArtifactGate' -Default $false)
             triggerBlockMappingPass = ([string](Get-JsonProperty -Object $triggerBlockMapping -Name 'status' -Default '') -eq 'pass')
+            unityInputModalityGuardrailsPass = ([string](Get-JsonProperty -Object $unityInputModality -Name 'status' -Default '') -eq 'pass')
             panelReturnContractsPass = ([string](Get-JsonProperty -Object $panelReturnContracts -Name 'status' -Default '') -eq 'pass')
             directHandoffPreflightPass = ([string](Get-JsonProperty -Object $directPreflight -Name 'preflightStatus' -Default (Get-JsonProperty -Object $directPreflight -Name 'status' -Default '')) -eq 'pass')
             questAdbProductPathReady = [bool](Get-JsonProperty -Object $questAdb -Name 'productPathReady' -Default $false)
@@ -971,6 +973,12 @@ function New-WorkflowReceipt {
                 pngFileCount = Get-JsonProperty -Object $temporalRender -Name 'pngFileCount' -Default 0
                 passesArtifactGate = [bool](Get-JsonProperty -Object $temporalRender -Name 'passesArtifactGate' -Default $false)
                 samplePngs = @(Get-JsonProperty -Object $temporalRender -Name 'samplePngs' -Default @())
+            }
+            unityInputModality = [ordered]@{
+                status = Get-JsonProperty -Object $unityInputModality -Name 'status'
+                failedCount = Get-JsonProperty -Object $unityInputModality -Name 'failedCount' -Default 0
+                source = Get-JsonProperty -Object $unityInputModality -Name 'source'
+                apk = Get-JsonProperty -Object $unityInputModality -Name 'apk'
             }
             directHandoffPreflight = [ordered]@{
                 summaryPath = Get-JsonProperty -Object $directPreflight -Name 'summaryPath'

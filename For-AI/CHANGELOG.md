@@ -354,3 +354,9 @@ Use absolute dates.
   mode: download links, dependency status/install controls, connector URL/token
   fields, and Quest detection are available before an APK trigger catalog is
   loaded, while Generate APK and Install APK remain trigger-manifest gated.
+- Added `validate-unity-input-modality.ps1` and wired it into the
+  builder-to-Quest matrix as `unity-input-modality-guardrails`. Generic
+  demo/stimulus Unity builds now have a no-headset gate for optional hand
+  tracking, hand tracking permission/metadata, Quest controller OpenXR
+  profiles, hand OpenXR profiles, and build-script preservation before live
+  trials can stumble into Horizon controller-required launch dialogs.

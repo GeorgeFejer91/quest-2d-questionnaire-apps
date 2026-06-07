@@ -1253,6 +1253,12 @@ try {
         [int]$workflowCounts.failed -eq 0 -and
         [int]$workflowCounts.blocked -eq 0
     )
+    $workflowInputModalityPass = (
+        $workflowSummary -and
+        $workflowSummary.evidence -and
+        $workflowSummary.evidence.unityInputModality -and
+        [string]$workflowSummary.evidence.unityInputModality.status -eq 'pass'
+    )
     $directHandoffDryRunGatePass = (
         [string]$directHandoff.handoffStatus -eq 'pass' -and
         $directHandoff.decisionGate -and
@@ -1316,6 +1322,7 @@ try {
         $evidenceBundlePass -and
         [string]$generateReceipt.status -eq 'pass' -and
         $workflowMatrixInspectable -and
+        $workflowInputModalityPass -and
         [string]$installApk.installStatus -eq 'pass' -and
         [string]$questReplay.replayStatus -ne 'fail' -and
         [bool]$workflowReceipt.offlineEvidenceReady -and
@@ -1341,6 +1348,7 @@ try {
         $workflowArtifactPreviewPass -and
         $evidenceBundlePass -and
         $workflowMatrixInspectable -and
+        $workflowInputModalityPass -and
         [string]$installApk.installStatus -eq 'pass' -and
         [string]$questReplay.replayStatus -ne 'fail' -and
         [bool]$workflowReceipt.offlineEvidenceReady -and
@@ -1385,6 +1393,7 @@ try {
             workflowArtifactPreviewEndpointPass = $workflowArtifactPreviewPass
             evidenceBundleEndpointPass = $evidenceBundlePass
             workflowMatrixInspectable = $workflowMatrixInspectable
+            workflowUnityInputModalityPass = $workflowInputModalityPass
             workflowReceiptInspectable = [bool]$workflowReceipt.offlineEvidenceReady
             runnerJobReceiptsInspectable = $stepJobReceiptsInspectable
             workflowDirectHandoffClampGatePass = $workflowClampGatePass

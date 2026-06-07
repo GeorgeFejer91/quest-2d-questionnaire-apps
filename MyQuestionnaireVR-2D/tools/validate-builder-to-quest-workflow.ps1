@@ -855,6 +855,35 @@ Add-Requirement `
     -Status ($(if ($SkipUnityStatic) { 'skipped' } else { [string]$unityStatic.Status })) `
     -Evidence ($(if ($unityStatic) { $unityStatic.SummaryPath } else { '' }))
 
+$unityInputModalityStep = $null
+$unityInputModalityFacts = $null
+$unityInputModalitySummaryPath = Join-Path $staticDir 'unity-input-modality\unity-input-modality-summary.json'
+if (-not $SkipUnityStatic) {
+    $unityInputModalityStep = Invoke-ToolStep `
+        -Name 'unity-input-modality-static' `
+        -Arguments @(
+            '-NoProfile',
+            '-ExecutionPolicy',
+            'Bypass',
+            '-File',
+            (Join-Path $ProjectPath 'tools\validate-unity-input-modality.ps1'),
+            '-UnityProjectPath',
+            $UnityDemoPath,
+            '-UnityApk',
+            $UnityApk,
+            '-OutputRoot',
+            (Join-Path $staticDir 'unity-input-modality')
+        ) `
+        -SummaryPath $unityInputModalitySummaryPath
+    $unityInputModalityFacts = Read-JsonIfExists -Path $unityInputModalitySummaryPath
+}
+Add-Requirement `
+    -Id 'unity-input-modality-guardrails' `
+    -Requirement 'Generic Unity demo/stimulus APKs must support both Quest controllers and hands, and must not trigger Horizon controller-required launch dialogs unless controller-only input is an explicit study constraint.' `
+    -Status ($(if ($SkipUnityStatic) { 'skipped' } else { Get-StepStatus $unityInputModalityStep })) `
+    -Evidence ($(if ($unityInputModalityStep) { $unityInputModalitySummaryPath } else { '' })) `
+    -Facts $unityInputModalityFacts
+
 $panelReturnContracts = Test-PanelReturnContracts -OutputDir $staticDir
 $steps.Add([ordered]@{
     name = 'panel-return-contracts-static'
@@ -1073,6 +1102,7 @@ $summary = [ordered]@{
             restore = $questionnaireAssetRestore
         }
         triggerBlockMapping = $triggerBlockMapping.Summary
+        unityInputModality = $unityInputModalityFacts
         panelReturnContracts = $panelReturnContracts.Summary
         directHandoffPreflight = $dryRunFacts
         questAdb = $questAdbFacts

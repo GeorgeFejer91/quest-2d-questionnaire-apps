@@ -313,6 +313,29 @@ $twoDFirstWorkflowPass = (
 )
 $twoDFirstPass = $twoDFirstConfigPass -and $twoDFirstWorkflowPass
 
+$latestUnityInputModalityWorkflow = Resolve-LatestSummary `
+    -Root $BuilderToQuestRoot `
+    -FileName 'builder-to-quest-workflow-summary.json' `
+    -Predicate {
+        param($json)
+        return [string]$json.schemaVersion -eq 'mq.builder_to_quest.workflow_validation.v1' -and
+            $json.evidence -and
+            $json.evidence.unityInputModality -and
+            [string]$json.evidence.unityInputModality.status -eq 'pass'
+    }
+$unityInputModality = if ($latestUnityInputModalityWorkflow -and $latestUnityInputModalityWorkflow.json.evidence) {
+    $latestUnityInputModalityWorkflow.json.evidence.unityInputModality
+} else {
+    $null
+}
+$unityInputModalitySourceFacts = if ($unityInputModality) { Get-FirstPropertyValue -Object $unityInputModality -Names @('source') -Default $null } else { $null }
+$unityInputModalityApkFacts = if ($unityInputModality) { Get-FirstPropertyValue -Object $unityInputModality -Names @('apk') -Default $null } else { $null }
+$unityInputModalityReceiptPass = [bool](Get-FirstPropertyValue -Object $checks -Names @('workflowUnityInputModalityPass') -Default $false)
+$unityInputModalityPass = (
+    $unityInputModalityReceiptPass -or
+    ($unityInputModality -and [string]$unityInputModality.status -eq 'pass')
+)
+
 $twoDFirstLauncherSummaries = @()
 if (Test-Path -LiteralPath $TwoDFirstLauncherRoot) {
     $twoDFirstLauncherSummaries = @(
@@ -443,6 +466,13 @@ $requirements += New-Requirement `
     -EvidencePath $directHandoffDryRunSummaryPath `
     -Evidence "unityApk=$($demoUnityApkEvidence.path); bytes=$($demoUnityApkEvidence.bytes); sha256=$($demoUnityApkEvidence.sha256); preflightStatus=$($preflight.status); embeddedTriggerCount=$unityEmbeddedTriggerCount; exampleCatalog=$exampleCatalogPath"
 $requirements += New-Requirement `
+    -Id 'unity-input-modality-guardrails' `
+    -Requirement 'Generic Unity demo/stimulus APKs must pass hand-and-controller input-modality preflight before headset trials, so Horizon controller-required launch dialogs are treated as build issues unless controller-only input is explicit.' `
+    -Status $(if ($unityInputModalityPass) { 'proven' } else { 'missing' }) `
+    -EvidencePath $(if ($latestUnityInputModalityWorkflow) { [string]$latestUnityInputModalityWorkflow.path } else { [string]$CompanionSummaryPath }) `
+    -Evidence "receiptPass=$unityInputModalityReceiptPass; modalityStatus=$([string](Get-FirstPropertyValue -Object $unityInputModality -Names @('status') -Default '')); sourceHandEnabled=$([bool](Get-FirstPropertyValue -Object (Get-FirstPropertyValue -Object $unityInputModalitySourceFacts -Names @('openXrFacts') -Default $null) -Names @('handEnabled') -Default $false)); sourceControllerEnabled=$([bool](Get-FirstPropertyValue -Object (Get-FirstPropertyValue -Object $unityInputModalitySourceFacts -Names @('openXrFacts') -Default $null) -Names @('controllerEnabled') -Default $false)); apkHandTrackingRequiredFalse=$([bool](Get-FirstPropertyValue -Object (Get-FirstPropertyValue -Object $unityInputModalityApkFacts -Names @('manifestFacts') -Default $null) -Names @('handTrackingRequiredFalse') -Default $false))" `
+    -Missing $(if ($unityInputModalityPass) { @() } else { @('unity-input-modality-guardrails-pass') })
+$requirements += New-Requirement `
     -Id 'apk-generation' `
     -Requirement 'The local companion creates a questionnaire APK and records path, byte count, and SHA-256 evidence.' `
     -Status $(if ([bool]$checks.generateApkHashPass) { 'proven' } else { 'missing' }) `
@@ -555,6 +585,9 @@ $summary = [ordered]@{
         demoUnityApk = $demoUnityApkEvidence
         demoUnityPreflightSummaryPath = $directHandoffDryRunSummaryPath
         demoUnityEmbeddedTriggerCount = $unityEmbeddedTriggerCount
+        unityInputModalityWorkflowSummaryPath = if ($latestUnityInputModalityWorkflow) { $latestUnityInputModalityWorkflow.path } else { '' }
+        unityInputModalityPass = $unityInputModalityPass
+        unityInputModality = $unityInputModality
         exampleTriggerCatalogPath = $exampleCatalogPath
         twoDFirstWorkflowSummaryPath = if ($latestTwoDFirstWorkflow) { $latestTwoDFirstWorkflow.path } else { '' }
         twoDFirstWorkflowStatus = if ($twoDFirstWorkflow) { $twoDFirstWorkflow.status } else { '' }

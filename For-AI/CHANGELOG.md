@@ -360,3 +360,7 @@ Use absolute dates.
   tracking, hand tracking permission/metadata, Quest controller OpenXR
   profiles, hand OpenXR profiles, and build-script preservation before live
   trials can stumble into Horizon controller-required launch dialogs.
+- Promoted `unity-input-modality-guardrails` into the Universal Handoff
+  readiness audit so completion summaries keep the controller-dialog prevention
+  gate visible alongside APK/catalog, render, companion, and physical Quest
+  gates.

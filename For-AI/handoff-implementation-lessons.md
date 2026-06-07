@@ -1055,6 +1055,12 @@ enabled. The builder-to-Quest matrix now promotes this as
 generic demo/stimulus builds before someone discovers the controller-required
 Horizon dialog inside the headset.
 
+Audit follow-up: include the same row in
+`audit-universal-handoff-readiness.ps1`. Completion audits should not collapse
+"Unity APK has the right trigger catalog" and "Unity APK will not be blocked by
+generic input-modality metadata" into one check; those are separate ways to
+lose the product path before the first questionnaire opens.
+
 ## 2D-First Launcher Is The Default Demographics Front Door
 
 Problem: when Unity is the first app in the chain, Horizon controller-required

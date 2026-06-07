@@ -38,6 +38,11 @@ Use absolute dates.
   receipts and distinguish offline proof from the remaining physical Quest
   gates. The audit now promotes the demo Unity APK and public example trigger
   catalog as their own evidence row.
+- Added `MyQuestionnaireVR-2D/tools/new-direct-handoff-manual-signoff.ps1` and
+  wired the readiness audit to consume structured manual headset signoff
+  summaries. Future agents should not close the direct handoff manual gate from
+  a loose note; the signoff must reference a real non-dry-run product-path
+  summary and confirm the observed headset sequence.
 - Recorded the Quest Unity input-modality rule: generic demo/stimulus APKs
   should support both hands and controllers, advertise optional hand tracking,
   and treat Horizon controller-required launch dialogs as build/preflight

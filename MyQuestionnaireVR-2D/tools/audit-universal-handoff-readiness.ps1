@@ -2,6 +2,7 @@ param(
     [string]$ProjectPath = (Split-Path -Parent $PSScriptRoot),
     [string]$CompanionSummaryPath = "",
     [string]$DirectHandoffRoot = "",
+    [string]$ManualSignoffRoot = "",
     [string]$OutputDir = "",
     [string]$RunId = "",
     [int]$RequiredCleanQuestTrials = 10,
@@ -114,6 +115,9 @@ $projectFull = [System.IO.Path]::GetFullPath($ProjectPath)
 if ([string]::IsNullOrWhiteSpace($DirectHandoffRoot)) {
     $DirectHandoffRoot = Join-Path $projectFull 'artifacts\quest-direct-handoff'
 }
+if ([string]::IsNullOrWhiteSpace($ManualSignoffRoot)) {
+    $ManualSignoffRoot = Join-Path $projectFull 'artifacts\direct-handoff-manual-signoff'
+}
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = Join-Path $projectFull ("artifacts\universal-handoff-readiness\" + $RunId)
 }
@@ -213,19 +217,43 @@ if (Test-Path -LiteralPath $DirectHandoffRoot) {
 $realDirectSummaries = @($directSummaries | Where-Object { -not [bool]$_.dryRun })
 $bestRealDirect = @($realDirectSummaries | Sort-Object @{ Expression = { $_.passCount }; Descending = $true }, @{ Expression = { $_.lastWriteTime }; Descending = $true } | Select-Object -First 1)
 $latestRealDirect = @($realDirectSummaries | Sort-Object lastWriteTime -Descending | Select-Object -First 1)
+$latestManualSignoff = Resolve-LatestSummary `
+    -Root $ManualSignoffRoot `
+    -FileName 'direct-handoff-manual-signoff-summary.json' `
+    -Predicate {
+        param($json)
+        return [string]$json.status -eq 'pass'
+    }
+$latestManualSignoffAny = Resolve-LatestSummary `
+    -Root $ManualSignoffRoot `
+    -FileName 'direct-handoff-manual-signoff-summary.json'
 $cleanTrialGate = $false
 $manualHeadsetPass = $false
 $defaultApproved = $false
-$manualStatus = 'missing'
+$decisionManualStatus = 'missing'
+$manualSignoffStatus = 'missing'
+$manualSignoffPath = ''
+$latestManualSignoffStatus = ''
+$decisionDefaultApproved = $false
 $directCandidateStatus = 'missing'
 if ($bestRealDirect) {
     $decisionGate = $bestRealDirect.json.decisionGate
     $cleanTrialGate = [bool](Get-FirstPropertyValue -Object $decisionGate -Names @('automatedQuestTrialGatePassed') -Default $false)
-    $manualStatus = [string](Get-FirstPropertyValue -Object $decisionGate -Names @('manualHeadsetPassStatus') -Default 'missing')
-    $manualHeadsetPass = $manualStatus -eq 'pass'
-    $defaultApproved = [bool](Get-FirstPropertyValue -Object $decisionGate -Names @('defaultDirectPendingIntentApproved') -Default $false)
+    $decisionManualStatus = [string](Get-FirstPropertyValue -Object $decisionGate -Names @('manualHeadsetPassStatus') -Default 'missing')
+    $decisionDefaultApproved = [bool](Get-FirstPropertyValue -Object $decisionGate -Names @('defaultDirectPendingIntentApproved') -Default $false)
     $directCandidateStatus = [string](Get-FirstPropertyValue -Object $decisionGate -Names @('candidateAStatus') -Default '')
 }
+if ($latestManualSignoff) {
+    $manualSignoffStatus = [string]$latestManualSignoff.json.status
+    $manualSignoffPath = $latestManualSignoff.path
+}
+elseif ($latestManualSignoffAny) {
+    $latestManualSignoffStatus = [string]$latestManualSignoffAny.json.status
+    $manualSignoffStatus = if ([string]::IsNullOrWhiteSpace($latestManualSignoffStatus)) { 'present-not-pass' } else { $latestManualSignoffStatus }
+    $manualSignoffPath = $latestManualSignoffAny.path
+}
+$manualHeadsetPass = $manualSignoffStatus -eq 'pass'
+$defaultApproved = $cleanTrialGate -and $manualHeadsetPass
 
 $requirements = @()
 $requirements += New-Requirement `
@@ -285,11 +313,11 @@ $requirements += New-Requirement `
     -Missing $(if ($cleanTrialGate) { @() } else { @("need-$RequiredCleanQuestTrials-clean-real-product-path-trials") })
 $requirements += New-Requirement `
     -Id 'manual-headset-pass' `
-    -Requirement 'A human/manual headset pass is required before defaulting direct PendingIntent in production.' `
+    -Requirement 'A structured human/manual headset pass signoff is required before defaulting direct PendingIntent in production.' `
     -Status $(if ($manualHeadsetPass) { 'proven' } else { 'physical-pending' }) `
-    -EvidencePath $(if ($bestRealDirect) { [string]$bestRealDirect.path } else { '' }) `
-    -Evidence "manualHeadsetPassStatus=$manualStatus; defaultDirectPendingIntentApproved=$defaultApproved" `
-    -Missing $(if ($manualHeadsetPass) { @() } else { @('manual-headset-pass-signoff') })
+    -EvidencePath $manualSignoffPath `
+    -Evidence "manualSignoffStatus=$manualSignoffStatus; directDecisionManualStatus=$decisionManualStatus; readinessDefaultDirectPendingIntentApproved=$defaultApproved; directDecisionDefaultDirectPendingIntentApproved=$decisionDefaultApproved" `
+    -Missing $(if ($manualHeadsetPass) { @() } else { @('direct-handoff-manual-signoff-pass') })
 
 $failed = @($requirements | Where-Object { $_.status -eq 'missing' -or $_.status -eq 'contradicted' })
 $physicalPending = @($requirements | Where-Object { $_.status -eq 'physical-pending' })
@@ -350,13 +378,19 @@ $summary = [ordered]@{
         latestRealDirectHandoffSummaryPath = if ($latestRealDirect) { $latestRealDirect.path } else { '' }
         latestRealDirectHandoffStatus = if ($latestRealDirect) { $latestRealDirect.status } else { '' }
         realDirectHandoffSummaryCount = $realDirectSummaries.Count
+        directHandoffManualSignoffSummaryPath = $manualSignoffPath
+        directHandoffManualSignoffStatus = $manualSignoffStatus
+        directDecisionManualHeadsetPassStatus = $decisionManualStatus
+        directDecisionDefaultDirectPendingIntentApproved = $decisionDefaultApproved
         latestPhysicalBlock = $latestPhysicalBlock
     }
     requirements = $requirements
     nextPhysicalGates = [ordered]@{
         requiredCleanQuestTrials = $RequiredCleanQuestTrials
         currentBestCleanQuestTrialPassCount = if ($bestRealDirect) { $bestRealDirect.passCount } else { 0 }
-        manualHeadsetPassStatus = $manualStatus
+        manualHeadsetPassStatus = $manualSignoffStatus
+        manualHeadsetPassSignoffSummaryPath = $manualSignoffPath
+        directDecisionManualHeadsetPassStatus = $decisionManualStatus
         productPathStatus = $receipt.physicalEvidenceStillNeeded.currentProductPathStatus
         productPathBlockedReasons = @($receipt.physicalEvidenceStillNeeded.blockedReasons)
     }

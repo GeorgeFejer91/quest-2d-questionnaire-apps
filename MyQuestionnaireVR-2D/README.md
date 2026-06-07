@@ -225,6 +225,28 @@ Use `-RequireComplete` only when the 10 clean real Quest trials and manual
 headset pass are expected to be present; otherwise a
 `pass-with-physical-pending` status is the correct overnight state.
 
+Create the structured manual headset signoff artifact after a supervised
+product-path run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\new-direct-handoff-manual-signoff.ps1
+```
+
+The script writes operator instructions and an
+`operator-signoff-template.json` under
+`artifacts\direct-handoff-manual-signoff\<run-id>`. After the operator has
+filled and saved that template as `operator-signoff.json`, validate it with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\new-direct-handoff-manual-signoff.ps1 `
+  -OperatorSignoffPath .\artifacts\direct-handoff-manual-signoff\<run-id>\operator-signoff.json `
+  -RequirePass
+```
+
+`audit-universal-handoff-readiness.ps1` consumes the resulting
+`direct-handoff-manual-signoff-summary.json`; a loose verbal signoff is not
+enough to close the manual headset gate.
+
 Run the full builder-to-Quest evidence spine for a saved GUI config:
 
 ```powershell

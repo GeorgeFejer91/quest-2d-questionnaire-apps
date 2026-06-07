@@ -202,6 +202,27 @@ completion audit that preserves the original scope. Make the audit prove
 completion or name exactly which requirement remains, instead of letting green
 subchecks redefine success.
 
+## Manual Gates Need Structured Signoff Artifacts
+
+Problem: the direct handoff validator can prove app-owned focus, logs, exports,
+and media liveness, but a human headset observation can still disappear into a
+chat note. That makes the final production gate fragile: future agents may
+remember that somebody was physically at the headset while the audit still has
+no durable artifact to consume.
+
+Solution: add a direct-handoff manual signoff helper that creates operator
+instructions, a JSON template, and a validation summary. A pass must reference
+a real non-dry-run direct handoff summary, confirm the full Unity ->
+questionnaire -> Unity video resumed -> tracer -> Unity completion sequence,
+and record that no Meta menu navigation or ADB foreground switching occurred
+after the initial Unity launch. The readiness audit consumes the signoff
+summary, while keeping the direct validator's automated decision-gate status
+visible as secondary evidence.
+
+Generalizable rule: manual physical gates need their own typed artifacts.
+Human observation can close a gate only when it is tied to the machine evidence
+that was observed and can be rechecked by the next agent.
+
 ## Browser Controls Need Job Handles For Long Work
 
 Problem: `/api/validate-workflow` originally ran the full builder-to-Quest

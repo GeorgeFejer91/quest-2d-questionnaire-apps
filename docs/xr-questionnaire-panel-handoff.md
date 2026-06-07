@@ -252,6 +252,25 @@ evidence row, so the "starting with a demo Unity" part of the workflow is not
 left implicit. Add `-RequireComplete` when those physical artifacts should
 already exist.
 
+The manual headset pass must be a structured signoff artifact, not just a
+conversation note. Generate the instructions and template with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\new-direct-handoff-manual-signoff.ps1
+```
+
+After a supervised product-path run, save the filled template as
+`operator-signoff.json` and validate it:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\new-direct-handoff-manual-signoff.ps1 -OperatorSignoffPath .\MyQuestionnaireVR-2D\artifacts\direct-handoff-manual-signoff\<run-id>\operator-signoff.json -RequirePass
+```
+
+The signoff must point at a real non-dry-run direct handoff summary and confirm
+the observed Unity start gate, questionnaire return, resumed video motion,
+tracer return, final Unity completion, and absence of Meta menu or ADB
+foreground switching after the initial Unity launch.
+
 The end-to-end builder-to-Quest evidence matrix is:
 
 ```powershell

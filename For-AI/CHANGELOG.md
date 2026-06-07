@@ -121,6 +121,9 @@ Use absolute dates.
   companion receipts and GUI receipt text, with builder smoke coverage so the
   website keeps showing the 2D-first/start-gate, controller-dialog,
   frozen-video/video-resume, and no Meta/ADB recovery rules.
+- Added `operator-guardrail-receipts` to the local companion capability
+  contract and hosted builder validator so the online GUI can detect older
+  companions that do not expose checked operator guardrail receipt fields.
 
 ## 2026-06-07
 

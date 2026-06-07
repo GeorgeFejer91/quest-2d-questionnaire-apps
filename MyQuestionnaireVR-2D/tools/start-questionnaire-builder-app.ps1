@@ -2591,7 +2591,7 @@ function New-StatusPayload {
     $payload = [ordered]@{
         status = 'ok'
         schemaVersion = 'my-questionnaire-2d.builder-app.v1'
-        apiVersion = '2026-06-07.receipts.v1'
+        apiVersion = '2026-06-07.guardrail-receipts.v1'
         receiptSchemaVersion = 'my-questionnaire-2d.builder-receipts.v1'
         mode = $Mode
         url = "http://127.0.0.1:$Port/"
@@ -2626,6 +2626,7 @@ function New-StatusPayload {
             'handoff-readiness-audit',
             'direct-handoff-manual-signoff',
             'physical-gate-packet',
+            'operator-guardrail-receipts',
             'runner-job-receipts',
             'dependency-status',
             'install-dependencies'

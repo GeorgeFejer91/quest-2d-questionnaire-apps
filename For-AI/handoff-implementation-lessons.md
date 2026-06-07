@@ -907,6 +907,23 @@ should show the safety-critical classification rules, not just artifact paths.
 If a stop condition matters during a live headset session, make it visible in
 the same receipt panel that reports the packet is ready.
 
+## Receipt Schema Changes Need Capability Flags
+
+Problem: hosted static GUIs can outlive the local companion binary that an
+operator starts on a PC. If the GUI expects new manual signoff or physical
+packet receipt fields, an older companion can still answer the endpoint but
+hide the guardrail evidence the operator needs.
+
+Solution: add `operator-guardrail-receipts` to the companion status capability
+list and to the hosted/offline GUI's required capability set. The companion
+validator requires the capability and API marker, and the hosted builder
+validator requires the capability id plus the guardrail receipt text in the
+published HTML.
+
+Generalizable rule: when receipt fields become part of the operator contract,
+advertise them as a named capability. A browser dashboard should warn about
+missing evidence semantics, not only missing endpoints.
+
 ## Operator Packets Should Follow Visible Evidence
 
 Problem: a dashboard can show the operator a specific readiness audit and then

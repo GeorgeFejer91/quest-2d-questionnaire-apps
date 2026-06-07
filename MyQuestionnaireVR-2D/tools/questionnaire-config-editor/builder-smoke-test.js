@@ -145,7 +145,7 @@ function loadEditor() {
   vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, applyQuestionnaireFirstDefaults, refresh, buildExperimentBlockRegistry, buildChainPlan, directHandoffWorkflowOptions, workflowValidationPayload, runHeadsetSequenceWithApp, physicalGatePacketPayloadFromEvidence, manualSignoffReceiptText, physicalGatePacketReceiptText };`, context, {
     filename: htmlPath
   });
-  return { context, document };
+  return { context, document, html };
 }
 
 function assertOrderedText(text, tokens, label) {
@@ -157,7 +157,7 @@ function assertOrderedText(text, tokens, label) {
   });
 }
 
-const { context, document } = loadEditor();
+const { context, document, html } = loadEditor();
 const initial = context.__api.buildConfig();
 const initialQuality = context.__api.qualityReport(initial);
 assert(initial.schemaVersion === "my-questionnaire-vr.config.v1", "Default schema version mismatch.");
@@ -184,6 +184,7 @@ assert(document.getElementById("downloadChainPlanButton"), "Chain plan download 
 assert(document.getElementById("headsetSequenceAppButton"), "Headset sequence button was not rendered.");
 assert(typeof context.__api.runHeadsetSequenceWithApp === "function", "Headset sequence runner should be exposed.");
 assert(typeof context.__api.physicalGatePacketPayloadFromEvidence === "function", "Physical packet payload helper should be exposed.");
+assert(html.includes("operator-guardrail-receipts"), "Hosted/offline GUI should require the operator guardrail receipt capability.");
 const sequenceSource = context.__api.runHeadsetSequenceWithApp.toString();
 assertOrderedText(sequenceSource, [
   "\"Save config\"",

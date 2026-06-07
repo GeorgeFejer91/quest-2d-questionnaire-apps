@@ -60,8 +60,9 @@ profile, or repository path.
 `generate-apk-receipt`, `artifact-preview`, `workflow-render-previews`,
 `evidence-bundle`, `workflow-receipt`, `direct-handoff-preflight`,
 `2d-first-launcher-preflight`, `handoff-readiness-audit`,
-`direct-handoff-manual-signoff`, and `runner-job-receipts` so the hosted GUI
-can warn when a user connects an older local companion package.
+`direct-handoff-manual-signoff`, `physical-gate-packet`,
+`operator-guardrail-receipts`, and `runner-job-receipts` so the hosted GUI can
+warn when a user connects an older local companion package.
 
 Render preview thumbnails are fetched from the companion through
 `GET /api/artifact-preview?path=...`. That route must stay token-protected,
@@ -109,6 +110,11 @@ for the next person physically in the headset; it must not install, launch,
 wake, or mark physical evidence as passed. When the GUI is already showing an
 audit or physical packet receipt, it should pass that visible `auditSummaryPath`
 instead of relying on backend latest-file discovery.
+Manual signoff and physical packet receipts should expose
+`operator-guardrail-receipts`: explicit checked guardrails for the 2D-first
+start-gate flow, controller-required launch dialogs, frozen/resumed Unity
+video, and no Meta menu or ADB foreground recovery. The hosted GUI should warn
+on companions that do not advertise this capability.
 `Wake before readiness` should remain opt-in, ignored for `Preflight only`, and
 passed through to `/api/direct-handoff` or `/api/validate-workflow` only for
 live direct-handoff attempts so wake-assisted evidence stays explicit.

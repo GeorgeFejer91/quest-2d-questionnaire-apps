@@ -784,6 +784,7 @@ try {
             waitSeconds = $directHandoffClamp.waitSeconds
             runId = $directHandoffClamp.runId
             summaryPath = $directHandoffClamp.summaryPath
+            decisionGate = $directHandoffClamp.decisionGate
         }
         builder = [ordered]@{
             outputDir = $builderOut

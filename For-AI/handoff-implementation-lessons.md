@@ -379,3 +379,22 @@ handoff success.
 Generalizable rule: when a safety bound matters for physical-device
 automation, cover it in the same stress ladder as the happy path. Do not rely
 on frontend constraints alone.
+
+## Dry-Run Pass Is Not Strategy Approval
+
+Problem: direct handoff dry-runs are useful for proving package preflight, job
+polling, and summary plumbing, but `status=pass` can be misread as approval to
+make direct `PendingIntent` the production default. That would bypass the
+project's actual decision gate: 10 clean product-path Quest trials plus a
+manual headset pass.
+
+Solution: direct handoff summaries now include
+`mq.direct_handoff_strategy_decision.v1`. Dry-runs report
+`candidateAStatus=dry-run-only`,
+`recommendedProductionStrategy=collect-real-quest-product-path-trials`, and
+`defaultDirectPendingIntentApproved=false`. Even after automated real trials
+pass, approval remains false while the manual headset pass is pending.
+
+Generalizable rule: separate automation-health evidence from architecture
+decision evidence. A dry-run can approve the runner contract, but only physical
+product-path evidence should approve the handoff strategy.

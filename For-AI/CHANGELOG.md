@@ -118,6 +118,11 @@ Use absolute dates.
   path so the companion stress ladder can prove direct-handoff trial/wait
   clamps without launching Unity or treating dry-run preflight as physical
   headset evidence.
+- Added an explicit direct handoff strategy decision gate to direct dry-run,
+  live-trial, and companion clamp summaries. Dry-run summaries can pass
+  package/preflight checks, but they now report `candidateAStatus=dry-run-only`
+  and `defaultDirectPendingIntentApproved=false` until real Quest trials and a
+  manual headset pass provide product-path evidence.
 - Added a dedicated trigger-catalog-to-block mapping gate to the aggregate
   builder-to-Quest matrix. Future agents should treat
   `trigger-block-mapping-contract` as the evidence row proving that the

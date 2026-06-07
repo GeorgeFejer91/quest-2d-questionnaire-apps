@@ -283,6 +283,122 @@ function Write-Json {
     $Value | ConvertTo-Json -Depth $Depth | Set-Content -LiteralPath $Path -Encoding UTF8
 }
 
+function New-DirectHandoffDecisionGate {
+    param(
+        [bool]$IsDryRun,
+        [string]$PreflightStatus,
+        [int]$RequestedTrialCount = 0,
+        [int]$AttemptedTrialCount = 0,
+        [int]$PassCount = 0,
+        [int]$WarnCount = 0,
+        [int]$BlockedCount = 0,
+        [int]$FailCount = 0,
+        [object[]]$Trials = @()
+    )
+
+    $requiredTrials = 10
+    $trialArray = @($Trials)
+    $shellSwitchCount = @($trialArray | Where-Object {
+        $_.productPath -and [bool]$_.productPath.shellDrivenForegroundSwitchAfterInitialLaunch
+    }).Count
+    $blockedBeforeProductPathCount = @($trialArray | Where-Object {
+        $_.productPath -and [bool]$_.productPath.blockedBeforeProductPath
+    }).Count
+    $automatedTrialGatePassed = (
+        -not $IsDryRun -and
+        [string]$PreflightStatus -eq 'pass' -and
+        $AttemptedTrialCount -ge $requiredTrials -and
+        $PassCount -ge $requiredTrials -and
+        $WarnCount -eq 0 -and
+        $BlockedCount -eq 0 -and
+        $FailCount -eq 0 -and
+        $shellSwitchCount -eq 0
+    )
+
+    $reasons = New-Object 'System.Collections.Generic.List[string]'
+    if ($IsDryRun) {
+        $reasons.Add('dry-run-preflight-only-no-headset-focus-or-export-proof') | Out-Null
+    }
+    if ([string]$PreflightStatus -ne 'pass') {
+        $reasons.Add("preflight-status-$PreflightStatus") | Out-Null
+    }
+    if (-not $IsDryRun -and $AttemptedTrialCount -lt $requiredTrials) {
+        $reasons.Add("needs-$requiredTrials-real-quest-trials-attempted-$AttemptedTrialCount") | Out-Null
+    }
+    if (-not $IsDryRun -and $PassCount -lt $requiredTrials) {
+        $reasons.Add("needs-$requiredTrials-passing-quest-trials-pass-count-$PassCount") | Out-Null
+    }
+    if ($WarnCount -gt 0) {
+        $reasons.Add("warning-trials-$WarnCount") | Out-Null
+    }
+    if ($BlockedCount -gt 0) {
+        $reasons.Add("blocked-trials-$BlockedCount") | Out-Null
+    }
+    if ($FailCount -gt 0) {
+        $reasons.Add("failed-trials-$FailCount") | Out-Null
+    }
+    if ($shellSwitchCount -gt 0) {
+        $reasons.Add("shell-driven-foreground-switch-after-initial-launch-$shellSwitchCount") | Out-Null
+    }
+    if ($automatedTrialGatePassed) {
+        $reasons.Add('manual-headset-pass-still-required-before-default-approval') | Out-Null
+    }
+
+    $candidateAStatus = 'not-approved'
+    if ($automatedTrialGatePassed) {
+        $candidateAStatus = 'automated-trials-passed-manual-pass-pending'
+    } elseif ($IsDryRun) {
+        $candidateAStatus = 'dry-run-only'
+    } elseif ([string]$PreflightStatus -ne 'pass') {
+        $candidateAStatus = 'preflight-failed'
+    } elseif ($blockedBeforeProductPathCount -gt 0 -and $PassCount -eq 0 -and $FailCount -eq 0) {
+        $candidateAStatus = 'blocked-before-product-path'
+    } elseif ($PassCount -gt 0 -and $FailCount -eq 0) {
+        $candidateAStatus = 'inconclusive-clean-10-required'
+    }
+
+    $recommendedStrategy = 'collect-clean-10-real-quest-trials'
+    if ($automatedTrialGatePassed) {
+        $recommendedStrategy = 'candidate-a-pending-manual-headset-pass'
+    } elseif ([string]$PreflightStatus -ne 'pass') {
+        $recommendedStrategy = 'fix-preflight-before-strategy-selection'
+    } elseif ($IsDryRun) {
+        $recommendedStrategy = 'collect-real-quest-product-path-trials'
+    } elseif ($blockedBeforeProductPathCount -gt 0 -and $PassCount -eq 0) {
+        $recommendedStrategy = 'wait-for-product-path-ready-headset'
+    } elseif ($FailCount -gt 0) {
+        $recommendedStrategy = 'investigate-candidate-a-and-compare-chainlink-fallback'
+    }
+
+    return [ordered]@{
+        schemaVersion = 'mq.direct_handoff_strategy_decision.v1'
+        candidateA = 'direct-pendingintent'
+        candidateB = 'chainlink-trigger-router-fallback'
+        candidateC = 'legacy-caller-package-activity-fallback'
+        requiredTrialsForDefaultDirectPendingIntent = $requiredTrials
+        requestedTrialCount = $RequestedTrialCount
+        attemptedTrialCount = $AttemptedTrialCount
+        passCount = $PassCount
+        warnCount = $WarnCount
+        blockedCount = $BlockedCount
+        failCount = $FailCount
+        dryRun = $IsDryRun
+        preflightStatus = $PreflightStatus
+        shellDrivenForegroundSwitchAfterInitialLaunchCount = $shellSwitchCount
+        blockedBeforeProductPathCount = $blockedBeforeProductPathCount
+        passedRequiredTrials = $automatedTrialGatePassed
+        automatedQuestTrialGatePassed = $automatedTrialGatePassed
+        manualHeadsetPassRequired = $true
+        manualHeadsetPassStatus = 'pending'
+        manualHeadsetPassStillRequired = $true
+        defaultDirectPendingIntentApproved = $false
+        candidateAStatus = $candidateAStatus
+        recommendedProductionStrategy = $recommendedStrategy
+        chainLinkRole = 'plan-compiler-trigger-mapping-validator-and-fallback-router-unless-candidate-a-fails-on-quest'
+        reasons = $reasons.ToArray()
+    }
+}
+
 function Count-Matches {
     param([string]$Text, [string]$Pattern)
     return @([regex]::Matches($Text, $Pattern)).Count
@@ -549,6 +665,10 @@ if ($preflightStatus -eq 'fail') {
         reason = 'preflight-failed'
         outputRoot = $OutputRoot
         preflight = $preflightSummary
+        decisionGate = (New-DirectHandoffDecisionGate `
+            -IsDryRun ([bool]$DryRun) `
+            -PreflightStatus $preflightStatus `
+            -RequestedTrialCount $TrialCount)
         completedAt = (Get-Date).ToUniversalTime().ToString('o')
     }
     Write-Json -Value $summary -Path (Join-Path $OutputRoot 'quest-direct-handoff-validation-summary.json') -Depth 12
@@ -561,6 +681,12 @@ if ($DryRun) {
         status = 'pass'
         dryRun = $true
         outputRoot = $OutputRoot
+        trialCount = $TrialCount
+        attemptedTrialCount = 0
+        passCount = 0
+        warnCount = 0
+        blockedCount = 0
+        failCount = 0
         preflight = $preflightSummary
         plannedProductPath = [ordered]@{
             initialLaunch = "adb shell am start -n $UnityPackage/$UnityActivity"
@@ -572,6 +698,10 @@ if ($DryRun) {
             readinessPollSeconds = [Math]::Max(1, $ReadinessPollSeconds)
             allowLaunchWhenNotReady = [bool]$AllowLaunchWhenNotReady
         }
+        decisionGate = (New-DirectHandoffDecisionGate `
+            -IsDryRun $true `
+            -PreflightStatus $preflightStatus `
+            -RequestedTrialCount $TrialCount)
         completedAt = (Get-Date).ToUniversalTime().ToString('o')
     }
     Write-Json -Value $summary -Path (Join-Path $OutputRoot 'quest-direct-handoff-validation-summary.json') -Depth 12
@@ -894,12 +1024,16 @@ $summary = [ordered]@{
     allowLaunchWhenNotReady = [bool]$AllowLaunchWhenNotReady
     preflight = $preflightSummary
     trials = $trialArray
-    decisionGate = [ordered]@{
-        requiredTrialsForDefaultDirectPendingIntent = 10
-        passedRequiredTrials = ($passCount -ge 10 -and $failCount -eq 0 -and $blockedCount -eq 0 -and $warnCount -eq 0)
-        defaultDirectPendingIntentApproved = ($passCount -ge 10 -and $failCount -eq 0 -and $blockedCount -eq 0 -and $warnCount -eq 0)
-        manualHeadsetPassStillRequired = $true
-    }
+    decisionGate = (New-DirectHandoffDecisionGate `
+        -IsDryRun $false `
+        -PreflightStatus $preflightStatus `
+        -RequestedTrialCount $TrialCount `
+        -AttemptedTrialCount $trialArray.Count `
+        -PassCount $passCount `
+        -WarnCount $warnCount `
+        -BlockedCount $blockedCount `
+        -FailCount $failCount `
+        -Trials $trialArray)
     completedAt = (Get-Date).ToUniversalTime().ToString('o')
 }
 $summaryPath = Join-Path $OutputRoot 'quest-direct-handoff-validation-summary.json'

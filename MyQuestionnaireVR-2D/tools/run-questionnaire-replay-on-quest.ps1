@@ -115,6 +115,12 @@ finally {
 $readinessSummaryPath = Join-Path $readinessRoot 'quest-adb-readiness-summary.json'
 $readinessSummary = Read-JsonIfExists -Path $readinessSummaryPath
 $targetSerial = if ($readinessSummary -and $readinessSummary.targetSerial) { [string]$readinessSummary.targetSerial } else { $Serial }
+$productPathStatus = if ($readinessSummary -and $readinessSummary.PSObject.Properties.Name -contains 'productPathStatus') { [string]$readinessSummary.productPathStatus } else { 'not-probed' }
+$productPathBlockedReasons = if ($readinessSummary -and $readinessSummary.productPath -and $readinessSummary.productPath.PSObject.Properties.Name -contains 'blockedReasons') {
+    @($readinessSummary.productPath.blockedReasons)
+} else {
+    @()
+}
 
 $questValidationSummaryPath = Join-Path $OutputRoot 'quest-validation\my-questionnaire-2d-validation-summary.json'
 $questValidation = $null
@@ -123,12 +129,23 @@ $questValidationOutputPath = Join-Path $OutputRoot 'quest-validate-output.txt'
 $notes = New-Object 'System.Collections.Generic.List[string]'
 
 if ($DryRun) {
-    $status = if ($readinessSummary -and $readinessSummary.readiness -eq 'online') { 'pass' } else { 'warn' }
+    $status = if ($readinessSummary -and $readinessSummary.readiness -eq 'online' -and $productPathStatus -eq 'ready') { 'pass' } else { 'warn' }
     $notes.Add('Dry run: verified APK path and readiness summary without installing, launching, replaying, or pulling exports.') | Out-Null
+    if ($readinessSummary -and $readinessSummary.readiness -eq 'online' -and $productPathStatus -ne 'ready') {
+        $notes.Add("Dry run detected product-path readiness $productPathStatus; live replay/export should wait until the headset is awake and system launch prompts are clear.") | Out-Null
+    }
 }
 elseif ($readinessExitCode -ne 0 -or -not $readinessSummary -or $readinessSummary.readiness -ne 'online') {
     $status = 'fail'
     $notes.Add('Quest ADB readiness did not reach online state; replay/export was not attempted.') | Out-Null
+}
+elseif ($productPathStatus -ne 'ready') {
+    $status = 'blocked'
+    $reasonText = (@($productPathBlockedReasons) -join ', ')
+    if ([string]::IsNullOrWhiteSpace($reasonText)) {
+        $reasonText = $productPathStatus
+    }
+    $notes.Add("Quest product path is blocked ($reasonText); replay/export was not attempted.") | Out-Null
 }
 else {
     $questValidationRoot = Join-Path $OutputRoot 'quest-validation'
@@ -189,6 +206,9 @@ $summary = [ordered]@{
     serial = $targetSerial
     readiness = if ($readinessSummary) { $readinessSummary.readiness } else { 'missing-summary' }
     readinessStatus = if ($readinessSummary) { $readinessSummary.status } else { 'missing-summary' }
+    productPathStatus = $productPathStatus
+    productPathBlockedReasons = @($productPathBlockedReasons)
+    productPath = if ($readinessSummary -and $readinessSummary.PSObject.Properties.Name -contains 'productPath') { $readinessSummary.productPath } else { $null }
     readinessSummaryPath = $readinessSummaryPath
     readinessOutputPath = $readinessOutputPath
     questValidationExitCode = $questValidationExitCode

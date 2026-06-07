@@ -185,6 +185,9 @@ function Get-QuestAdbEvidence {
         unauthorizedCount = $summary.unauthorizedCount
         offlineCount = $summary.offlineCount
         offlineEmulatorCount = $summary.offlineEmulatorCount
+        productPathStatus = if ($summary.PSObject.Properties.Name -contains 'productPathStatus') { $summary.productPathStatus } else { 'not-probed' }
+        productPathReady = if ($summary.PSObject.Properties.Name -contains 'productPathReady') { [bool]$summary.productPathReady } else { $false }
+        productPathBlockedReasons = if ($summary.PSObject.Properties.Name -contains 'productPath' -and $summary.productPath -and $summary.productPath.PSObject.Properties.Name -contains 'blockedReasons') { @($summary.productPath.blockedReasons) } else { @() }
         model = $summary.deviceProps.model
         androidRelease = $summary.deviceProps.androidRelease
         wmSize = $summary.deviceProps.wmSize

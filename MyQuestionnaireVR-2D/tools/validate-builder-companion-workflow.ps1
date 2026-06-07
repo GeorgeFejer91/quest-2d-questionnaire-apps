@@ -273,7 +273,7 @@ try {
 
     Write-Host "== Quest readiness through companion =="
     $questReadiness = Invoke-Json -Method POST -Uri "$baseUrl/api/quest-readiness" -Headers $headers -Body @{ waitSeconds = 0 } -TimeoutSec 120
-    Add-Progress "quest-readiness-complete readiness=$($questReadiness.readiness) status=$($questReadiness.readinessStatus)"
+    Add-Progress "quest-readiness-complete readiness=$($questReadiness.readiness) status=$($questReadiness.readinessStatus) productPath=$($questReadiness.productPathStatus)"
     if ($questReadiness.status -ne 'ok' -or [string]::IsNullOrWhiteSpace([string]$questReadiness.summaryPath) -or -not (Test-Path -LiteralPath $questReadiness.summaryPath)) {
         throw "Companion quest-readiness did not produce a usable readiness summary."
     }
@@ -404,6 +404,9 @@ try {
         questReadiness = [ordered]@{
             status = $questReadiness.readinessStatus
             readiness = $questReadiness.readiness
+            productPathStatus = $questReadiness.productPathStatus
+            productPathReady = [bool]$questReadiness.productPathReady
+            productPathBlockedReasons = if ($questReadiness.productPath -and $questReadiness.productPath.PSObject.Properties.Name -contains 'blockedReasons') { @($questReadiness.productPath.blockedReasons) } else { @() }
             targetSerial = $questReadiness.targetSerial
             onlineCount = $questReadiness.onlineCount
             summaryPath = $questReadiness.summaryPath
@@ -417,6 +420,8 @@ try {
         questReplayDryRun = [ordered]@{
             jobStatus = $questReplay.jobStatus
             replayStatus = $questReplay.replayStatus
+            productPathStatus = $questReplay.productPathStatus
+            productPathBlockedReasons = if ($questReplay.PSObject.Properties.Name -contains 'productPathBlockedReasons') { @($questReplay.productPathBlockedReasons) } else { @() }
             runId = $questReplay.runId
             summaryPath = $questReplay.summaryPath
         }

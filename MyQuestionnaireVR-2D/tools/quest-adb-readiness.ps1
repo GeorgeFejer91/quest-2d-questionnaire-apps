@@ -158,9 +158,90 @@ function Get-Recommendations {
         $recommendations += 'For wireless ADB, enable wireless/debug-over-network in headset developer tools, then rerun with -ConnectAddress <ip:port>.'
     }
     if ($recommendations.Count -eq 0) {
-        $recommendations += 'Quest ADB transport is ready for install/launch stress validation.'
+        $recommendations += 'Quest ADB transport is online for install and file validation.'
     }
     return $recommendations
+}
+
+function Get-FocusLines {
+    param([string]$Text)
+
+    return @($Text -split "`r?`n" | Where-Object {
+        $_ -match 'mCurrentFocus|mFocusedApp|mFocusedWindow|mResumedActivity|topResumedActivity|ResumedActivity'
+    })
+}
+
+function Get-FocusPackage {
+    param([string]$Text)
+
+    $focusText = (Get-FocusLines -Text $Text) -join "`n"
+    foreach ($package in @(
+        'org.questionnairebuilder.stimulusdemo',
+        'org.viscereality.questionnaires2d',
+        'org.viscereality.temporaltracer2d',
+        'org.viscereality.chainlink',
+        'com.oculus.vrshell',
+        'com.oculus.shellenv'
+    )) {
+        if ($focusText -match [regex]::Escape($package)) {
+            return $package
+        }
+    }
+    return ''
+}
+
+function Get-ProductPathState {
+    param(
+        [object]$Power,
+        [object]$Window,
+        [string]$PowerPath,
+        [string]$WindowPath,
+        [string]$FocusPath
+    )
+
+    $powerText = (@($Power.output) | ForEach-Object { $_.ToString() }) -join "`n"
+    $windowText = (@($Window.output) | ForEach-Object { $_.ToString() }) -join "`n"
+    $wakefulness = if ($powerText -match 'mWakefulness=([^\r\n]+)') { $Matches[1].Trim() } else { '' }
+    $interactive = if ($powerText -match 'mInteractive=([^\r\n]+)') { $Matches[1].Trim() } else { '' }
+    $displayState = if ($powerText -match 'Display Power: state=([^\r\n]+)') { $Matches[1].Trim() } else { '' }
+    $focusLines = Get-FocusLines -Text $windowText
+    $focusText = $focusLines -join "`n"
+    $windowSleeping = [bool]($windowText -match 'isSleeping=true')
+    $displayOff = [bool]($displayState -match '^OFF\b' -or $interactive -eq 'false')
+    $headsetAsleep = [bool]($wakefulness -match 'Asleep|Dozing|Dreaming' -or $windowSleeping)
+    $launchCheckDialogFocused = [bool]($focusText -match 'LaunchCheckControllerRequiredDialogActivity' -or $windowText -match 'LaunchCheckControllerRequiredDialogActivity')
+    $blockedReasons = New-Object 'System.Collections.Generic.List[string]'
+    if ($Power.exitCode -ne 0 -or $Window.exitCode -ne 0) {
+        $blockedReasons.Add('adb-power-or-window-probe-failed') | Out-Null
+    }
+    if ($headsetAsleep -or $displayOff) {
+        $blockedReasons.Add('headset-asleep-or-display-off') | Out-Null
+    }
+    if ($launchCheckDialogFocused) {
+        $blockedReasons.Add('horizon-launch-check-controller-dialog-focused') | Out-Null
+    }
+    $ready = $blockedReasons.Count -eq 0
+
+    return [ordered]@{
+        probed = $true
+        status = if ($ready) { 'ready' } else { 'blocked' }
+        ready = $ready
+        blockedReasons = @($blockedReasons)
+        wakefulness = $wakefulness
+        interactive = $interactive
+        displayState = $displayState
+        headsetAsleep = $headsetAsleep
+        displayOff = $displayOff
+        windowSleeping = $windowSleeping
+        launchCheckDialogFocused = $launchCheckDialogFocused
+        focusedPackage = Get-FocusPackage -Text $windowText
+        focusLines = $focusLines
+        powerExitCode = $Power.exitCode
+        windowExitCode = $Window.exitCode
+        powerPath = $PowerPath
+        windowPath = $WindowPath
+        focusPath = $FocusPath
+    }
 }
 
 New-Item -ItemType Directory -Force -Path $OutputRoot | Out-Null
@@ -221,6 +302,12 @@ $usbInventoryPath = Join-Path $OutputRoot 'windows-usb-inventory.json'
 $usbInventory | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $usbInventoryPath -Encoding UTF8
 
 $deviceProps = [ordered]@{}
+$productPath = [ordered]@{
+    probed = $false
+    status = 'not-probed'
+    ready = $false
+    blockedReasons = @()
+}
 if ($null -ne $targetDevice) {
     $serial = [string]$targetDevice.serial
     $probeDir = Join-Path $OutputRoot 'online-device-probes'
@@ -231,9 +318,14 @@ if ($null -ne $targetDevice) {
     $deviceProps.androidRelease = (Invoke-SerialAdbCapture -Serial $serial -Arguments @('shell', 'getprop', 'ro.build.version.release') -OutputPath (Join-Path $probeDir 'android-release.txt')).output -join "`n"
     $deviceProps.wmSize = (Invoke-SerialAdbCapture -Serial $serial -Arguments @('shell', 'wm', 'size') -OutputPath (Join-Path $probeDir 'wm-size.txt')).output -join "`n"
     $deviceProps.wmDensity = (Invoke-SerialAdbCapture -Serial $serial -Arguments @('shell', 'wm', 'density') -OutputPath (Join-Path $probeDir 'wm-density.txt')).output -join "`n"
-    $window = Invoke-SerialAdbCapture -Serial $serial -Arguments @('shell', 'dumpsys', 'window') -OutputPath (Join-Path $probeDir 'dumpsys-window.txt')
-    ($window.output | Where-Object { $_ -match 'mCurrentFocus|mFocusedApp|mResumedActivity|mFocusedWindow' }) |
-        Set-Content -LiteralPath (Join-Path $probeDir 'focused-window.txt') -Encoding UTF8
+    $powerPath = Join-Path $probeDir 'dumpsys-power.txt'
+    $windowPath = Join-Path $probeDir 'dumpsys-window.txt'
+    $focusPath = Join-Path $probeDir 'focused-window.txt'
+    $power = Invoke-SerialAdbCapture -Serial $serial -Arguments @('shell', 'dumpsys', 'power') -OutputPath $powerPath
+    $window = Invoke-SerialAdbCapture -Serial $serial -Arguments @('shell', 'dumpsys', 'window') -OutputPath $windowPath
+    (Get-FocusLines -Text ((@($window.output) | ForEach-Object { $_.ToString() }) -join "`n")) |
+        Set-Content -LiteralPath $focusPath -Encoding UTF8
+    $productPath = Get-ProductPathState -Power $power -Window $window -PowerPath $powerPath -WindowPath $windowPath -FocusPath $focusPath
 }
 
 $readiness = if ($null -ne $targetDevice) {
@@ -251,6 +343,14 @@ $readiness = if ($null -ne $targetDevice) {
 }
 
 $recommendations = @(Get-Recommendations -Devices $latestDevices -UsbInventory $usbInventory -Expected $ExpectedSerial)
+if ($readiness -eq 'online') {
+    if ($productPath.status -eq 'ready') {
+        $recommendations += 'Product-path launch appears ready: headset power/window state is awake and no Horizon launch-check dialog is focused.'
+    } elseif ($productPath.status -eq 'blocked') {
+        $reasonText = (@($productPath.blockedReasons) -join ', ')
+        $recommendations += "ADB is online, but product-path launch is blocked: $reasonText. Put on/wake the headset and clear system launch prompts before direct handoff, replay/export, or foreground validation."
+    }
+}
 $status = if ($readiness -eq 'online') { 'pass' } else { if ($RequireOnline) { 'fail' } else { 'warn' } }
 
 $summary = [ordered]@{
@@ -269,6 +369,9 @@ $summary = [ordered]@{
     offlineEmulatorCount = $offlineEmulators.Count
     targetSerial = if ($targetDevice) { $targetDevice.serial } else { "" }
     deviceProps = $deviceProps
+    productPathStatus = $productPath.status
+    productPathReady = [bool]$productPath.ready
+    productPath = $productPath
     usbInventory = $usbInventory
     usbInventoryPath = $usbInventoryPath
     recommendations = $recommendations
@@ -286,6 +389,7 @@ $summary | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $summaryPath -Enc
     Unauthorized = $unauthorizedDevices.Count
     Offline = $offlineDevices.Count
     TargetSerial = if ($targetDevice) { $targetDevice.serial } else { "" }
+    ProductPathStatus = $productPath.status
     Summary = $summaryPath
 }
 

@@ -93,3 +93,8 @@ Use absolute dates.
   the builder, `/api/quest-replay` plus `/api/quest-replay-job` in the
   companion, and `tools/run-questionnaire-replay-on-quest.ps1` as the wrapper
   around `quest-validate.ps1`.
+- Split Quest readiness into ADB transport readiness and product-path launch
+  readiness. `quest-adb-readiness.ps1` now records `productPathStatus`,
+  blocked reasons, power/window evidence, and focus lines; the GUI warns when
+  direct handoff or replay/export is blocked by headset sleep or Horizon launch
+  dialogs.

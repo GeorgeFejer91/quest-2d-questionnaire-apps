@@ -140,6 +140,11 @@ records `blocked` with `initialUnityLaunchAttempted=false` and does not begin
 the product path. Use `-AllowLaunchWhenNotReady` only when deliberately
 diagnosing the Horizon launch gate.
 
+Use `/api/quest-readiness` or `quest-adb-readiness.ps1` before live trials to
+separate transport from launch readiness. `readiness=online` means ADB can see
+the Quest; `productPathStatus=ready` is the stronger evidence needed before
+replay/export, foreground render, or direct handoff launch attempts.
+
 ## Local Validation
 
 The no-headset stress ladder is:

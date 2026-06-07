@@ -3190,6 +3190,12 @@
       if (data?.jobStatus === "running") {
         return `Quest replay/export running: ${runId}.`;
       }
+      if (data?.replayStatus === "blocked") {
+        const reasons = Array.isArray(data?.productPathBlockedReasons) && data.productPathBlockedReasons.length > 0
+          ? `: ${data.productPathBlockedReasons.join(", ")}`
+          : "";
+        return `Quest replay/export blocked${reasons}; summary: ${data?.summaryPath || "not written yet"}`;
+      }
       return `Quest replay/export ${data?.replayStatus || data?.jobStatus}; summary: ${data?.summaryPath || "not written yet"}`;
     }
 
@@ -3216,10 +3222,26 @@
       return `Missing required: ${missing.join(", ")}.`;
     }
 
+    function questReadinessLevel(data) {
+      if (data?.readiness !== "online") {
+        return "warn";
+      }
+      if (data?.productPathStatus && data.productPathStatus !== "ready") {
+        return "warn";
+      }
+      return "ok";
+    }
+
     function formatQuestReadiness(data) {
       if (data?.readiness === "online") {
         const model = data.model ? ` (${String(data.model).trim()})` : "";
-        return `Quest ready: ${data.targetSerial || "online device"}${model}.`;
+        if (data.productPathStatus && data.productPathStatus !== "ready") {
+          const reasons = Array.isArray(data?.productPath?.blockedReasons) && data.productPath.blockedReasons.length > 0
+            ? `: ${data.productPath.blockedReasons.join(", ")}`
+            : "";
+          return `Quest ADB online: ${data.targetSerial || "online device"}${model}. Product path blocked${reasons}.`;
+        }
+        return `Quest ready: ${data.targetSerial || "online device"}${model}. Product path is clear.`;
       }
       const recommendation = Array.isArray(data?.recommendations) && data.recommendations.length > 0
         ? ` ${data.recommendations[0]}`
@@ -3250,8 +3272,7 @@
         if (data.targetSerial) {
           serialInput.value = data.targetSerial;
         }
-        const level = data.readiness === "online" ? "ok" : "warn";
-        setAppBackendStatus(formatQuestReadiness(data), level);
+        setAppBackendStatus(formatQuestReadiness(data), questReadinessLevel(data));
         setAppBackendLog(data);
       } catch (error) {
         setAppBackendStatus(error.message || String(error), "error");

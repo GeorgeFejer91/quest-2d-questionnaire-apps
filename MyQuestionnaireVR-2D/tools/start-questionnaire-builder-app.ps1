@@ -507,6 +507,9 @@ function Invoke-QuestReadinessCheck {
         runId = $runId
         exitCode = $result.exitCode
         targetSerial = if ($summary) { $summary.targetSerial } else { '' }
+        productPathStatus = if ($summary -and $summary.PSObject.Properties.Name -contains 'productPathStatus') { $summary.productPathStatus } else { 'not-probed' }
+        productPathReady = if ($summary -and $summary.PSObject.Properties.Name -contains 'productPathReady') { [bool]$summary.productPathReady } else { $false }
+        productPath = if ($summary -and $summary.PSObject.Properties.Name -contains 'productPath') { $summary.productPath } else { $null }
         onlineCount = if ($summary) { $summary.onlineCount } else { 0 }
         unauthorizedCount = if ($summary) { $summary.unauthorizedCount } else { 0 }
         offlineCount = if ($summary) { $summary.offlineCount } else { 0 }
@@ -733,6 +736,8 @@ function Get-QuestReplayJobStatus {
         runId = $RunId
         jobStatus = $jobStatus
         replayStatus = $replayStatus
+        productPathStatus = if ($summary -and $summary.PSObject.Properties.Name -contains 'productPathStatus') { $summary.productPathStatus } else { '' }
+        productPathBlockedReasons = if ($summary -and $summary.PSObject.Properties.Name -contains 'productPathBlockedReasons') { @($summary.productPathBlockedReasons) } else { @() }
         exitCode = $exitCode
         processError = $processError
         apk = $job['apk']

@@ -208,3 +208,21 @@ launching the app.
 Generalizable rule: every live device validation rung that can be clicked in a
 dashboard should have a reusable CLI helper, a job endpoint, and a dry-run
 contract test.
+
+## ADB Online Is Not Product-Path Ready
+
+Problem: `adb devices` can report a Quest as online while the headset is asleep
+or Horizon is focused on `LaunchCheckControllerRequiredDialogActivity`. In
+that state install/file checks may still be possible, but replay/export,
+foreground render, and direct PendingIntent handoff trials cannot prove the
+product path.
+
+Solution: split readiness into two facts. `quest-adb-readiness.ps1` keeps
+`readiness=online` for transport, but also writes `productPathStatus`,
+`productPathReady`, power/window artifact paths, focus lines, and blocked
+reasons. The builder warns when product-path launch is blocked, and live
+replay/export stops as `blocked` before launching the panel.
+
+Generalizable rule: device transport readiness and product-path readiness are
+different gates. Dashboards should surface both before letting a user interpret
+launch or handoff evidence.

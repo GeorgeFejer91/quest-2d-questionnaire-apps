@@ -889,6 +889,24 @@ content, not only trusted as documentation. A physical-gate validator should
 fail if the packet loses the exact observations needed to classify a live
 headset problem.
 
+## Receipt Text Should Surface Operator Guardrails
+
+Problem: even after manual signoff templates and physical packets contain the
+right stop conditions, the browser can still summarize them as only "template
+written" or "runbook written". That hides the most important live-headset
+decision rules from the operator surface.
+
+Solution: companion receipts now expose explicit guardrail checks for manual
+signoff prep and physical gate packets. The GUI receipt text names the
+controller-dialog, Unity start-gate, frozen-video/video-resume, and no
+Meta/ADB recovery rules, and the builder smoke test verifies those strings
+from synthetic receipts.
+
+Generalizable rule: when a GUI is the operator cockpit, receipt summaries
+should show the safety-critical classification rules, not just artifact paths.
+If a stop condition matters during a live headset session, make it visible in
+the same receipt panel that reports the packet is ready.
+
 ## Operator Packets Should Follow Visible Evidence
 
 Problem: a dashboard can show the operator a specific readiness audit and then

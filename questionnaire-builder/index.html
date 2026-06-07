@@ -3452,6 +3452,9 @@
       } else {
         pieces.push("operator signoff pending");
       }
+      if (checks.stopConditionGuardrailsPresent || receipt.guardrails?.present) {
+        pieces.push("stop conditions checked: controller dialog, start gate, frozen video, no Meta/ADB recovery");
+      }
       if (checks.directHandoffProductPathPass) {
         pieces.push("real direct handoff summary pass");
       }
@@ -3502,6 +3505,9 @@
       }
       if (checks.manualSignoffTemplateWritten) {
         pieces.push("manual template written");
+      }
+      if (checks.operatorGuardrailsPresent || receipt.guardrails?.present) {
+        pieces.push("operator guardrails included: 2D-first start gate, no controller dialog, no Meta/ADB recovery, video resumes");
       }
       if (receipt.remainingGateCount > 0) {
         pieces.push(`${receipt.remainingGateCount} remaining gates listed`);

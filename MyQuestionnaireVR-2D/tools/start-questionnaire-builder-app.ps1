@@ -321,11 +321,11 @@ function Test-FileExists {
 function Read-TextFileIfExists {
     param([string]$Path)
 
-    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path)) {
+    if (-not (Test-FileExists -Path $Path)) {
         return ''
     }
 
-    $stream = [System.IO.File]::Open($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+    $stream = [System.IO.File]::Open((ConvertTo-LongPath -Path $Path), [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
     try {
         $reader = [System.IO.StreamReader]::new($stream, [System.Text.Encoding]::UTF8, $true)
         try {
@@ -1216,6 +1216,22 @@ function New-DirectHandoffManualSignoffReceipt {
     $templatePath = [string](Get-JsonProperty -Object $evidence -Name 'operatorSignoffTemplatePath' -Default '')
     $operatorSignoffPath = [string](Get-JsonProperty -Object $evidence -Name 'operatorSignoffPath' -Default '')
     $directHandoffSummaryPath = [string](Get-JsonProperty -Object $evidence -Name 'directHandoffSummaryPath' -Default '')
+    $template = Read-JsonFileIfExists -Path $templatePath
+    $templateFields = if ($template) { @($template.PSObject.Properties.Name) } else { @() }
+    $instructionsText = Read-TextFileIfExists -Path $instructionsPath
+    $manualStopConditionChecks = [ordered]@{
+        controllerRequiredDialogObservation = ($templateFields -contains 'observedNoControllerRequiredLaunchDialog')
+        unityStartGateObservation = ($templateFields -contains 'observedUnityStartGate' -and $templateFields -contains 'clickedStartExperimentInUnity')
+        videoResumeObservation = ($templateFields -contains 'observedVideoResumedAfterQuestionnaire')
+        noMetaMenuObservation = ($templateFields -contains 'observedNoMetaMenuNavigation')
+        noAdbForegroundObservation = ($templateFields -contains 'observedNoAdbForegroundSwitchAfterInitialLaunch')
+        instructionsMentionControllerDialog = $instructionsText.Contains('LaunchCheckControllerRequiredDialogActivity')
+        instructionsMentionStartGate = $instructionsText.Contains('Start experiment')
+        instructionsMentionFrozenVideo = $instructionsText.Contains('Unity video stays frozen')
+        instructionsMentionNoMetaMenu = $instructionsText.Contains('Meta menu navigation')
+        instructionsMentionNoAdbForeground = $instructionsText.Contains('ADB foreground switching')
+    }
+    $manualStopConditionGuardrailsPresent = -not @($manualStopConditionChecks.GetEnumerator() | Where-Object { -not [bool]$_.Value })
 
     return [ordered]@{
         schemaVersion = 'mq.builder_manual_signoff.receipt.v1'
@@ -1233,10 +1249,15 @@ function New-DirectHandoffManualSignoffReceipt {
             directHandoffProductPathPass = [bool](Get-JsonProperty -Object $directHandoff -Name 'passesProductPathEvidence' -Default $false)
             requiredObservationsComplete = ($missing.Count -eq 0)
             noValidationIssues = ($issues.Count -eq 0)
+            stopConditionGuardrailsPresent = $manualStopConditionGuardrailsPresent
         }
         counts = [ordered]@{
             missing = $missing.Count
             issues = $issues.Count
+        }
+        guardrails = [ordered]@{
+            present = $manualStopConditionGuardrailsPresent
+            checks = $manualStopConditionChecks
         }
         artifacts = [ordered]@{
             summaryPath = $SummaryPath
@@ -1268,6 +1289,19 @@ function New-PhysicalGatePacketReceipt {
     $auditSummaryPath = [string](Get-JsonProperty -Object $artifacts -Name 'auditSummaryPath' -Default ([string](Get-JsonProperty -Object $audit -Name 'summaryPath' -Default '')))
     $manualSummaryPath = [string](Get-JsonProperty -Object $artifacts -Name 'manualSignoffSummaryPath' -Default ([string](Get-JsonProperty -Object $manualSignoff -Name 'summaryPath' -Default '')))
     $templatePath = [string](Get-JsonProperty -Object $artifacts -Name 'operatorSignoffTemplatePath' -Default ([string](Get-JsonProperty -Object $manualSignoff -Name 'operatorSignoffTemplatePath' -Default '')))
+    $operatorGuardrails = @(Get-JsonProperty -Object $Summary -Name 'operatorGuardrails' -Default @())
+    $operatorGuardrailIds = @($operatorGuardrails | ForEach-Object { [string](Get-JsonProperty -Object $_ -Name 'id' -Default '') })
+    $runbookText = Read-TextFileIfExists -Path $runbookPath
+    $physicalPacketGuardrailChecks = [ordered]@{
+        twoDFirstStartGate = ($operatorGuardrailIds -contains '2d-demographics-unity-start-video')
+        noControllerRequiredDialog = ($operatorGuardrailIds -contains 'no-controller-required-dialog')
+        noMenuOrAdbRecovery = ($operatorGuardrailIds -contains 'no-menu-or-adb-recovery')
+        unityVideoResumesAfterPanel = ($operatorGuardrailIds -contains 'unity-video-resumes-after-panel')
+        runbookMentionsControllerDialog = $runbookText.Contains('LaunchCheckControllerRequiredDialogActivity')
+        runbookMentionsFrozenVideo = $runbookText.Contains('Unity video remains frozen')
+        runbookMentionsMetaMenu = $runbookText.Contains('Meta menu navigation')
+    }
+    $physicalPacketGuardrailsPresent = -not @($physicalPacketGuardrailChecks.GetEnumerator() | Where-Object { -not [bool]$_.Value })
 
     return [ordered]@{
         schemaVersion = 'mq.builder_physical_gate_packet.receipt.v1'
@@ -1283,9 +1317,15 @@ function New-PhysicalGatePacketReceipt {
             auditSummaryPresent = (Test-FileExists -Path $auditSummaryPath)
             manualSignoffTemplateWritten = (Test-FileExists -Path $templatePath)
             manualSignoffSummaryPresent = (Test-FileExists -Path $manualSummaryPath)
+            operatorGuardrailsPresent = $physicalPacketGuardrailsPresent
         }
         counts = $counts
         remainingGateCount = $remainingRequirements.Count
+        guardrails = [ordered]@{
+            present = $physicalPacketGuardrailsPresent
+            ids = $operatorGuardrailIds
+            checks = $physicalPacketGuardrailChecks
+        }
         artifacts = [ordered]@{
             summaryPath = $SummaryPath
             runbookPath = $runbookPath

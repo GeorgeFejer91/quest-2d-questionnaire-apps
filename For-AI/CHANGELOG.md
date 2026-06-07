@@ -117,6 +117,10 @@ Use absolute dates.
   the controller-dialog, Unity Start experiment, frozen-video, Meta menu, and
   ADB foreground-switching guardrails before the offline stress ladder can
   pass.
+- Exposed manual signoff and physical packet stop-condition guardrail checks in
+  companion receipts and GUI receipt text, with builder smoke coverage so the
+  website keeps showing the 2D-first/start-gate, controller-dialog,
+  frozen-video/video-resume, and no Meta/ADB recovery rules.
 
 ## 2026-06-07
 

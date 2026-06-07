@@ -961,7 +961,7 @@ try {
         throw "Companion direct-handoff-manual-signoff did not produce a usable summary."
     }
     $manualSignoffReceipt = if ($manualSignoff.PSObject.Properties.Name -contains 'manualSignoffReceipt') { $manualSignoff.manualSignoffReceipt } else { $null }
-    if ($null -eq $manualSignoffReceipt -or [string]$manualSignoffReceipt.kind -ne 'direct-handoff-manual-signoff' -or -not [bool]$manualSignoffReceipt.checks.instructionsWritten -or -not [bool]$manualSignoffReceipt.checks.operatorTemplateWritten -or -not [bool]$manualSignoffReceipt.physicalQuestProductPathPending) {
+    if ($null -eq $manualSignoffReceipt -or [string]$manualSignoffReceipt.kind -ne 'direct-handoff-manual-signoff' -or -not [bool]$manualSignoffReceipt.checks.instructionsWritten -or -not [bool]$manualSignoffReceipt.checks.operatorTemplateWritten -or -not [bool]$manualSignoffReceipt.checks.stopConditionGuardrailsPresent -or -not [bool]$manualSignoffReceipt.physicalQuestProductPathPending) {
         throw "Companion direct-handoff-manual-signoff did not return a valid pending manual signoff receipt."
     }
     $manualSignoffArtifacts = Get-JsonProperty -Object $manualSignoffReceipt -Name 'artifacts' -Default ([pscustomobject]@{})
@@ -982,6 +982,8 @@ try {
         $manualSignoffTemplateFields -contains 'observedVideoResumedAfterQuestionnaire' -and
         $manualSignoffTemplateFields -contains 'observedNoMetaMenuNavigation' -and
         $manualSignoffTemplateFields -contains 'observedNoAdbForegroundSwitchAfterInitialLaunch' -and
+        [bool]$manualSignoffReceipt.checks.stopConditionGuardrailsPresent -and
+        [bool]$manualSignoffReceipt.guardrails.present -and
         $manualSignoffInstructionsText.Contains('LaunchCheckControllerRequiredDialogActivity') -and
         $manualSignoffInstructionsText.Contains('controller-required launch prompt') -and
         $manualSignoffInstructionsText.Contains('Start experiment') -and
@@ -1637,7 +1639,7 @@ try {
         throw "Companion physical-gate-packet did not produce a usable packet summary."
     }
     $physicalGatePacketReceipt = if ($physicalGatePacket.PSObject.Properties.Name -contains 'physicalGatePacketReceipt') { $physicalGatePacket.physicalGatePacketReceipt } else { $null }
-    if ($null -eq $physicalGatePacketReceipt -or [string]$physicalGatePacketReceipt.kind -ne 'universal-handoff-physical-gate-packet' -or -not [bool]$physicalGatePacketReceipt.checks.runbookWritten -or -not [bool]$physicalGatePacketReceipt.checks.auditSummaryPresent -or -not [bool]$physicalGatePacketReceipt.checks.manualSignoffTemplateWritten -or [string]$physicalGatePacketReceipt.status -eq 'needs-offline-attention') {
+    if ($null -eq $physicalGatePacketReceipt -or [string]$physicalGatePacketReceipt.kind -ne 'universal-handoff-physical-gate-packet' -or -not [bool]$physicalGatePacketReceipt.checks.runbookWritten -or -not [bool]$physicalGatePacketReceipt.checks.auditSummaryPresent -or -not [bool]$physicalGatePacketReceipt.checks.manualSignoffTemplateWritten -or -not [bool]$physicalGatePacketReceipt.checks.operatorGuardrailsPresent -or [string]$physicalGatePacketReceipt.status -eq 'needs-offline-attention') {
         throw "Companion physical-gate-packet did not return a valid operator-ready receipt."
     }
     $physicalGatePacketSummary = Read-JsonIfExists -Path ([string]$physicalGatePacket.summaryPath)
@@ -1655,6 +1657,8 @@ try {
         $physicalGatePacketGuardrailIds -contains 'no-controller-required-dialog' -and
         $physicalGatePacketGuardrailIds -contains 'no-menu-or-adb-recovery' -and
         $physicalGatePacketGuardrailIds -contains 'unity-video-resumes-after-panel' -and
+        [bool]$physicalGatePacketReceipt.checks.operatorGuardrailsPresent -and
+        [bool]$physicalGatePacketReceipt.guardrails.present -and
         $physicalGatePacketRunbookText.Contains('LaunchCheckControllerRequiredDialogActivity') -and
         $physicalGatePacketRunbookText.Contains('Unity video remains frozen') -and
         $physicalGatePacketRunbookText.Contains('Meta menu navigation')

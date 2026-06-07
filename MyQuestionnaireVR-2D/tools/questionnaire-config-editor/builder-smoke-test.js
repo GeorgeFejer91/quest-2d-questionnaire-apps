@@ -142,7 +142,7 @@ function loadEditor() {
   };
   context.window = context;
   vm.createContext(context);
-  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, applyQuestionnaireFirstDefaults, refresh, buildExperimentBlockRegistry, buildChainPlan, directHandoffWorkflowOptions, workflowValidationPayload, runHeadsetSequenceWithApp, physicalGatePacketPayloadFromEvidence };`, context, {
+  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, applyQuestionnaireFirstDefaults, refresh, buildExperimentBlockRegistry, buildChainPlan, directHandoffWorkflowOptions, workflowValidationPayload, runHeadsetSequenceWithApp, physicalGatePacketPayloadFromEvidence, manualSignoffReceiptText, physicalGatePacketReceiptText };`, context, {
     filename: htmlPath
   });
   return { context, document };
@@ -226,6 +226,40 @@ const companionPacketPayload = context.__api.physicalGatePacketPayloadFromEviden
   endToEndReceipt: { artifacts: { summaryPath: "C:\\artifacts\\companion-summary.json" } }
 });
 assert(companionPacketPayload.companionSummaryPath === "C:\\artifacts\\companion-summary.json", "Physical packet payload should fall back to the visible companion workflow summary.");
+const manualGuardrailText = context.__api.manualSignoffReceiptText({
+  manualSignoffReceipt: {
+    status: "pending-operator-signoff",
+    checks: {
+      instructionsWritten: true,
+      operatorTemplateWritten: true,
+      stopConditionGuardrailsPresent: true
+    },
+    counts: {},
+    artifacts: {}
+  }
+});
+assert(manualGuardrailText.includes("controller dialog"), "Manual signoff receipt should show the controller-dialog stop condition.");
+assert(manualGuardrailText.includes("start gate"), "Manual signoff receipt should show the Unity start-gate stop condition.");
+assert(manualGuardrailText.includes("frozen video"), "Manual signoff receipt should show the frozen-video stop condition.");
+assert(manualGuardrailText.includes("Meta/ADB recovery"), "Manual signoff receipt should show the no Meta/ADB recovery stop condition.");
+const physicalGuardrailText = context.__api.physicalGatePacketReceiptText({
+  physicalGatePacketReceipt: {
+    status: "ready-for-operator",
+    checks: {
+      runbookWritten: true,
+      manualSignoffTemplateWritten: true,
+      operatorGuardrailsPresent: true
+    },
+    counts: { requirements: 12, proven: 9, physicalPending: 3, failedOrMissing: 0 },
+    remainingGateCount: 3,
+    physicalQuestProductPathPending: true,
+    artifacts: {}
+  }
+});
+assert(physicalGuardrailText.includes("2D-first start gate"), "Physical packet receipt should show the 2D-first start-gate guardrail.");
+assert(physicalGuardrailText.includes("no controller dialog"), "Physical packet receipt should show the no-controller-dialog guardrail.");
+assert(physicalGuardrailText.includes("no Meta/ADB recovery"), "Physical packet receipt should show the no Meta/ADB recovery guardrail.");
+assert(physicalGuardrailText.includes("video resumes"), "Physical packet receipt should show the video-resume guardrail.");
 assert(document.getElementById("pipelineCommands").textContent.includes("quest-validate.ps1"), "Quest validation command was not rendered.");
 assert(document.getElementById("pipelineCommands").textContent.includes("render-questionnaire-visuals.ps1"), "Foreground render command was not rendered.");
 assert(document.getElementById("pipelineCommands").textContent.includes("quest-chain-validate.ps1"), "Quest chain validation command was not rendered.");

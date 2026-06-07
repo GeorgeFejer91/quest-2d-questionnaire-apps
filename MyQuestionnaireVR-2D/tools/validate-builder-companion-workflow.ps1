@@ -484,6 +484,47 @@ try {
         throw "Companion validate-workflow did not produce a usable workflow summary."
     }
 
+    Write-Host "== Validate workflow direct handoff clamp dry run through companion =="
+    $workflowClampBody = @{
+        config = $handoffConfig
+        skipBuild = $true
+        skipQuestionnaireRender = $true
+        skipTemporalRender = $true
+        runQuestReadiness = $false
+        runQuestDirectHandoff = $true
+        dryRunQuestDirectHandoff = $true
+        skipInstall = $true
+        questSerial = [string]$questReadiness.targetSerial
+        questTrials = 999
+        waitForReadySeconds = 999999
+    }
+    $workflowClampStart = Invoke-Json -Method POST -Uri "$baseUrl/api/validate-workflow" -Headers $headers -Body $workflowClampBody -TimeoutSec 60
+    Add-Progress "validate-workflow-clamp-started=$($workflowClampStart.runId)"
+    if ($workflowClampStart.status -ne 'ok' -or [string]::IsNullOrWhiteSpace([string]$workflowClampStart.runId)) {
+        throw "Companion validate-workflow clamp check did not start a workflow job."
+    }
+    if ([int]$workflowClampStart.questTrials -ne 10 -or [int]$workflowClampStart.waitForReadySeconds -ne 28800 -or -not [bool]$workflowClampStart.dryRunQuestDirectHandoff) {
+        throw "Companion validate-workflow start clamp mismatch. Expected questTrials=10, waitForReadySeconds=28800, dryRunQuestDirectHandoff=true; got questTrials=$($workflowClampStart.questTrials), waitForReadySeconds=$($workflowClampStart.waitForReadySeconds), dryRunQuestDirectHandoff=$($workflowClampStart.dryRunQuestDirectHandoff)."
+    }
+    $workflowClamp = if ($workflowClampStart.jobStatus -eq 'running') {
+        Wait-WorkflowJob -BaseUrl $baseUrl -Headers $headers -RunId $workflowClampStart.runId -TimeoutSec 1800
+    }
+    else {
+        $workflowClampStart
+    }
+    Add-Progress "validate-workflow-clamp-complete jobStatus=$($workflowClamp.jobStatus) workflowStatus=$($workflowClamp.workflowStatus) questTrials=$($workflowClamp.questTrials) waitForReadySeconds=$($workflowClamp.waitForReadySeconds)"
+    if ($workflowClamp.workflowStatus -eq 'fail' -or [string]::IsNullOrWhiteSpace([string]$workflowClamp.summaryPath) -or -not (Test-Path -LiteralPath $workflowClamp.summaryPath)) {
+        throw "Companion validate-workflow clamp dry run did not produce a usable workflow summary."
+    }
+    if ([int]$workflowClamp.questTrials -ne 10 -or [int]$workflowClamp.waitForReadySeconds -ne 28800 -or -not [bool]$workflowClamp.dryRunQuestDirectHandoff) {
+        throw "Companion validate-workflow final clamp mismatch. Expected questTrials=10, waitForReadySeconds=28800, dryRunQuestDirectHandoff=true; got questTrials=$($workflowClamp.questTrials), waitForReadySeconds=$($workflowClamp.waitForReadySeconds), dryRunQuestDirectHandoff=$($workflowClamp.dryRunQuestDirectHandoff)."
+    }
+    $workflowClampSummary = Get-Content -LiteralPath $workflowClamp.summaryPath -Raw | ConvertFrom-Json
+    $workflowClampDirectFacts = $workflowClampSummary.evidence.directQuestHandoff
+    if (-not $workflowClampDirectFacts -or -not [bool]$workflowClampDirectFacts.dryRun -or [int]$workflowClampDirectFacts.requestedQuestTrials -ne 10 -or [int]$workflowClampDirectFacts.requestedWaitForReadySeconds -ne 28800) {
+        throw "Companion validate-workflow clamp summary missing dry-run direct handoff facts."
+    }
+
     $renderPreviewRequested = -not $SkipRenderPreview
     $summaryStatus = 'pass'
     $summary = [ordered]@{
@@ -565,6 +606,18 @@ try {
             renderPreview = $renderPreviewRequested
             workflowStatus = $workflow.workflowStatus
             workflowSummaryPath = $workflow.summaryPath
+        }
+        workflowDirectHandoffClampDryRun = [ordered]@{
+            jobStatus = $workflowClamp.jobStatus
+            workflowStatus = $workflowClamp.workflowStatus
+            requestedQuestTrials = 999
+            requestedWaitForReadySeconds = 999999
+            questTrials = $workflowClamp.questTrials
+            waitForReadySeconds = $workflowClamp.waitForReadySeconds
+            dryRunQuestDirectHandoff = [bool]$workflowClamp.dryRunQuestDirectHandoff
+            runId = $workflowClamp.runId
+            summaryPath = $workflowClamp.summaryPath
+            directQuestHandoff = $workflowClampDirectFacts
         }
         completedAt = (Get-Date).ToString('o')
     }

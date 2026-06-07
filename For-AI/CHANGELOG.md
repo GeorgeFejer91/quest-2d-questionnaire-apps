@@ -114,3 +114,7 @@ Use absolute dates.
 - Added companion stress coverage for direct handoff safety bounds: an
   out-of-range dry-run request must report backend-clamped `trialCount=10` and
   `waitForReadySeconds=28800`.
+- Added `dryRunQuestDirectHandoff` for the aggregate `/api/validate-workflow`
+  path so the companion stress ladder can prove direct-handoff trial/wait
+  clamps without launching Unity or treating dry-run preflight as physical
+  headset evidence.

@@ -279,7 +279,10 @@ Solution: the companion workflow validator now sends an intentionally
 out-of-range direct handoff dry-run request (`trialCount=999`,
 `waitForReadySeconds=999999`) and asserts the job status reports the backend
 clamps (`trialCount=10`, `waitForReadySeconds=28800`) while still producing a
-valid preflight summary.
+valid preflight summary. It also sends an out-of-range `/api/validate-workflow`
+request with `dryRunQuestDirectHandoff=true` so the aggregate workflow endpoint
+proves the same bounds without launching Unity or claiming physical Quest
+handoff success.
 
 Generalizable rule: when a safety bound matters for physical-device
 automation, cover it in the same stress ladder as the happy path. Do not rely

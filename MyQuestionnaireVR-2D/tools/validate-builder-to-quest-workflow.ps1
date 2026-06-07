@@ -21,6 +21,7 @@ param(
     [switch]$SkipUnityStatic,
     [switch]$RunQuestReadiness,
     [switch]$RunQuestDirectHandoff,
+    [switch]$DryRunQuestDirectHandoff,
     [switch]$SkipInstall
 )
 
@@ -619,6 +620,9 @@ if ($RunQuestDirectHandoff) {
         if ($SkipInstall) {
             $directArgs += '-SkipInstall'
         }
+        if ($DryRunQuestDirectHandoff) {
+            $directArgs += '-DryRun'
+        }
         $directStep = Invoke-ToolStep `
             -Name 'quest-direct-pendingintent-handoff' `
             -Arguments $directArgs `
@@ -626,10 +630,16 @@ if ($RunQuestDirectHandoff) {
             -NonZeroStatus 'blocked'
         $directQuestSummary = $directStep.summary
         if ($null -ne $directQuestSummary) {
-            $directQuestStatus = [string]$directQuestSummary.status
+            $directQuestStatus = if ($DryRunQuestDirectHandoff -and [string]$directQuestSummary.status -eq 'pass') { 'warn' } else { [string]$directQuestSummary.status }
             $directQuestEvidence = $directStep.summaryPath
             $directQuestFacts = [ordered]@{
                 status = $directQuestSummary.status
+                dryRun = [bool]$DryRunQuestDirectHandoff
+                requestedQuestTrials = $QuestTrials
+                requestedWaitForReadySeconds = $WaitForReadySeconds
+                trialCount = if ($directQuestSummary.PSObject.Properties.Name -contains 'trialCount') { $directQuestSummary.trialCount } else { $null }
+                attemptedTrialCount = if ($directQuestSummary.PSObject.Properties.Name -contains 'attemptedTrialCount') { $directQuestSummary.attemptedTrialCount } else { $null }
+                waitForReadySeconds = if ($directQuestSummary.PSObject.Properties.Name -contains 'waitForReadySeconds') { $directQuestSummary.waitForReadySeconds } else { $null }
                 passCount = $directQuestSummary.passCount
                 warnCount = $directQuestSummary.warnCount
                 blockedCount = $directQuestSummary.blockedCount
@@ -647,7 +657,7 @@ Add-Requirement `
     -Requirement "Direct XR -> 2D panel -> same XR PendingIntent handoff must pass $QuestTrials/$QuestTrials Quest trials without shell foreground switching after initial launch." `
     -Status $directQuestStatus `
     -Evidence $directQuestEvidence `
-    -Notes 'This remains the decisive Candidate A gate.' `
+    -Notes ($(if ($DryRunQuestDirectHandoff) { 'Dry-run preflight only; this does not replace physical Quest trials.' } else { 'This remains the decisive Candidate A gate.' })) `
     -Facts $directQuestFacts
 
 $requirementArray = @($requirements.ToArray())

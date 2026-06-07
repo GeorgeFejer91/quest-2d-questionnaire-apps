@@ -328,6 +328,9 @@ function New-WorkflowValidationArguments {
     if ($Payload.PSObject.Properties.Name -contains 'runQuestDirectHandoff' -and [bool]$Payload.runQuestDirectHandoff) {
         $arguments += '-RunQuestDirectHandoff'
     }
+    if ($Payload.PSObject.Properties.Name -contains 'dryRunQuestDirectHandoff' -and [bool]$Payload.dryRunQuestDirectHandoff) {
+        $arguments += '-DryRunQuestDirectHandoff'
+    }
     if ($Payload.PSObject.Properties.Name -contains 'skipInstall' -and [bool]$Payload.skipInstall) {
         $arguments += '-SkipInstall'
     }
@@ -413,6 +416,7 @@ function Get-WorkflowJobStatus {
         processError = $processError
         configPath = $job['configPath']
         runQuestDirectHandoff = [bool]$job['runQuestDirectHandoff']
+        dryRunQuestDirectHandoff = [bool]$job['dryRunQuestDirectHandoff']
         questTrials = [int]$job['questTrials']
         waitForReadySeconds = [int]$job['waitForReadySeconds']
         artifactDir = $job['artifactDir']
@@ -439,6 +443,7 @@ function Start-WorkflowValidationJob {
     $stderrPath = Join-Path $jobDir 'workflow-stderr.txt'
     $summaryPath = Join-Path $ProjectPath ("artifacts\builder-to-quest-workflow\$runId\builder-to-quest-workflow-summary.json")
     $runQuestDirectHandoff = ($Payload.PSObject.Properties.Name -contains 'runQuestDirectHandoff' -and [bool]$Payload.runQuestDirectHandoff)
+    $dryRunQuestDirectHandoff = ($Payload.PSObject.Properties.Name -contains 'dryRunQuestDirectHandoff' -and [bool]$Payload.dryRunQuestDirectHandoff)
     $questTrials = if ($Payload.PSObject.Properties.Name -contains 'questTrials' -and [int]$Payload.questTrials -gt 0) { [Math]::Min(10, [Math]::Max(1, [int]$Payload.questTrials)) } else { 10 }
     $waitForReadySeconds = if ($Payload.PSObject.Properties.Name -contains 'waitForReadySeconds' -and [int]$Payload.waitForReadySeconds -ge 0) { [Math]::Min(28800, [Math]::Max(0, [int]$Payload.waitForReadySeconds)) } else { 30 }
     $arguments = New-WorkflowValidationArguments -Payload $Payload -ConfigPath $configPath -RunId $runId
@@ -457,6 +462,7 @@ function Start-WorkflowValidationJob {
         runId = $runId
         configPath = $configPath
         runQuestDirectHandoff = [bool]$runQuestDirectHandoff
+        dryRunQuestDirectHandoff = [bool]$dryRunQuestDirectHandoff
         questTrials = [int]$questTrials
         waitForReadySeconds = [int]$waitForReadySeconds
         artifactDir = $jobDir

@@ -27,6 +27,7 @@ $ExpectedCompanionReceiptApiVersion = '2026-06-07.receipts.v1'
 $RequiredCompanionCapabilities = @(
     'generate-apk-receipt',
     'artifact-preview',
+    'workflow-render-previews',
     'workflow-receipt',
     'runner-job-receipts'
 )
@@ -772,6 +773,30 @@ try {
     if ($null -eq $workflowReceipt -or [string]::IsNullOrWhiteSpace([string]$workflowReceipt.status) -or -not [bool]$workflowReceipt.offlineEvidenceReady) {
         throw "Companion validate-workflow did not return an inspectable workflow receipt."
     }
+    $workflowArtifactPreviewEvidence = @()
+    foreach ($renderName in @('questionnaireRender', 'temporalTracerRender')) {
+        $renderReceipt = if ($workflowReceipt.artifacts -and $workflowReceipt.artifacts.PSObject.Properties.Name -contains $renderName) { $workflowReceipt.artifacts.PSObject.Properties[$renderName].Value } else { $null }
+        $receiptSamplePngs = @()
+        if ($renderReceipt -and $renderReceipt.PSObject.Properties.Name -contains 'samplePngs') {
+            $receiptSamplePngs = @($renderReceipt.samplePngs | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
+        }
+        if ($receiptSamplePngs.Count -eq 0) {
+            throw "Companion workflowReceipt did not expose sample PNG paths for $renderName."
+        }
+        $sourcePath = [string]$receiptSamplePngs[0]
+        $copyPath = Join-Path $artifactDir ("workflow-$renderName-preview-sample.png")
+        $pngEvidence = Invoke-ArtifactPreview -BaseUrl $baseUrl -Headers $headers -Path $sourcePath -OutFile $copyPath
+        Add-Progress "workflow-artifact-preview-$renderName bytes=$($pngEvidence.bytes) validPng=$($pngEvidence.validPng)"
+        if (-not [bool]$pngEvidence.exists -or -not [bool]$pngEvidence.validPng -or [int64]$pngEvidence.bytes -le 0) {
+            throw "Companion artifact-preview endpoint did not return a valid workflow PNG for $renderName from $sourcePath."
+        }
+        $workflowArtifactPreviewEvidence += [pscustomobject][ordered]@{
+            renderName = $renderName
+            sourcePath = $sourcePath
+            copiedPath = $copyPath
+            png = $pngEvidence
+        }
+    }
 
     Write-Host "== Validate workflow direct handoff clamp dry run through companion =="
     $workflowClampBody = @{
@@ -852,6 +877,10 @@ try {
         (-not $renderPreviewRequested) -or
         ($artifactPreviewEvidence -and [bool]$artifactPreviewEvidence.exists -and [bool]$artifactPreviewEvidence.validPng -and [int64]$artifactPreviewEvidence.bytes -gt 0)
     )
+    $workflowArtifactPreviewPass = (
+        $workflowArtifactPreviewEvidence.Count -eq 2 -and
+        @($workflowArtifactPreviewEvidence | Where-Object { -not [bool]$_.png.exists -or -not [bool]$_.png.validPng -or [int64]$_.png.bytes -le 0 }).Count -eq 0
+    )
     $workflowMatrixInspectable = (
         $workflowSummary -and
         $workflowCounts -and
@@ -897,6 +926,7 @@ try {
         $generatedApkHashPass -and
         $renderPreviewPass -and
         $artifactPreviewPass -and
+        $workflowArtifactPreviewPass -and
         [string]$generateReceipt.status -eq 'pass' -and
         $workflowMatrixInspectable -and
         [string]$installApk.installStatus -eq 'pass' -and
@@ -917,6 +947,7 @@ try {
         $saveValidatePass -and
         $generateReceipt -and
         $artifactPreviewPass -and
+        $workflowArtifactPreviewPass -and
         $workflowMatrixInspectable -and
         [string]$installApk.installStatus -eq 'pass' -and
         [string]$questReplay.replayStatus -ne 'fail' -and
@@ -953,6 +984,7 @@ try {
             generationReceiptInspectable = ($generateReceipt -and ([string]$generateReceipt.status -eq 'pass' -or [string]$generateReceipt.status -eq 'partial-skipped-evidence'))
             renderPreviewArtifactGatePass = $renderPreviewPass
             artifactPreviewEndpointPass = $artifactPreviewPass
+            workflowArtifactPreviewEndpointPass = $workflowArtifactPreviewPass
             workflowMatrixInspectable = $workflowMatrixInspectable
             workflowReceiptInspectable = [bool]$workflowReceipt.offlineEvidenceReady
             runnerJobReceiptsInspectable = $stepJobReceiptsInspectable
@@ -974,6 +1006,7 @@ try {
             workflowSummaryPath = $workflow.summaryPath
             workflowCounts = $workflowCounts
             workflowReceipt = $workflowReceipt
+            workflowArtifactPreviews = $workflowArtifactPreviewEvidence
             directHandoffSummaryPath = $directHandoff.summaryPath
             workflowClampSummaryPath = $workflowClamp.summaryPath
             workflowClampReceipt = $workflowClampReceipt
@@ -1102,6 +1135,7 @@ try {
             }
             workflowStatus = $workflow.workflowStatus
             workflowReceipt = $workflowReceipt
+            workflowArtifactPreviews = $workflowArtifactPreviewEvidence
             workflowSummaryPath = $workflow.summaryPath
         }
         workflowDirectHandoffClampDryRun = [ordered]@{

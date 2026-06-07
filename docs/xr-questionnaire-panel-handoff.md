@@ -199,11 +199,11 @@ produced, whether product-path readiness blocked a live rung, and whether
 direct PendingIntent is still awaiting product-path evidence.
 The companion `/api/status` health payload advertises `apiVersion`,
 `receiptSchemaVersion`, and receipt capabilities such as
-`generate-apk-receipt`, `artifact-preview`, `workflow-receipt`, and
-`runner-job-receipts`; the hosted GUI should warn if a user connects an older
-local companion that lacks those capabilities. The `artifact-preview`
-capability means the companion can serve generation-receipt sample PNGs through
-the token-protected
+`generate-apk-receipt`, `artifact-preview`, `workflow-render-previews`,
+`workflow-receipt`, and `runner-job-receipts`; the hosted GUI should warn if a
+user connects an older local companion that lacks those capabilities. The
+`artifact-preview` capability means the companion can serve generation-receipt
+and workflow-receipt sample PNGs through the token-protected
 `/api/artifact-preview` route. That route is only for generated local PNG
 artifacts and is part of offline visual inspection, not a substitute for
 Quest product-path focus evidence.

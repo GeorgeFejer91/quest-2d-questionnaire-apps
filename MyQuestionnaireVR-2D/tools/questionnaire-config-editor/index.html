@@ -1150,6 +1150,7 @@
     const requiredAppBackendCapabilities = [
       { id: "generate-apk-receipt", label: "APK generation receipts" },
       { id: "artifact-preview", label: "local render previews" },
+      { id: "workflow-render-previews", label: "workflow render previews" },
       { id: "workflow-receipt", label: "workflow receipts" },
       { id: "runner-job-receipts", label: "runner job receipts" }
     ];
@@ -3015,7 +3016,7 @@
         return "";
       }
       if (!Array.isArray(data?.capabilities)) {
-        return "update the local companion because this older API cannot show APK generation, local render previews, workflow, or runner receipts";
+        return "update the local companion because this older API cannot show APK generation, local render previews, workflow render previews, workflow, or runner receipts";
       }
       return `update the local companion to enable ${missing.map(item => item.label).join(" and ")}`;
     }
@@ -3232,7 +3233,7 @@
     function setWorkflowReceiptStatus(data) {
       const target = byId("workflowReceiptStatus");
       const text = workflowReceiptText(data);
-      if (!data?.generationReceipt) {
+      if (!data || artifactPreviewPaths(data).length === 0) {
         clearArtifactPreviews();
       }
       if (!text) {
@@ -3261,11 +3262,27 @@
     }
 
     function artifactPreviewPaths(data) {
-      const samplePngs = data?.generationReceipt?.artifacts?.render?.samplePngs;
-      if (!Array.isArray(samplePngs)) {
-        return [];
+      const sources = [
+        data?.generationReceipt?.artifacts?.render?.samplePngs,
+        data?.workflowReceipt?.artifacts?.questionnaireRender?.samplePngs,
+        data?.workflowReceipt?.artifacts?.temporalTracerRender?.samplePngs
+      ];
+      const paths = [];
+      sources.forEach(samplePngs => {
+        if (!Array.isArray(samplePngs)) {
+          return;
+        }
+        samplePngs.forEach(path => {
+          const normalized = String(path || "").trim();
+          if (normalized && !paths.includes(normalized)) {
+            paths.push(normalized);
+          }
+        });
+      });
+      if (data?.workflowReceipt) {
+        return paths.slice(0, 6);
       }
-      return samplePngs.map(path => String(path || "").trim()).filter(Boolean).slice(0, 3);
+      return paths.slice(0, 3);
     }
 
     function renderArtifactPreviewError(target, path) {
@@ -3516,6 +3533,7 @@
         setWorkflowReceiptStatus(data);
         setAppBackendLog(data);
         if (data.jobStatus !== "running") {
+          await showArtifactPreviews(data);
           return data;
         }
         await delay(2500);
@@ -3935,10 +3953,12 @@
         setAppBackendStatus(workflowJobText(data), workflowJobLevel(data));
         setWorkflowReceiptStatus(data);
         setAppBackendLog(data);
+        await showArtifactPreviews(data);
         if (data.jobStatus === "running" && (data.runId || data.jobId)) {
           const finalData = await pollWorkflowJob(data.runId || data.jobId, waitForReadySeconds, trialCount, runDirect);
           setAppBackendStatus(workflowJobText(finalData), workflowJobLevel(finalData));
           setWorkflowReceiptStatus(finalData);
+          await showArtifactPreviews(finalData);
           setAppBackendLog(finalData);
         }
       } catch (error) {

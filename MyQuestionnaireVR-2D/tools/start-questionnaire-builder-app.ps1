@@ -712,12 +712,16 @@ function New-WorkflowReceipt {
             questionnaireRender = [ordered]@{
                 summaryPath = Get-JsonProperty -Object $questionnaireRender -Name 'summaryPath'
                 renderCount = Get-JsonProperty -Object $questionnaireRender -Name 'renderCount' -Default 0
+                pngFileCount = Get-JsonProperty -Object $questionnaireRender -Name 'pngFileCount' -Default 0
                 passesArtifactGate = [bool](Get-JsonProperty -Object $questionnaireRender -Name 'passesArtifactGate' -Default $false)
+                samplePngs = @(Get-JsonProperty -Object $questionnaireRender -Name 'samplePngs' -Default @())
             }
             temporalTracerRender = [ordered]@{
                 summaryPath = Get-JsonProperty -Object $temporalRender -Name 'summaryPath'
                 renderCount = Get-JsonProperty -Object $temporalRender -Name 'renderCount' -Default 0
+                pngFileCount = Get-JsonProperty -Object $temporalRender -Name 'pngFileCount' -Default 0
                 passesArtifactGate = [bool](Get-JsonProperty -Object $temporalRender -Name 'passesArtifactGate' -Default $false)
+                samplePngs = @(Get-JsonProperty -Object $temporalRender -Name 'samplePngs' -Default @())
             }
             directHandoffPreflight = [ordered]@{
                 summaryPath = Get-JsonProperty -Object $directPreflight -Name 'summaryPath'
@@ -1807,6 +1811,7 @@ function New-StatusPayload {
             'generate-apk',
             'generate-apk-receipt',
             'artifact-preview',
+            'workflow-render-previews',
             'validate-workflow',
             'workflow-job-status',
             'workflow-receipt',

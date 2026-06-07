@@ -57,14 +57,17 @@ profile, or repository path.
 
 `GET /api/status` is also the compatibility check. It advertises the companion
 `apiVersion`, `receiptSchemaVersion`, and capabilities such as
-`generate-apk-receipt`, `artifact-preview`, `workflow-receipt`, and
-`runner-job-receipts` so the hosted GUI can warn when a user connects an older
-local companion package.
+`generate-apk-receipt`, `artifact-preview`, `workflow-render-previews`,
+`workflow-receipt`, and `runner-job-receipts` so the hosted GUI can warn when a
+user connects an older local companion package.
 
 Render preview thumbnails are fetched from the companion through
 `GET /api/artifact-preview?path=...`. That route must stay token-protected,
 CORS-limited, PNG-only, and constrained to generated artifact roots. Do not
 turn it into a general local file browser.
+The GUI can show samples from both `generationReceipt` and `workflowReceipt`;
+workflow receipts should expose questionnaire and temporal tracer
+`samplePngs` when their local render gates run.
 
 ## Important Files
 

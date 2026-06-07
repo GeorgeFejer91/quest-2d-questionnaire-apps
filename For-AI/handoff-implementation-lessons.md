@@ -485,3 +485,23 @@ Generalizable rule: receipt paths are evidence references, not browser
 permissions. When a local companion serves artifact bytes to a hosted GUI,
 keep the endpoint typed, authenticated, path-scoped, and covered by the same
 stress ladder as the receipt that produced the paths.
+
+## Workflow Receipts Should Carry Their Preview Samples
+
+Problem: the aggregate workflow matrix validated questionnaire and temporal
+tracer render PNGs, but the compact `workflowReceipt` only exposed render
+counts and summary paths. The GUI could tell the user that local renders
+existed, yet still could not show representative PNGs from the full workflow
+validation button.
+
+Solution: `workflowReceipt.artifacts.questionnaireRender` and
+`workflowReceipt.artifacts.temporalTracerRender` now promote `samplePngs` and
+`pngFileCount`, and `/api/status` advertises `workflow-render-previews`. The
+builder uses those paths with the existing token-protected
+`/api/artifact-preview` endpoint, and the companion stress ladder fetches one
+questionnaire and one tracer sample PNG from the workflow receipt as valid
+non-empty images.
+
+Generalizable rule: when a compact receipt claims a visual gate passed, include
+enough sample artifact references for the dashboard to inspect the same
+evidence. Counts alone are not enough for user-facing visual validation.

@@ -166,3 +166,7 @@ Use absolute dates.
   and GUI so render-preview PNGs referenced by `generationReceipt` can be
   visually inspected from the hosted/offline builder without exposing a generic
   local file server.
+- Promoted questionnaire and temporal tracer sample PNGs into
+  `workflowReceipt` and added the `workflow-render-previews` companion
+  capability so the GUI's full workflow validation step can visually inspect
+  both local render families through the same protected preview endpoint.

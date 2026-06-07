@@ -90,6 +90,26 @@ function New-Requirement {
     }
 }
 
+function Get-FileEvidence {
+    param([string]$Path)
+
+    $evidence = [ordered]@{
+        path = $Path
+        exists = $false
+        bytes = 0
+        sha256 = ''
+    }
+    if (-not [string]::IsNullOrWhiteSpace($Path) -and (Test-Path -LiteralPath $Path)) {
+        $item = Get-Item -LiteralPath $Path
+        if (-not $item.PSIsContainer) {
+            $evidence.exists = $true
+            $evidence.bytes = [int64]$item.Length
+            $evidence.sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash
+        }
+    }
+    return $evidence
+}
+
 $projectFull = [System.IO.Path]::GetFullPath($ProjectPath)
 if ([string]::IsNullOrWhiteSpace($DirectHandoffRoot)) {
     $DirectHandoffRoot = Join-Path $projectFull 'artifacts\quest-direct-handoff'
@@ -126,6 +146,46 @@ if (-not $companion) {
 $receipt = $companion.endToEndReceipt
 $checks = $receipt.checks
 $artifacts = $receipt.artifacts
+$directHandoffDryRunSummaryPath = [string](Get-FirstPropertyValue -Object $companion.directHandoffDryRun -Names @('summaryPath') -Default '')
+$directHandoffDryRunSummary = Read-JsonIfExists -Path $directHandoffDryRunSummaryPath
+$demoUnityApkPath = [string](Get-FirstPropertyValue -Object $companion.directHandoffDryRun -Names @('unityApk') -Default '')
+$demoUnityApkEvidence = Get-FileEvidence -Path $demoUnityApkPath
+$exampleCatalogPath = Join-Path (Split-Path -Parent $projectFull) 'example-scenario-apk\questionnaire-trigger-catalog.json'
+if (-not (Test-Path -LiteralPath $exampleCatalogPath)) {
+    $exampleCatalogPath = Join-Path $projectFull '..\example-scenario-apk\questionnaire-trigger-catalog.json'
+}
+$exampleCatalogPath = [System.IO.Path]::GetFullPath($exampleCatalogPath)
+$exampleCatalog = Read-JsonIfExists -Path $exampleCatalogPath
+$exampleTriggers = if ($exampleCatalog -and $exampleCatalog.triggers) { @($exampleCatalog.triggers) } else { @() }
+$exampleTriggerIds = @($exampleTriggers | ForEach-Object { [string]$_.triggerId })
+$exampleRecommendedModes = @{}
+foreach ($trigger in $exampleTriggers) {
+    $exampleRecommendedModes[[string]$trigger.triggerId] = [string]$trigger.recommendedMode
+}
+$preflight = if ($directHandoffDryRunSummary) { $directHandoffDryRunSummary.preflight } else { $null }
+$unityEmbeddedCatalog = if ($preflight) { $preflight.unityEmbeddedTriggerCatalog } else { $null }
+$unityEmbeddedTriggerCount = [int](Get-FirstPropertyValue -Object $unityEmbeddedCatalog -Names @('triggerCount') -Default 0)
+$demoUnityCatalogPass = (
+    $exampleCatalog -and
+    [string]$exampleCatalog.schemaVersion -eq 'mq.quest_questionnaire_trigger_catalog.v1' -and
+    [string]$exampleCatalog.package -eq 'org.questionnairebuilder.stimulusdemo' -and
+    [string]$exampleCatalog.activity -eq 'org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity' -and
+    $exampleTriggerIds -contains 'trigger_1_launch_questionnaire' -and
+    $exampleTriggerIds -contains 'trigger_2_video_complete' -and
+    $exampleRecommendedModes['trigger_1_launch_questionnaire'] -eq 'demographics' -and
+    $exampleRecommendedModes['trigger_2_video_complete'] -eq 'temporalTracer' -and
+    [bool]$demoUnityApkEvidence.exists -and
+    [int64]$demoUnityApkEvidence.bytes -gt 0 -and
+    $preflight -and
+    [string]$preflight.status -eq 'pass' -and
+    $preflight.apkInfo -and
+    $preflight.apkInfo.unity -and
+    [string]$preflight.apkInfo.unity.package -eq [string]$exampleCatalog.package -and
+    [string]$preflight.apkInfo.unity.activity -eq [string]$exampleCatalog.activity -and
+    $unityEmbeddedCatalog -and
+    [string]$unityEmbeddedCatalog.parseStatus -eq 'pass' -and
+    $unityEmbeddedTriggerCount -ge 2
+)
 
 $directSummaries = @()
 if (Test-Path -LiteralPath $DirectHandoffRoot) {
@@ -180,6 +240,12 @@ $requirements += New-Requirement `
     -Status $(if ([bool]$checks.companionTokenAuthorization -and [bool]$checks.runnerJobReceiptsInspectable) { 'proven' } else { 'missing' }) `
     -EvidencePath ([string]$CompanionSummaryPath) `
     -Evidence "companionTokenAuthorization=$($checks.companionTokenAuthorization); runnerJobReceiptsInspectable=$($checks.runnerJobReceiptsInspectable)"
+$requirements += New-Requirement `
+    -Id 'demo-unity-apk-trigger-catalog' `
+    -Requirement 'The demo Unity stimulus APK and public example trigger catalog advertise the two questionnaire/tracer triggers used by the builder workflow.' `
+    -Status $(if ($demoUnityCatalogPass) { 'proven' } else { 'missing' }) `
+    -EvidencePath $directHandoffDryRunSummaryPath `
+    -Evidence "unityApk=$($demoUnityApkEvidence.path); bytes=$($demoUnityApkEvidence.bytes); sha256=$($demoUnityApkEvidence.sha256); preflightStatus=$($preflight.status); embeddedTriggerCount=$unityEmbeddedTriggerCount; exampleCatalog=$exampleCatalogPath"
 $requirements += New-Requirement `
     -Id 'apk-generation' `
     -Requirement 'The local companion creates a questionnaire APK and records path, byte count, and SHA-256 evidence.' `
@@ -275,6 +341,10 @@ $summary = [ordered]@{
         companionSummaryPath = $CompanionSummaryPath
         companionReceiptStatus = $receipt.status
         companionOfflineWorkflowReady = [bool]$receipt.offlineWorkflowReady
+        demoUnityApk = $demoUnityApkEvidence
+        demoUnityPreflightSummaryPath = $directHandoffDryRunSummaryPath
+        demoUnityEmbeddedTriggerCount = $unityEmbeddedTriggerCount
+        exampleTriggerCatalogPath = $exampleCatalogPath
         bestRealDirectHandoffSummaryPath = if ($bestRealDirect) { $bestRealDirect.path } else { '' }
         bestRealDirectHandoffPassCount = if ($bestRealDirect) { $bestRealDirect.passCount } else { 0 }
         latestRealDirectHandoffSummaryPath = if ($latestRealDirect) { $latestRealDirect.path } else { '' }

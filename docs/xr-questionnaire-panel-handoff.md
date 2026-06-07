@@ -237,8 +237,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools
 The audit reads the companion receipt and direct handoff trial summaries,
 emits one requirement-by-requirement JSON matrix, and exits successfully when
 all offline requirements are proven while the only remaining items are the
-physical 10 clean Quest product-path trials and manual headset pass. Add
-`-RequireComplete` when those physical artifacts should already exist.
+physical 10 clean Quest product-path trials and manual headset pass. It also
+promotes the demo Unity APK and public example trigger catalog as their own
+evidence row, so the "starting with a demo Unity" part of the workflow is not
+left implicit. Add `-RequireComplete` when those physical artifacts should
+already exist.
 
 The end-to-end builder-to-Quest evidence matrix is:
 

@@ -190,9 +190,10 @@ real Quest behavior.
 Solution: add `audit-universal-handoff-readiness.ps1`. It reads the latest
 full companion receipt and real direct-handoff summaries, then emits a
 requirement-by-requirement matrix for the original product promise: hosted GUI,
-local companion contract, APK generation, local renders, evidence bundle,
-direct PendingIntent preflight, at least one real product-path trial, 10 clean
-Quest product-path trials, and manual headset pass. It exits cleanly for
+local companion contract, demo Unity APK/trigger catalog, APK generation,
+local renders, evidence bundle, direct PendingIntent preflight, at least one
+real product-path trial, 10 clean Quest product-path trials, and manual
+headset pass. It exits cleanly for
 `pass-with-physical-pending` when the only missing items are physical gates,
 and `-RequireComplete` turns that same state into a failure.
 

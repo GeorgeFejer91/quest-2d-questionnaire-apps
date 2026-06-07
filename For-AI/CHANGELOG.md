@@ -36,7 +36,8 @@ Use absolute dates.
 - Added `MyQuestionnaireVR-2D/tools/audit-universal-handoff-readiness.ps1` to
   summarize the original Universal Quest Handoff requirements from current
   receipts and distinguish offline proof from the remaining physical Quest
-  gates.
+  gates. The audit now promotes the demo Unity APK and public example trigger
+  catalog as their own evidence row.
 
 ## 2026-06-07
 

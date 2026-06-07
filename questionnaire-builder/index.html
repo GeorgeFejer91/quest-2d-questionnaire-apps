@@ -574,6 +574,14 @@
       margin-top: 10px;
     }
 
+    .hosted-final-product [data-dev-only] {
+      display: none !important;
+    }
+
+    .hosted-final-product .content {
+      max-width: 860px;
+    }
+
     @media (max-width: 980px) {
       .side-nav {
         position: static;
@@ -630,22 +638,22 @@
           <span>Block builder</span>
           <span id="navTriggersState" class="nav-state">Locked</span>
         </a>
-        <a id="navQuestionnaires" class="nav-link locked" href="#questionnaire-stage">
+        <a id="navQuestionnaires" class="nav-link locked" href="#questionnaire-stage" data-dev-only>
           <span class="nav-number">03</span>
           <span>Questionnaires</span>
           <span id="navQuestionnairesState" class="nav-state">Locked</span>
         </a>
-        <a id="navProject" class="nav-link locked" href="#project-stage">
+        <a id="navProject" class="nav-link locked" href="#project-stage" data-dev-only>
           <span class="nav-number">04</span>
           <span>Project</span>
           <span id="navProjectState" class="nav-state">Locked</span>
         </a>
         <a id="navRunner" class="nav-link locked" href="#runner-stage">
-          <span class="nav-number">05</span>
-          <span>Export</span>
+          <span id="navRunnerNumber" class="nav-number">05</span>
+          <span id="navRunnerLabel">Export</span>
           <span id="navRunnerState" class="nav-state">Locked</span>
         </a>
-        <a id="navReview" class="nav-link locked" href="#review-stage">
+        <a id="navReview" class="nav-link locked" href="#review-stage" data-dev-only>
           <span class="nav-number">06</span>
           <span>Review</span>
           <span id="navReviewState" class="nav-state">Locked</span>
@@ -655,7 +663,7 @@
       <div class="side-group">
         <div class="side-group-title">Reference</div>
         <a class="side-link" href="https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/blob/main/MyQuestionnaireVR-2D/README.md" target="_blank" rel="noreferrer">Instructions</a>
-        <a class="side-link" href="https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/blob/main/workflow/START_HERE.md" target="_blank" rel="noreferrer">Workflow docs</a>
+        <a class="side-link" href="https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/blob/main/workflow/START_HERE.md" target="_blank" rel="noreferrer" data-dev-only>Workflow docs</a>
       </div>
 
       <div class="side-group">
@@ -673,11 +681,11 @@
 
       <div class="side-group">
         <div class="side-group-title">Files</div>
-        <button id="loadCurrentButton" type="button" data-requires-apk-control>Reload preview config</button>
-        <button id="copyButton" type="button" data-requires-apk-control>Copy JSON</button>
-        <button id="downloadBlockRegistryButton" type="button" data-requires-apk-control>Download block registry</button>
-        <button id="downloadChainPlanButton" type="button" data-requires-apk-control>Download chain plan</button>
-        <button id="downloadQualityButton" type="button" data-requires-apk-control>Download quality report</button>
+        <button id="loadCurrentButton" type="button" data-requires-apk-control data-dev-only>Reload preview config</button>
+        <button id="copyButton" type="button" data-requires-apk-control data-dev-only>Copy JSON</button>
+        <button id="downloadBlockRegistryButton" type="button" data-requires-apk-control data-dev-only>Download block registry</button>
+        <button id="downloadChainPlanButton" type="button" data-requires-apk-control data-dev-only>Download chain plan</button>
+        <button id="downloadQualityButton" type="button" data-requires-apk-control data-dev-only>Download quality report</button>
         <button id="downloadButton" class="primary" type="button" data-requires-apk-control>Download config</button>
       </div>
     </aside>
@@ -765,7 +773,7 @@
         </div>
       </section>
 
-      <section id="questionnaire-stage" class="stage" data-requires-apk>
+      <section id="questionnaire-stage" class="stage" data-requires-apk data-dev-only>
         <div class="stage-heading">
           <div>
             <h2>3. Build questionnaire content</h2>
@@ -869,7 +877,7 @@
         </div>
       </section>
 
-      <section id="project-stage" class="stage" data-requires-apk>
+      <section id="project-stage" class="stage" data-requires-apk data-dev-only>
         <div class="stage-heading">
           <div>
             <h2>4. Set project and return behavior</h2>
@@ -1010,8 +1018,8 @@
       <section id="runner-stage" class="stage" data-requires-apk>
         <div class="stage-heading">
           <div>
-            <h2>5. Save and generate APK</h2>
-            <p class="subtle">The hosted page sends local actions to the companion on this PC.</p>
+            <h2 id="runnerStageTitle">5. Save and generate APK</h2>
+            <p id="runnerStageSubtitle" class="subtle">The hosted page sends local actions to the companion on this PC.</p>
           </div>
           <div class="stage-state">Locked</div>
         </div>
@@ -1035,35 +1043,35 @@
             <div id="workflowReceiptStatus" class="issue" hidden></div>
             <div id="artifactPreviewStrip" class="artifact-preview-strip" hidden></div>
             <div class="compact-grid">
-              <label class="toggle-row">
+              <label class="toggle-row" data-dev-only>
                 <input id="appRunTests" type="checkbox" checked>
                 <span>Run unit tests</span>
               </label>
-              <label class="toggle-row">
+              <label class="toggle-row" data-dev-only>
                 <input id="appRenderPreview" type="checkbox">
                 <span>Render preview</span>
               </label>
-              <label class="toggle-row">
+              <label class="toggle-row" data-dev-only>
                 <input id="workflowQuestReadiness" type="checkbox">
                 <span>Check connected Quest readiness</span>
               </label>
-              <label class="toggle-row">
+              <label class="toggle-row" data-dev-only>
                 <input id="workflowDirectHandoff" type="checkbox">
                 <span>Run direct PendingIntent headset trials</span>
               </label>
-              <label class="toggle-row">
+              <label class="toggle-row" data-dev-only>
                 <input id="directHandoffPreflightOnly" type="checkbox" checked>
                 <span>Preflight only</span>
               </label>
-              <label>
+              <label data-dev-only>
                 Direct trials
                 <input id="directHandoffTrials" type="number" min="1" max="10" step="1" value="10">
               </label>
-              <label>
+              <label data-dev-only>
                 Ready wait (s)
                 <input id="directHandoffWaitSeconds" type="number" min="0" max="28800" step="30" value="30">
               </label>
-              <label class="toggle-row">
+              <label class="toggle-row" data-dev-only>
                 <input id="directHandoffWakeBeforeReadiness" type="checkbox">
                 <span>Wake before readiness</span>
               </label>
@@ -1071,11 +1079,11 @@
                 Quest serial
                 <input id="workflowQuestSerial" placeholder="2G0YC1ZG1002QL" spellcheck="false">
               </label>
-              <label>
+              <label data-dev-only>
                 Direct summary for signoff
                 <input id="manualSignoffDirectSummary" placeholder="artifacts\\quest-direct-handoff\\...\\quest-direct-handoff-validation-summary.json" spellcheck="false">
               </label>
-              <label>
+              <label data-dev-only>
                 Operator signoff JSON
                 <input id="manualSignoffOperatorPath" placeholder="artifacts\\direct-handoff-manual-signoff\\...\\operator-signoff.json" spellcheck="false">
               </label>
@@ -1083,24 +1091,24 @@
             <div class="button-row" style="margin-top: 10px;">
               <button id="checkBackendButton" type="button">Check backend</button>
               <button id="questReadinessButton" type="button">Detect Quest</button>
-              <button id="saveConfigAppButton" type="button">Save config</button>
-              <button id="validateConfigAppButton" type="button">Validate config</button>
+              <button id="saveConfigAppButton" type="button" data-dev-only>Save config</button>
+              <button id="validateConfigAppButton" type="button" data-dev-only>Validate config</button>
               <button id="generateApkAppButton" class="primary" type="button">Generate APK</button>
               <button id="installApkAppButton" type="button">Install APK on Quest</button>
-              <button id="questReplayAppButton" type="button">Run replay/export</button>
-              <button id="twoDFirstLauncherAppButton" type="button">Run 2D-first launch</button>
-              <button id="directHandoffAppButton" type="button">Run direct handoff</button>
-              <button id="headsetSequenceAppButton" type="button">Run headset sequence</button>
-              <button id="validateWorkflowAppButton" type="button">Validate workflow</button>
-              <button id="auditHandoffReadinessButton" type="button">Audit readiness</button>
-              <button id="manualSignoffAppButton" type="button">Prepare manual signoff</button>
-              <button id="physicalGatePacketAppButton" type="button">Prepare physical packet</button>
-              <button id="downloadEvidenceBundleButton" type="button" disabled>Download evidence bundle</button>
+              <button id="questReplayAppButton" type="button" data-dev-only>Run replay/export</button>
+              <button id="twoDFirstLauncherAppButton" type="button" data-dev-only>Run 2D-first launch</button>
+              <button id="directHandoffAppButton" type="button" data-dev-only>Run direct handoff</button>
+              <button id="headsetSequenceAppButton" type="button" data-dev-only>Run headset sequence</button>
+              <button id="validateWorkflowAppButton" type="button" data-dev-only>Validate workflow</button>
+              <button id="auditHandoffReadinessButton" type="button" data-dev-only>Audit readiness</button>
+              <button id="manualSignoffAppButton" type="button" data-dev-only>Prepare manual signoff</button>
+              <button id="physicalGatePacketAppButton" type="button" data-dev-only>Prepare physical packet</button>
+              <button id="downloadEvidenceBundleButton" type="button" disabled data-dev-only>Download evidence bundle</button>
             </div>
-            <pre id="appBackendLog" style="margin-top: 10px; max-height: 280px;"></pre>
+            <pre id="appBackendLog" style="margin-top: 10px; max-height: 280px;" data-dev-only></pre>
           </div>
 
-          <div class="panel">
+          <div class="panel" data-dev-only>
             <div class="section-title">
               <h3>APK generator command</h3>
             </div>
@@ -1109,7 +1117,7 @@
         </div>
       </section>
 
-      <section id="review-stage" class="stage" data-requires-apk>
+      <section id="review-stage" class="stage" data-requires-apk data-dev-only>
         <div class="stage-heading">
           <div>
             <h2>6. Review output</h2>
@@ -1214,7 +1222,17 @@
       { id: "direct-handoff-manual-signoff", label: "manual headset signoff" },
       { id: "physical-gate-packet", label: "physical gate packet" },
       { id: "operator-guardrail-receipts", label: "operator guardrail receipts" },
+      { id: "packet-bundle-audit-receipts", label: "packet bundle audit receipts" },
       { id: "runner-job-receipts", label: "runner job receipts" }
+    ];
+    const hostedProductBackendCapabilities = [
+      { id: "generate-apk", label: "APK generation" },
+      { id: "generate-apk-receipt", label: "APK generation receipts" },
+      { id: "install-apk", label: "Quest APK install" },
+      { id: "install-apk-job-status", label: "Quest install job status" },
+      { id: "quest-readiness", label: "Quest detection" },
+      { id: "dependency-status", label: "dependency status" },
+      { id: "install-dependencies", label: "dependency installer" }
     ];
 
     const triggerCatalogPaths = [
@@ -3132,6 +3150,54 @@
         ["127.0.0.1", "localhost", "::1", "[::1]"].includes(location.hostname);
     }
 
+    function isHostedFinalProductPage() {
+      const location = window.location || {};
+      if (String(location.search || "").includes("hostedFinalProduct=1")) {
+        return true;
+      }
+      if (!/^https?:$/.test(location.protocol || "")) {
+        return false;
+      }
+      return !["127.0.0.1", "localhost", "::1", "[::1]"].includes(location.hostname);
+    }
+
+    function applyHostedFinalProductMode() {
+      if (!isHostedFinalProductPage()) {
+        return;
+      }
+      if (document.body && document.body.classList) {
+        document.body.classList.add("hosted-final-product");
+      }
+      if (byId("navRunnerNumber")) {
+        byId("navRunnerNumber").textContent = "03";
+      }
+      if (byId("navRunnerLabel")) {
+        byId("navRunnerLabel").textContent = "Build and load";
+      }
+      if (byId("runnerStageTitle")) {
+        byId("runnerStageTitle").textContent = "3. Generate and load APK";
+      }
+      if (byId("runnerStageSubtitle")) {
+        byId("runnerStageSubtitle").textContent = "Generate the questionnaire APK through the local companion, then install it on the connected Quest.";
+      }
+      if (byId("appRunTests")) {
+        byId("appRunTests").checked = false;
+      }
+      if (byId("appRenderPreview")) {
+        byId("appRenderPreview").checked = false;
+      }
+      if (byId("workflowQuestReadiness")) {
+        byId("workflowQuestReadiness").checked = false;
+      }
+      if (byId("workflowDirectHandoff")) {
+        byId("workflowDirectHandoff").checked = false;
+      }
+    }
+
+    function appBackendRequiredCapabilities() {
+      return isHostedFinalProductPage() ? hostedProductBackendCapabilities : requiredAppBackendCapabilities;
+    }
+
     function normalizeAppBackendUrl(value) {
       const trimmed = String(value || "").trim();
       if (!trimmed) {
@@ -3154,10 +3220,10 @@
 
     function missingAppBackendCapabilities(data) {
       if (!Array.isArray(data?.capabilities)) {
-        return requiredAppBackendCapabilities;
+        return appBackendRequiredCapabilities();
       }
       const capabilities = new Set(data.capabilities.map(value => String(value)));
-      return requiredAppBackendCapabilities.filter(item => !capabilities.has(item.id));
+      return appBackendRequiredCapabilities().filter(item => !capabilities.has(item.id));
     }
 
     function appBackendCompatibilityWarning(data) {
@@ -3166,12 +3232,15 @@
         return "";
       }
       if (!Array.isArray(data?.capabilities)) {
-        return "update the local companion because this older API cannot show APK generation, local render previews, evidence bundles, workflow render previews, direct handoff preflight, workflow, or runner receipts";
+        return isHostedFinalProductPage()
+          ? "update the local companion because this older API cannot generate and install questionnaire APKs from the hosted builder"
+          : "update the local companion because this older API cannot show APK generation, local render previews, evidence bundles, workflow render previews, direct handoff preflight, workflow, or runner receipts";
       }
       return `update the local companion to enable ${missing.map(item => item.label).join(" and ")}`;
     }
 
     function initializeAppBackendControls() {
+      applyHostedFinalProductMode();
       const urlInput = byId("appBackendUrl");
       const tokenInput = byId("appBackendToken");
       if (urlInput) {
@@ -3426,6 +3495,30 @@
       const productPathStatus = artifacts.nextPhysicalGates?.productPathStatus;
       if (productPathStatus) {
         pieces.push(`product path ${productPathStatus}`);
+      }
+      const packetBundleAvailable = Boolean(
+        artifacts.physicalGatePacketEvidenceBundleAvailable ||
+        data?.summary?.evidence?.physicalGatePacketEvidenceBundleAvailable
+      );
+      const packetBundlePass = Boolean(
+        artifacts.physicalGatePacketEvidenceBundlePass ||
+        data?.summary?.evidence?.physicalGatePacketEvidenceBundlePass
+      );
+      if (packetBundleAvailable && packetBundlePass) {
+        const entryCount = Number(
+          artifacts.physicalGatePacketEvidenceBundleEntryCount ||
+          data?.summary?.evidence?.physicalGatePacketEvidenceBundleEntryCount ||
+          0
+        );
+        const textEntryCount = Number(
+          artifacts.physicalGatePacketEvidenceBundleTextEntryCount ||
+          data?.summary?.evidence?.physicalGatePacketEvidenceBundleTextEntryCount ||
+          0
+        );
+        pieces.push(entryCount > 0 ? `portable packet bundle proven (${entryCount} entries, ${textEntryCount} text)` : "portable packet bundle proven");
+      } else if (packetBundleAvailable) {
+        const missingEntries = artifacts.physicalGatePacketMissingBundleEntries || data?.summary?.evidence?.physicalGatePacketMissingBundleEntries || [];
+        pieces.push(`portable packet bundle missing${Array.isArray(missingEntries) && missingEntries.length > 0 ? `: ${missingEntries.join(", ")}` : ""}`);
       }
       if (artifacts.summaryPath) {
         pieces.push(`summary: ${artifacts.summaryPath}`);

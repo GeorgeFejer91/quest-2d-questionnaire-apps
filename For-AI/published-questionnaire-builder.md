@@ -33,7 +33,7 @@ a96dcad524267dd1a3a34acb6b81575310f7c908
 
 ## Architecture
 
-There are two user-facing modes that must remain functionally aligned:
+There are two modes that share the same source and local companion contract:
 
 - Offline desktop mode: the user runs
   `MyQuestionnaireVR-2D/Start-QuestionnaireBuilderApp.cmd`. This starts the
@@ -42,6 +42,22 @@ There are two user-facing modes that must remain functionally aligned:
   `MyQuestionnaireVR-2D/Start-QuestionnaireBuilderOnlineConnector.cmd` locally.
   The local companion prints a pairing token; the user enters that token in the
   online GUI.
+
+The hosted Pages GUI is the final product surface for study users, not a
+software-development cockpit. Its visible workflow should stay minimal:
+
+```text
+download/connect local companion -> load/scan APK trigger catalog -> assign
+questionnaire type per detected trigger block -> generate questionnaire APK ->
+detect Quest -> install/load APK onto headset
+```
+
+Development validators, direct handoff stress runners, replay/export runners,
+readiness audits, manual signoff packet prep, raw logs, pipeline commands, and
+other internal evidence tools may remain in the shared source for offline
+engineering mode, but must be hidden from the hosted final-product page with
+`data-dev-only`/hosted mode unless the user explicitly asks to make them part of
+the product.
 
 The hosted Pages site is intentionally static. It must not claim to directly
 install software, write files, validate configs, or build APKs. Those actions
@@ -55,14 +71,11 @@ Privileged local actions require the `X-MQ-Builder-Token` header. The companion
 generates the token locally on each PC. It is not tied to one machine, user
 profile, or repository path.
 
-`GET /api/status` is also the compatibility check. It advertises the companion
-`apiVersion`, `receiptSchemaVersion`, and capabilities such as
-`generate-apk-receipt`, `artifact-preview`, `workflow-render-previews`,
-`evidence-bundle`, `workflow-receipt`, `direct-handoff-preflight`,
-`2d-first-launcher-preflight`, `handoff-readiness-audit`,
-`direct-handoff-manual-signoff`, `physical-gate-packet`,
-`operator-guardrail-receipts`, and `runner-job-receipts` so the hosted GUI can
-warn when a user connects an older local companion package.
+`GET /api/status` is also the compatibility check. In hosted final-product
+mode, the GUI should warn only about product-path capabilities it actually
+needs, such as APK generation, dependency status/installation, Quest detection,
+and APK install. Offline/developer mode may require the broader receipt
+capability set for workflow validation and evidence tooling.
 
 Render preview thumbnails are fetched from the companion through
 `GET /api/artifact-preview?path=...`. That route must stay token-protected,
@@ -79,49 +92,23 @@ When the visible receipt is a physical gate packet, the Evidence Bundle button
 should download a portable zip rooted at that packet summary and include the
 operator runbook, manual signoff template, manual signoff summary, and linked
 audit evidence.
-The direct handoff runner should keep `Preflight only` available for the hosted
-and offline GUI. That mode calls `/api/direct-handoff` with `dryRun=true` and
-`skipInstall=true` so users can prove package/activity/catalog preflight
-without installing or launching on Quest.
-The 2D-first launcher runner should keep the same `Preflight only` behavior
-through `/api/2d-first-launcher`: it proves that the packaged questionnaire APK
-starts with `questionnaireFirst` demographics and opens the Unity APK next, but
-it must still leave the live participant-front-door Quest trial pending.
-`Validate workflow` should use the same `Preflight only` toggle to include
-direct handoff preflight in the aggregate workflow matrix by sending
-`dryRunQuestDirectHandoff=true` and `skipInstall=true` to `/api/validate-workflow`.
-`Run headset sequence` should keep reusing the same companion endpoints as the
-individual controls, in order: save, validate, generate with tests and local
-render preview, readiness, install, replay/export, 2D-first launcher
-preflight/live trial, direct handoff preflight or live trials, readiness audit,
-and physical gate packet preparation. Do not let it become a separate hidden
-backend workflow.
-`Audit readiness` should call `/api/handoff-readiness-audit` and show the
-Universal Handoff requirement matrix from local evidence. It is the GUI's
-completion readout: offline evidence can pass while live Quest trials and
-manual signoff remain explicitly pending.
-`Prepare manual signoff` should call `/api/direct-handoff-manual-signoff`.
-Without an operator JSON it prepares the instructions/template under
-`artifacts\direct-handoff-manual-signoff\`; with an operator JSON path it
-validates the filled signoff against a real direct-handoff summary. This keeps
-the physical signoff gate visible in the hosted/offline builder without
-pretending the browser can observe the headset.
-`Prepare physical packet` should call `/api/physical-gate-packet`. It packages
-the current readiness audit, remaining headset gates, manual signoff template,
-and operator runbook under
-`artifacts\universal-handoff-physical-gate-packet\`. This is the GUI handoff
-for the next person physically in the headset; it must not install, launch,
-wake, or mark physical evidence as passed. When the GUI is already showing an
-audit or physical packet receipt, it should pass that visible `auditSummaryPath`
-instead of relying on backend latest-file discovery.
-Manual signoff and physical packet receipts should expose
-`operator-guardrail-receipts`: explicit checked guardrails for the 2D-first
-start-gate flow, controller-required launch dialogs, frozen/resumed Unity
-video, and no Meta menu or ADB foreground recovery. The hosted GUI should warn
-on companions that do not advertise this capability.
-`Wake before readiness` should remain opt-in, ignored for `Preflight only`, and
-passed through to `/api/direct-handoff` or `/api/validate-workflow` only for
-live direct-handoff attempts so wake-assisted evidence stays explicit.
+The hosted page should expose download links for the companion software package
+and Windows launchers in the left rail at all times. Dependency check/install
+controls are product-facing because the hosted page needs local PC software to
+generate and load APKs.
+
+The old development controls still matter for engineering confidence. Keep
+their implementation in offline/local mode and in validators, but do not expose
+them as the public hosted workflow:
+
+- direct handoff and 2D-first stress runners,
+- replay/export runners,
+- `Validate workflow`,
+- `Run headset sequence`,
+- `Audit readiness`,
+- manual signoff and physical packet prep,
+- evidence bundle downloads,
+- raw JSON/log panes and pipeline command lists.
 
 ## Important Files
 

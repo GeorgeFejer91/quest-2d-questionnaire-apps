@@ -1,7 +1,8 @@
 # Questionnaire Builder GUI Constraints
 
-The questionnaire builder GUI must stay functionally identical, or near
-identical, across offline and online entry points.
+The questionnaire builder source should stay shared across offline and online
+entry points, but the hosted online GUI is the final user-facing product. Do
+not let the public GitHub Pages page become a development validation cockpit.
 
 Required modes:
 
@@ -12,25 +13,31 @@ Required modes:
   to the local companion service with a pairing token.
 
 Do not fork the GUI into separate offline and online implementations. Prefer one
-HTML/JavaScript UI with small runtime differences:
+HTML/JavaScript UI with mode-specific visibility:
 
 - Offline mode may auto-fill the local connector URL and pairing token because
   the local companion injects them when serving the page.
 - Online mode must ask the user for the connector URL/token or use safe defaults
   such as `http://127.0.0.1:8765`.
-- All questionnaire editing, trigger-catalog import, trigger-to-block mapping,
-  validation display, dependency display, config saving, and APK generation
-  controls should be the same across modes.
+- Online mode should show only the final-product path: download/connect the
+  local companion, load or scan an APK trigger catalog, assign questionnaire
+  types to detected trigger blocks, generate the questionnaire APK, detect a
+  Quest, and install/load the APK onto the headset.
+- Development-only controls such as workflow validation, direct handoff trials,
+  replay/export stress runners, audit packets, raw logs, and pipeline commands
+  may remain in the shared source for offline engineering, but must be hidden
+  from the hosted final-product surface.
 
 Workflow constraint:
 
 - The builder should present an APK-first sequence. A fresh session starts by
   loading an existing scenario APK, or a compact trigger catalog JSON, that
   declares questionnaire triggers.
-- The block builder, questionnaire content editor, project settings, validation,
-  local dependency, and export controls should be visibly present but disabled
-  until a trigger manifest is loaded from the user's APK or the repository
-  example catalog.
+- The hosted GUI should keep the trigger/block assignment, local dependency,
+  APK generation, and Quest install controls visible. Questionnaire content
+  editing and project settings may stay available in offline/developer mode,
+  but should not be part of the public minimal flow unless needed by a study
+  user.
 - Trigger mappings are the source of block-builder structure: each enabled
   manifest trigger should become one questionnaire block, with completion
   returning to the calling scenario APK by default.
@@ -42,9 +49,9 @@ Workflow constraint:
   local companion for trusted PC actions.
 - Section 1 should include a user-friendly "Load example APK" fallback with the
   GitHub folder URL for `example-scenario-apk/`.
-- Device-state helpers in the runner, such as `Wake before readiness`, must be
-  explicit opt-in controls, disabled by default, and ignored by preflight-only
-  paths. They should be recorded in companion receipts when used.
+- Device-state helpers in developer runners, such as `Wake before readiness`,
+  must be explicit opt-in controls, disabled by default, and hidden from the
+  hosted final-product path unless they become a user-facing requirement.
 
 Security and portability constraints:
 

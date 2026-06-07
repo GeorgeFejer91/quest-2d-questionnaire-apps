@@ -25,7 +25,7 @@ $serverErr = Join-Path $artifactDir 'companion-stderr.txt'
 $progressLog = Join-Path $artifactDir 'validator-progress.txt'
 New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
 
-$ExpectedCompanionReceiptApiVersion = '2026-06-07.guardrail-receipts.v1'
+$ExpectedCompanionReceiptApiVersion = '2026-06-07.packet-bundle-audit-receipts.v1'
 $RequiredCompanionCapabilities = @(
     'generate-apk-receipt',
     'artifact-preview',
@@ -38,6 +38,7 @@ $RequiredCompanionCapabilities = @(
     'direct-handoff-manual-signoff',
     'physical-gate-packet',
     'operator-guardrail-receipts',
+    'packet-bundle-audit-receipts',
     'runner-job-receipts'
 )
 

@@ -75,8 +75,14 @@ The questionnaire builder must keep both launch paths available:
   `MyQuestionnaireVR-2D/Start-QuestionnaireBuilderOnlineConnector.cmd` starts
   the local companion while the hosted static GitHub Pages page connects to it.
 
-Keep both paths functionally identical except for the online pairing step.
-Do not add a builder feature to one path without keeping the other aligned.
+Keep both paths backed by the same HTML/JavaScript source and local companion
+API. The hosted online GUI is the final user-facing product and should stay
+minimal: download/connect the local companion, load or scan a scenario APK
+trigger catalog, assign questionnaire types to detected trigger blocks,
+generate the questionnaire APK, detect a Quest, and install/load the APK onto
+the headset. Offline/local mode may expose development validation controls,
+stress runners, audit packets, and raw logs, but those must be hidden from the
+hosted final-product surface unless they become true user requirements.
 
 After any GUI or website change, open the resulting website URL before the work
 is considered done. For hosted GUI changes, regenerate the staged Pages copy,
@@ -98,6 +104,8 @@ groups stacked vertically. Do not reintroduce side-by-side dashboard columns for
 the builder workflow. The left rail should include an always-visible Downloads
 group for the accompanying local companion software and launchers, because the
 hosted static GUI depends on that local companion for trusted PC actions.
+Hosted mode should hide developer-only pipeline sections marked with
+`data-dev-only`.
 Section 1 should also include a user-friendly "Load example APK" fallback that
 loads `example-scenario-apk/questionnaire-trigger-catalog.json` from the repo
 and displays the GitHub folder URL where the example APK and Unity project live.

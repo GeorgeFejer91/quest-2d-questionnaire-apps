@@ -2462,6 +2462,7 @@ function Invoke-HandoffReadinessAudit {
     $summary = Read-JsonFileIfExists -Path $summaryPath
     $auditStatus = if ($summary) { [string]$summary.status } elseif ($result.exitCode -eq 0) { 'missing-summary' } else { 'error' }
     $counts = if ($summary -and $summary.PSObject.Properties.Name -contains 'counts') { $summary.counts } else { [pscustomobject]@{} }
+    $summaryEvidence = if ($summary -and $summary.PSObject.Properties.Name -contains 'evidence') { $summary.evidence } else { [pscustomobject]@{} }
     $auditReceipt = [ordered]@{
         schemaVersion = 'mq.builder_audit.receipt.v1'
         kind = 'universal-handoff-readiness'
@@ -2474,6 +2475,13 @@ function Invoke-HandoffReadinessAudit {
         artifacts = [ordered]@{
             summaryPath = $summaryPath
             nextPhysicalGates = if ($summary -and $summary.PSObject.Properties.Name -contains 'nextPhysicalGates') { $summary.nextPhysicalGates } else { $null }
+            physicalGatePacketSummaryPath = [string](Get-JsonProperty -Object $summaryEvidence -Name 'physicalGatePacketSummaryPath' -Default '')
+            physicalGatePacketEvidenceBundlePath = [string](Get-JsonProperty -Object $summaryEvidence -Name 'physicalGatePacketEvidenceBundlePath' -Default '')
+            physicalGatePacketEvidenceBundleAvailable = [bool](Get-JsonProperty -Object $summaryEvidence -Name 'physicalGatePacketEvidenceBundleAvailable' -Default $false)
+            physicalGatePacketEvidenceBundlePass = [bool](Get-JsonProperty -Object $summaryEvidence -Name 'physicalGatePacketEvidenceBundlePass' -Default $false)
+            physicalGatePacketEvidenceBundleEntryCount = [int](Get-JsonProperty -Object $summaryEvidence -Name 'physicalGatePacketEvidenceBundleEntryCount' -Default 0)
+            physicalGatePacketEvidenceBundleTextEntryCount = [int](Get-JsonProperty -Object $summaryEvidence -Name 'physicalGatePacketEvidenceBundleTextEntryCount' -Default 0)
+            physicalGatePacketMissingBundleEntries = @(Get-JsonProperty -Object $summaryEvidence -Name 'physicalGatePacketMissingBundleEntries' -Default @())
         }
         proofBoundary = 'Readiness audit summarizes existing evidence. It cannot replace the remaining live Quest product-path trials or manual headset signoff.'
     }
@@ -2591,7 +2599,7 @@ function New-StatusPayload {
     $payload = [ordered]@{
         status = 'ok'
         schemaVersion = 'my-questionnaire-2d.builder-app.v1'
-        apiVersion = '2026-06-07.guardrail-receipts.v1'
+        apiVersion = '2026-06-07.packet-bundle-audit-receipts.v1'
         receiptSchemaVersion = 'my-questionnaire-2d.builder-receipts.v1'
         mode = $Mode
         url = "http://127.0.0.1:$Port/"
@@ -2627,6 +2635,7 @@ function New-StatusPayload {
             'direct-handoff-manual-signoff',
             'physical-gate-packet',
             'operator-guardrail-receipts',
+            'packet-bundle-audit-receipts',
             'runner-job-receipts',
             'dependency-status',
             'install-dependencies'

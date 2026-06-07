@@ -94,6 +94,13 @@ class Element {
 class FakeDocument {
   constructor(html) {
     this.elements = new Map();
+    this.body = {
+      classes: new Set(),
+      classList: {
+        add: (...names) => names.forEach(name => this.body.classes.add(name)),
+        contains: name => this.body.classes.has(name)
+      }
+    };
     const idRegex = /<([a-zA-Z0-9-]+)([^>]*)\bid="([^"]+)"([^>]*)>/g;
     let match;
     while ((match = idRegex.exec(html)) !== null) {
@@ -142,7 +149,7 @@ function loadEditor() {
   };
   context.window = context;
   vm.createContext(context);
-  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, applyQuestionnaireFirstDefaults, refresh, buildExperimentBlockRegistry, buildChainPlan, directHandoffWorkflowOptions, workflowValidationPayload, runHeadsetSequenceWithApp, physicalGatePacketPayloadFromEvidence, evidenceBundleSummaryPath, manualSignoffReceiptText, physicalGatePacketReceiptText };`, context, {
+  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, applyQuestionnaireFirstDefaults, refresh, buildExperimentBlockRegistry, buildChainPlan, directHandoffWorkflowOptions, workflowValidationPayload, runHeadsetSequenceWithApp, physicalGatePacketPayloadFromEvidence, evidenceBundleSummaryPath, auditReceiptText, manualSignoffReceiptText, physicalGatePacketReceiptText, applyHostedFinalProductMode, appBackendRequiredCapabilities };`, context, {
     filename: htmlPath
   });
   return { context, document, html };
@@ -185,6 +192,21 @@ assert(document.getElementById("headsetSequenceAppButton"), "Headset sequence bu
 assert(typeof context.__api.runHeadsetSequenceWithApp === "function", "Headset sequence runner should be exposed.");
 assert(typeof context.__api.physicalGatePacketPayloadFromEvidence === "function", "Physical packet payload helper should be exposed.");
 assert(html.includes("operator-guardrail-receipts"), "Hosted/offline GUI should require the operator guardrail receipt capability.");
+assert(html.includes("packet-bundle-audit-receipts"), "Hosted/offline GUI should require the packet-bundle audit receipt capability.");
+assert(html.includes("hosted-final-product"), "Hosted GUI should include final-product mode styling.");
+assert(html.includes("data-dev-only"), "Hosted GUI should mark development-only controls.");
+assert(html.includes('id="validateWorkflowAppButton" type="button" data-dev-only'), "Validate workflow button should be hidden in hosted product mode.");
+assert(html.includes('id="review-stage" class="stage" data-requires-apk data-dev-only'), "Review pipeline stage should be hidden in hosted product mode.");
+context.location = { protocol: "https:", hostname: "georgefejer91.github.io" };
+context.__api.applyHostedFinalProductMode();
+assert(document.body.classList.contains("hosted-final-product"), "Hosted product mode should set the body class.");
+assert(document.getElementById("appRunTests").checked === false, "Hosted product mode should disable developer unit tests by default.");
+assert(document.getElementById("workflowDirectHandoff").checked === false, "Hosted product mode should disable direct handoff trials by default.");
+const hostedCapabilities = context.__api.appBackendRequiredCapabilities().map(item => item.id);
+assert(hostedCapabilities.includes("generate-apk"), "Hosted product mode should require APK generation.");
+assert(hostedCapabilities.includes("install-apk"), "Hosted product mode should require Quest APK install.");
+assert(!hostedCapabilities.includes("validate-workflow"), "Hosted product mode should not require developer validation workflow capability.");
+context.location = { protocol: "http:", hostname: "127.0.0.1" };
 const sequenceSource = context.__api.runHeadsetSequenceWithApp.toString();
 assertOrderedText(sequenceSource, [
   "\"Save config\"",
@@ -231,6 +253,32 @@ const physicalPacketBundleSummaryPath = context.__api.evidenceBundleSummaryPath(
   physicalGatePacketReceipt: { artifacts: { summaryPath: "C:\\artifacts\\physical-packet-summary.json" } }
 });
 assert(physicalPacketBundleSummaryPath === "C:\\artifacts\\physical-packet-summary.json", "Evidence bundle download should target the visible physical packet summary.");
+const packetBundleAuditText = context.__api.auditReceiptText({
+  auditReceipt: {
+    status: "pass-with-physical-pending",
+    counts: { requirements: 12, proven: 9, physicalPending: 3, failedOrMissing: 0 },
+    artifacts: {
+      physicalGatePacketEvidenceBundleAvailable: true,
+      physicalGatePacketEvidenceBundlePass: true,
+      physicalGatePacketEvidenceBundleEntryCount: 399,
+      physicalGatePacketEvidenceBundleTextEntryCount: 117
+    }
+  }
+});
+assert(packetBundleAuditText.includes("portable packet bundle proven"), "Audit receipt should show proven portable packet bundle evidence.");
+assert(packetBundleAuditText.includes("399 entries"), "Audit receipt should show packet bundle entry counts.");
+const packetBundleMissingAuditText = context.__api.auditReceiptText({
+  auditReceipt: {
+    status: "incomplete-missing-evidence",
+    counts: { requirements: 12, proven: 8, physicalPending: 3, failedOrMissing: 1 },
+    artifacts: {
+      physicalGatePacketEvidenceBundleAvailable: true,
+      physicalGatePacketEvidenceBundlePass: false,
+      physicalGatePacketMissingBundleEntries: ["physical-gate-runbook.txt"]
+    }
+  }
+});
+assert(packetBundleMissingAuditText.includes("portable packet bundle missing: physical-gate-runbook.txt"), "Audit receipt should show missing packet bundle entries.");
 const manualGuardrailText = context.__api.manualSignoffReceiptText({
   manualSignoffReceipt: {
     status: "pending-operator-signoff",

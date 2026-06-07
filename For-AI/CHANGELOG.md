@@ -344,3 +344,9 @@ Use absolute dates.
   audit post-packet and requires the packet summary, linked readiness audit,
   runbook, operator signoff template, and manual signoff summary to appear in
   that audit evidence.
+- Reframed the hosted questionnaire builder as the final user-facing product
+  instead of a development cockpit. GitHub Pages mode now hides development-only
+  validation/stress/audit controls, defaults off developer unit-test and direct
+  handoff options, and keeps the visible path focused on companion downloads,
+  APK trigger scan, questionnaire-type assignment, APK generation, Quest
+  detection, and APK install.

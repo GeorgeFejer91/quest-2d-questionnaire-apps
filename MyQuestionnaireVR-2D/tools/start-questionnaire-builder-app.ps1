@@ -444,6 +444,150 @@ function New-WorkflowReceipt {
     }
 }
 
+function New-InstallJobReceipt {
+    param(
+        [object]$Summary,
+        [string]$SummaryPath,
+        [string]$JobStatus = '',
+        [string]$InstallStatus = '',
+        [bool]$DryRun = $false
+    )
+
+    $apk = Get-JsonProperty -Object $Summary -Name 'apk'
+    $install = Get-JsonProperty -Object $Summary -Name 'install'
+    $packageCheck = Get-JsonProperty -Object $Summary -Name 'packageCheck'
+    $summaryDryRun = if ($null -ne $Summary) { [bool](Get-JsonProperty -Object $Summary -Name 'dryRun' -Default $DryRun) } else { $DryRun }
+    return [ordered]@{
+        schemaVersion = 'mq.builder_runner.job_receipt.v1'
+        kind = 'quest-apk-install'
+        status = if ([string]::IsNullOrWhiteSpace($InstallStatus)) { $JobStatus } else { $InstallStatus }
+        jobStatus = $JobStatus
+        actionStatus = $InstallStatus
+        dryRun = $summaryDryRun
+        physicalQuestProductPathPending = $true
+        checks = [ordered]@{
+            summaryWritten = ($null -ne $Summary)
+            apkExists = [bool](Get-JsonProperty -Object $apk -Name 'path' -Default '')
+            readinessOnline = ([string](Get-JsonProperty -Object $Summary -Name 'readiness' -Default '') -eq 'online')
+            installAttempted = [bool](Get-JsonProperty -Object $install -Name 'attempted' -Default $false)
+            packageCheckAttempted = [bool](Get-JsonProperty -Object $packageCheck -Name 'attempted' -Default $false)
+            dryRunContractPass = ($summaryDryRun -and [string]$InstallStatus -eq 'pass' -and -not [bool](Get-JsonProperty -Object $install -Name 'attempted' -Default $false))
+        }
+        artifacts = [ordered]@{
+            summaryPath = $SummaryPath
+            apk = $apk
+            package = Get-JsonProperty -Object $Summary -Name 'package'
+            serial = Get-JsonProperty -Object $Summary -Name 'serial'
+            readiness = Get-JsonProperty -Object $Summary -Name 'readiness'
+            readinessStatus = Get-JsonProperty -Object $Summary -Name 'readinessStatus'
+            readinessSummaryPath = Get-JsonProperty -Object $Summary -Name 'readinessSummaryPath'
+            install = $install
+            packageCheck = $packageCheck
+        }
+        proofBoundary = 'Install evidence only proves the APK load contract. Replay/export and direct handoff still need product-path Quest evidence.'
+    }
+}
+
+function New-QuestReplayJobReceipt {
+    param(
+        [object]$Summary,
+        [string]$SummaryPath,
+        [string]$JobStatus = '',
+        [string]$ReplayStatus = '',
+        [bool]$DryRun = $false
+    )
+
+    $apk = Get-JsonProperty -Object $Summary -Name 'apk'
+    $productPath = Get-JsonProperty -Object $Summary -Name 'productPath'
+    $questValidation = Get-JsonProperty -Object $Summary -Name 'questValidation'
+    $summaryDryRun = if ($null -ne $Summary) { [bool](Get-JsonProperty -Object $Summary -Name 'dryRun' -Default $DryRun) } else { $DryRun }
+    $productPathStatus = [string](Get-JsonProperty -Object $Summary -Name 'productPathStatus' -Default 'not-probed')
+    return [ordered]@{
+        schemaVersion = 'mq.builder_runner.job_receipt.v1'
+        kind = 'quest-replay-export'
+        status = if ([string]::IsNullOrWhiteSpace($ReplayStatus)) { $JobStatus } else { $ReplayStatus }
+        jobStatus = $JobStatus
+        actionStatus = $ReplayStatus
+        dryRun = $summaryDryRun
+        productPathStatus = $productPathStatus
+        productPathReady = [bool](Get-JsonProperty -Object $productPath -Name 'ready' -Default $false)
+        physicalQuestProductPathPending = ($summaryDryRun -or $productPathStatus -ne 'ready' -or [string]$ReplayStatus -ne 'pass')
+        checks = [ordered]@{
+            summaryWritten = ($null -ne $Summary)
+            apkExists = [bool](Get-JsonProperty -Object $apk -Name 'path' -Default '')
+            readinessOnline = ([string](Get-JsonProperty -Object $Summary -Name 'readiness' -Default '') -eq 'online')
+            productPathReady = [bool](Get-JsonProperty -Object $productPath -Name 'ready' -Default $false)
+            questValidationSummaryWritten = -not [string]::IsNullOrWhiteSpace([string](Get-JsonProperty -Object $Summary -Name 'questValidationSummaryPath' -Default ''))
+            replayExportAttempted = ($null -ne $questValidation)
+            dryRunContractPass = ($summaryDryRun -and [string]$ReplayStatus -ne 'fail' -and $null -eq $questValidation)
+        }
+        artifacts = [ordered]@{
+            summaryPath = $SummaryPath
+            apk = $apk
+            serial = Get-JsonProperty -Object $Summary -Name 'serial'
+            readiness = Get-JsonProperty -Object $Summary -Name 'readiness'
+            readinessStatus = Get-JsonProperty -Object $Summary -Name 'readinessStatus'
+            readinessSummaryPath = Get-JsonProperty -Object $Summary -Name 'readinessSummaryPath'
+            productPathStatus = $productPathStatus
+            productPathBlockedReasons = @(Get-JsonProperty -Object $Summary -Name 'productPathBlockedReasons' -Default @())
+            questValidationSummaryPath = Get-JsonProperty -Object $Summary -Name 'questValidationSummaryPath'
+            questValidation = $questValidation
+        }
+        proofBoundary = 'Replay/export dry-runs prove the endpoint contract only. Live replay/export requires product-path readiness and Quest-side export evidence.'
+    }
+}
+
+function New-DirectHandoffJobReceipt {
+    param(
+        [object]$Summary,
+        [string]$SummaryPath,
+        [string]$JobStatus = '',
+        [string]$HandoffStatus = '',
+        [bool]$DryRun = $false
+    )
+
+    $preflight = Get-JsonProperty -Object $Summary -Name 'preflight'
+    $decisionGate = Get-JsonProperty -Object $Summary -Name 'decisionGate'
+    $summaryDryRun = if ($null -ne $Summary) { [bool](Get-JsonProperty -Object $Summary -Name 'dryRun' -Default $DryRun) } else { $DryRun }
+    $defaultDirectApproved = if ($null -ne $decisionGate) { [bool](Get-JsonProperty -Object $decisionGate -Name 'defaultDirectPendingIntentApproved' -Default $false) } else { $false }
+    $candidateAStatus = Get-JsonProperty -Object $decisionGate -Name 'candidateAStatus'
+    $preflightStatus = Get-JsonProperty -Object $decisionGate -Name 'preflightStatus' -Default (Get-JsonProperty -Object $preflight -Name 'status')
+    $receiptStatus = if ([string]$HandoffStatus -eq 'pass' -and -not $defaultDirectApproved) { 'pass-with-physical-pending' } elseif ([string]::IsNullOrWhiteSpace($HandoffStatus)) { $JobStatus } else { $HandoffStatus }
+    return [ordered]@{
+        schemaVersion = 'mq.builder_runner.job_receipt.v1'
+        kind = 'direct-pendingintent-handoff'
+        status = $receiptStatus
+        jobStatus = $JobStatus
+        actionStatus = $HandoffStatus
+        dryRun = $summaryDryRun
+        candidateAStatus = $candidateAStatus
+        defaultDirectPendingIntentApproved = $defaultDirectApproved
+        physicalQuestProductPathPending = (-not $defaultDirectApproved)
+        checks = [ordered]@{
+            summaryWritten = ($null -ne $Summary)
+            preflightPass = ([string]$preflightStatus -eq 'pass')
+            attemptedTrials = [int](Get-JsonProperty -Object $Summary -Name 'attemptedTrialCount' -Default 0)
+            passCount = [int](Get-JsonProperty -Object $Summary -Name 'passCount' -Default 0)
+            blockedCount = [int](Get-JsonProperty -Object $Summary -Name 'blockedCount' -Default 0)
+            failCount = [int](Get-JsonProperty -Object $Summary -Name 'failCount' -Default 0)
+            dryRunContractPass = ($summaryDryRun -and [string]$HandoffStatus -eq 'pass' -and [string]$candidateAStatus -eq 'dry-run-only' -and -not $defaultDirectApproved)
+        }
+        artifacts = [ordered]@{
+            summaryPath = $SummaryPath
+            preflightStatus = $preflightStatus
+            triggerCount = Get-JsonProperty -Object $preflight -Name 'triggerCount' -Default 0
+            requestedTrialCount = Get-JsonProperty -Object $decisionGate -Name 'requestedTrialCount' -Default (Get-JsonProperty -Object $Summary -Name 'trialCount' -Default 0)
+            attemptedTrialCount = Get-JsonProperty -Object $Summary -Name 'attemptedTrialCount' -Default 0
+            passCount = Get-JsonProperty -Object $Summary -Name 'passCount' -Default 0
+            warnCount = Get-JsonProperty -Object $Summary -Name 'warnCount' -Default 0
+            blockedCount = Get-JsonProperty -Object $Summary -Name 'blockedCount' -Default 0
+            failCount = Get-JsonProperty -Object $Summary -Name 'failCount' -Default 0
+            decisionGate = $decisionGate
+        }
+        proofBoundary = 'A dry-run can approve the direct handoff runner contract, but production direct PendingIntent needs real Quest product-path trials plus a manual headset pass.'
+    }
+}
+
 function New-WorkflowValidationArguments {
     param(
         [object]$Payload,
@@ -752,6 +896,7 @@ function Get-InstallApkJobStatus {
     elseif ($summary -and $summary.PSObject.Properties.Name -contains 'status') {
         $installStatus = [string]$summary.status
     }
+    $jobReceipt = New-InstallJobReceipt -Summary $summary -SummaryPath ([string]$job['summaryPath']) -JobStatus $jobStatus -InstallStatus $installStatus -DryRun ([bool]$job['dryRun'])
 
     return [ordered]@{
         status = 'ok'
@@ -770,6 +915,7 @@ function Get-InstallApkJobStatus {
         stderrPath = $job['stderrPath']
         stdout = Get-TailText -Path ([string]$job['stdoutPath'])
         stderr = Get-TailText -Path ([string]$job['stderrPath'])
+        jobReceipt = $jobReceipt
         summary = $summary
         startedAt = $job['startedAt']
         completedAt = $job['completedAt']
@@ -906,6 +1052,7 @@ function Get-QuestReplayJobStatus {
     elseif ($summary -and $summary.PSObject.Properties.Name -contains 'status') {
         $replayStatus = [string]$summary.status
     }
+    $jobReceipt = New-QuestReplayJobReceipt -Summary $summary -SummaryPath ([string]$job['summaryPath']) -JobStatus $jobStatus -ReplayStatus $replayStatus -DryRun ([bool]$job['dryRun'])
 
     return [ordered]@{
         status = 'ok'
@@ -926,6 +1073,7 @@ function Get-QuestReplayJobStatus {
         stderrPath = $job['stderrPath']
         stdout = Get-TailText -Path ([string]$job['stdoutPath'])
         stderr = Get-TailText -Path ([string]$job['stderrPath'])
+        jobReceipt = $jobReceipt
         summary = $summary
         startedAt = $job['startedAt']
         completedAt = $job['completedAt']
@@ -1068,6 +1216,7 @@ function Get-DirectHandoffJobStatus {
     elseif ($summary -and $summary.PSObject.Properties.Name -contains 'status') {
         $handoffStatus = [string]$summary.status
     }
+    $jobReceipt = New-DirectHandoffJobReceipt -Summary $summary -SummaryPath ([string]$job['summaryPath']) -JobStatus $jobStatus -HandoffStatus $handoffStatus -DryRun ([bool]$job['dryRun'])
 
     return [ordered]@{
         status = 'ok'
@@ -1096,6 +1245,7 @@ function Get-DirectHandoffJobStatus {
         stderrPath = $job['stderrPath']
         stdout = Get-TailText -Path ([string]$job['stdoutPath'])
         stderr = Get-TailText -Path ([string]$job['stderrPath'])
+        jobReceipt = $jobReceipt
         summary = $summary
         startedAt = $job['startedAt']
         completedAt = $job['completedAt']

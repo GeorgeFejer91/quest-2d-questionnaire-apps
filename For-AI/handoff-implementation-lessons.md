@@ -430,10 +430,12 @@ could miss APK bytes, render counts, failed/blocked/pending gate counts, and
 the direct handoff decision boundary unless they opened JSON.
 
 Solution: `/api/workflow-job` now derives a compact `workflowReceipt` from the
-builder-to-Quest matrix and the GUI renders it as a visible evidence line. The
-raw summary remains available in the log, but the runner panel promotes the
-audit-critical facts: offline gates inspectable, failure/block/pending counts,
-APK size, local render count, direct handoff status, product-path readiness,
+builder-to-Quest matrix, and the install/replay/direct-handoff job endpoints
+derive matching `jobReceipt` objects from their summaries. The GUI renders
+these receipts as a visible evidence line. The raw summary remains available
+in the log, but the runner panel promotes the audit-critical facts: offline
+gates inspectable, failure/block/pending counts, APK size, local render count,
+install dry-run state, replay product-path readiness, direct handoff status,
 and the reminder that production direct PendingIntent remains pending until
 real Quest trials plus manual headset evidence pass.
 

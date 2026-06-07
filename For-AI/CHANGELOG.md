@@ -151,3 +151,7 @@ Use absolute dates.
   matrix artifact so users can see offline evidence readiness, failure/block
   counts, APK/render facts, and remaining physical Quest gates without opening
   nested JSON.
+- Added GUI-visible `jobReceipt` objects for install, replay/export, and direct
+  handoff runner jobs. Future local companion job endpoints should expose a
+  compact receipt beside raw logs and summary paths so every dashboard step can
+  be audited without spelunking nested artifacts.

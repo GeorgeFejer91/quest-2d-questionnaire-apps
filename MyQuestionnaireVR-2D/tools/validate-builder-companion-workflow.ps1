@@ -507,6 +507,10 @@ try {
     if ($installApk.installStatus -eq 'fail' -or [string]::IsNullOrWhiteSpace([string]$installApk.summaryPath) -or -not (Test-Path -LiteralPath $installApk.summaryPath)) {
         throw "Companion install-apk dry run did not produce a usable install summary."
     }
+    $installApkReceipt = if ($installApk.PSObject.Properties.Name -contains 'jobReceipt') { $installApk.jobReceipt } else { $null }
+    if ($null -eq $installApkReceipt -or [string]$installApkReceipt.kind -ne 'quest-apk-install' -or -not [bool]$installApkReceipt.dryRun -or -not [bool]$installApkReceipt.checks.dryRunContractPass) {
+        throw "Companion install-apk dry run did not return a valid job receipt."
+    }
 
     Write-Host "== Quest replay/export dry run through companion =="
     $replayDryRunApk = Join-Path $artifactDir 'replay-dry-run-placeholder.apk'
@@ -530,6 +534,10 @@ try {
     Add-Progress "quest-replay-complete jobStatus=$($questReplay.jobStatus) replayStatus=$($questReplay.replayStatus)"
     if ($questReplay.replayStatus -eq 'fail' -or [string]::IsNullOrWhiteSpace([string]$questReplay.summaryPath) -or -not (Test-Path -LiteralPath $questReplay.summaryPath)) {
         throw "Companion quest-replay dry run did not produce a usable replay summary."
+    }
+    $questReplayReceipt = if ($questReplay.PSObject.Properties.Name -contains 'jobReceipt') { $questReplay.jobReceipt } else { $null }
+    if ($null -eq $questReplayReceipt -or [string]$questReplayReceipt.kind -ne 'quest-replay-export' -or -not [bool]$questReplayReceipt.dryRun -or -not [bool]$questReplayReceipt.checks.dryRunContractPass) {
+        throw "Companion quest-replay dry run did not return a valid job receipt."
     }
 
     Write-Host "== Direct PendingIntent handoff dry run through companion =="
@@ -570,6 +578,10 @@ try {
     if ($directHandoff.handoffStatus -eq 'fail' -or $directHandoff.handoffStatus -eq 'error' -or [string]::IsNullOrWhiteSpace([string]$directHandoff.summaryPath) -or -not (Test-Path -LiteralPath $directHandoff.summaryPath)) {
         throw "Companion direct-handoff dry run did not produce a usable handoff summary."
     }
+    $directHandoffReceipt = if ($directHandoff.PSObject.Properties.Name -contains 'jobReceipt') { $directHandoff.jobReceipt } else { $null }
+    if ($null -eq $directHandoffReceipt -or [string]$directHandoffReceipt.kind -ne 'direct-pendingintent-handoff' -or -not [bool]$directHandoffReceipt.dryRun -or -not [bool]$directHandoffReceipt.checks.dryRunContractPass -or [bool]$directHandoffReceipt.defaultDirectPendingIntentApproved) {
+        throw "Companion direct-handoff dry run did not return a valid strategy-bounded job receipt."
+    }
 
     Write-Host "== Direct handoff clamp dry run through companion =="
     $directHandoffClampStart = Invoke-Json -Method POST -Uri "$baseUrl/api/direct-handoff" -Headers $headers -Body @{
@@ -596,6 +608,10 @@ try {
     Add-Progress "direct-handoff-clamp-complete jobStatus=$($directHandoffClamp.jobStatus) trialCount=$($directHandoffClamp.trialCount) waitForReadySeconds=$($directHandoffClamp.waitForReadySeconds)"
     if ($directHandoffClamp.handoffStatus -eq 'fail' -or $directHandoffClamp.handoffStatus -eq 'error' -or [string]::IsNullOrWhiteSpace([string]$directHandoffClamp.summaryPath) -or -not (Test-Path -LiteralPath $directHandoffClamp.summaryPath)) {
         throw "Companion direct-handoff clamp dry run did not produce a usable handoff summary."
+    }
+    $directHandoffClampReceipt = if ($directHandoffClamp.PSObject.Properties.Name -contains 'jobReceipt') { $directHandoffClamp.jobReceipt } else { $null }
+    if ($null -eq $directHandoffClampReceipt -or [string]$directHandoffClampReceipt.kind -ne 'direct-pendingintent-handoff' -or -not [bool]$directHandoffClampReceipt.dryRun -or -not [bool]$directHandoffClampReceipt.checks.dryRunContractPass -or [bool]$directHandoffClampReceipt.defaultDirectPendingIntentApproved) {
+        throw "Companion direct-handoff clamp dry run did not return a valid strategy-bounded job receipt."
     }
     if ([int]$directHandoffClamp.trialCount -ne 10 -or [int]$directHandoffClamp.waitForReadySeconds -ne 28800) {
         throw "Companion direct-handoff clamp mismatch. Expected trialCount=10 and waitForReadySeconds=28800, got trialCount=$($directHandoffClamp.trialCount), waitForReadySeconds=$($directHandoffClamp.waitForReadySeconds)."
@@ -784,6 +800,16 @@ try {
         [string]$workflowClampDirectFacts.decisionGate.candidateAStatus -eq 'dry-run-only' -and
         -not [bool]$workflowClampDirectFacts.decisionGate.defaultDirectPendingIntentApproved
     )
+    $stepJobReceiptsInspectable = (
+        $installApkReceipt -and
+        $questReplayReceipt -and
+        $directHandoffReceipt -and
+        $directHandoffClampReceipt -and
+        [bool]$installApkReceipt.checks.dryRunContractPass -and
+        [bool]$questReplayReceipt.checks.dryRunContractPass -and
+        [bool]$directHandoffReceipt.checks.dryRunContractPass -and
+        [bool]$directHandoffClampReceipt.checks.dryRunContractPass
+    )
     $offlineWorkflowReady = (
         $authorizationPass -and
         [string]$dependency.status -eq 'ok' -and
@@ -794,6 +820,7 @@ try {
         [string]$installApk.installStatus -eq 'pass' -and
         [string]$questReplay.replayStatus -ne 'fail' -and
         [bool]$workflowReceipt.offlineEvidenceReady -and
+        $stepJobReceiptsInspectable -and
         $directHandoffDryRunGatePass -and
         $directHandoffClampGatePass -and
         $workflowClampGatePass
@@ -810,6 +837,7 @@ try {
         [string]$installApk.installStatus -eq 'pass' -and
         [string]$questReplay.replayStatus -ne 'fail' -and
         [bool]$workflowReceipt.offlineEvidenceReady -and
+        $stepJobReceiptsInspectable -and
         $directHandoffDryRunGatePass -and
         $directHandoffClampGatePass -and
         $workflowClampGatePass
@@ -841,6 +869,7 @@ try {
             renderPreviewArtifactGatePass = $renderPreviewPass
             workflowMatrixInspectable = $workflowMatrixInspectable
             workflowReceiptInspectable = [bool]$workflowReceipt.offlineEvidenceReady
+            runnerJobReceiptsInspectable = $stepJobReceiptsInspectable
             workflowDirectHandoffClampGatePass = $workflowClampGatePass
         }
         artifacts = [ordered]@{
@@ -855,6 +884,12 @@ try {
             directHandoffSummaryPath = $directHandoff.summaryPath
             workflowClampSummaryPath = $workflowClamp.summaryPath
             workflowClampReceipt = $workflowClampReceipt
+            runnerJobReceipts = [ordered]@{
+                installApk = $installApkReceipt
+                questReplay = $questReplayReceipt
+                directHandoff = $directHandoffReceipt
+                directHandoffClamp = $directHandoffClampReceipt
+            }
         }
         physicalEvidenceStillNeeded = [ordered]@{
             directPendingIntentQuestTrials = '10 clean product-path trials'
@@ -900,6 +935,7 @@ try {
             installStatus = $installApk.installStatus
             runId = $installApk.runId
             summaryPath = $installApk.summaryPath
+            jobReceipt = $installApkReceipt
         }
         questReplayDryRun = [ordered]@{
             jobStatus = $questReplay.jobStatus
@@ -908,6 +944,7 @@ try {
             productPathBlockedReasons = if ($questReplay.PSObject.Properties.Name -contains 'productPathBlockedReasons') { @($questReplay.productPathBlockedReasons) } else { @() }
             runId = $questReplay.runId
             summaryPath = $questReplay.summaryPath
+            jobReceipt = $questReplayReceipt
         }
         directHandoffDryRun = [ordered]@{
             jobStatus = $directHandoff.jobStatus
@@ -922,6 +959,7 @@ try {
             temporalTracerApk = $temporalTracerApkForDirect
             unityApk = $unityApkForDirect
             decisionGate = $directHandoff.decisionGate
+            jobReceipt = $directHandoffReceipt
         }
         directHandoffClampDryRun = [ordered]@{
             jobStatus = $directHandoffClamp.jobStatus
@@ -934,6 +972,7 @@ try {
             runId = $directHandoffClamp.runId
             summaryPath = $directHandoffClamp.summaryPath
             decisionGate = $directHandoffClamp.decisionGate
+            jobReceipt = $directHandoffClampReceipt
         }
         builder = [ordered]@{
             outputDir = $builderOut

@@ -433,6 +433,11 @@
       color: #92400e;
     }
 
+    #workflowReceiptStatus {
+      margin-top: 8px;
+      overflow-wrap: anywhere;
+    }
+
     pre {
       margin: 0;
       min-height: 520px;
@@ -2994,7 +2999,7 @@
     function workflowReceiptText(data) {
       const receipt = data?.workflowReceipt;
       if (!receipt) {
-        return "";
+        return jobReceiptText(data);
       }
       const counts = receipt.counts || {};
       const artifacts = receipt.artifacts || {};
@@ -3047,6 +3052,74 @@
       return `${pieces.join("; ")}.`;
     }
 
+    function jobReceiptText(data) {
+      const receipt = data?.jobReceipt;
+      if (!receipt) {
+        return "";
+      }
+      const kindLabels = {
+        "quest-apk-install": "Quest APK install",
+        "quest-replay-export": "Quest replay/export",
+        "direct-pendingintent-handoff": "Direct handoff"
+      };
+      const label = kindLabels[receipt.kind] || "Runner job";
+      const artifacts = receipt.artifacts || {};
+      const checks = receipt.checks || {};
+      const pieces = [`Evidence receipt: ${label} ${receipt.status || "unknown"}`];
+      if (receipt.dryRun) {
+        pieces.push("dry-run contract");
+      }
+      if (checks.summaryWritten) {
+        pieces.push("summary written");
+      }
+      const apkBytes = formatReceiptBytes(artifacts.apk?.bytes);
+      if (checks.apkExists && apkBytes) {
+        pieces.push(`APK ${apkBytes}`);
+      }
+      if (checks.readinessOnline) {
+        pieces.push("ADB online");
+      }
+      const productPathStatus = receipt.productPathStatus || artifacts.productPathStatus;
+      if (productPathStatus && productPathStatus !== "not-probed") {
+        pieces.push(`product path ${productPathStatus}`);
+      }
+      if (Array.isArray(artifacts.productPathBlockedReasons) && artifacts.productPathBlockedReasons.length > 0) {
+        pieces.push(`blocked: ${artifacts.productPathBlockedReasons.join(", ")}`);
+      }
+      if (checks.preflightPass) {
+        pieces.push("APK preflight pass");
+      }
+      const attempted = Number(artifacts.attemptedTrialCount ?? checks.attemptedTrials ?? 0);
+      const passCount = Number(artifacts.passCount ?? checks.passCount ?? 0);
+      const blockedCount = Number(artifacts.blockedCount ?? checks.blockedCount ?? 0);
+      const failCount = Number(artifacts.failCount ?? checks.failCount ?? 0);
+      if (receipt.kind === "direct-pendingintent-handoff") {
+        pieces.push(`${passCount}/${artifacts.requestedTrialCount || directHandoffTrialCount()} trials passed`);
+        if (attempted === 0) {
+          pieces.push("0 product-path trials attempted");
+        }
+        if (blockedCount > 0) {
+          pieces.push(`${blockedCount} blocked`);
+        }
+        if (failCount > 0) {
+          pieces.push(`${failCount} failed`);
+        }
+        if (receipt.candidateAStatus) {
+          pieces.push(`candidate A ${receipt.candidateAStatus}`);
+        }
+        if (receipt.defaultDirectPendingIntentApproved === false) {
+          pieces.push("production direct default still pending");
+        }
+      }
+      if (receipt.physicalQuestProductPathPending) {
+        pieces.push("physical product-path evidence pending");
+      }
+      if (artifacts.summaryPath) {
+        pieces.push(`summary: ${artifacts.summaryPath}`);
+      }
+      return `${pieces.join("; ")}.`;
+    }
+
     function setWorkflowReceiptStatus(data) {
       const target = byId("workflowReceiptStatus");
       const text = workflowReceiptText(data);
@@ -3056,7 +3129,7 @@
         return;
       }
       target.hidden = false;
-      target.className = `issue ${workflowReceiptLevel(data.workflowReceipt)}`;
+      target.className = `issue ${workflowReceiptLevel(data?.workflowReceipt || data?.jobReceipt)}`;
       target.textContent = text;
     }
 
@@ -3276,6 +3349,7 @@
       while (Date.now() - startedAt < timeoutMs) {
         const data = await callAppBackend(`/api/install-apk-job?runId=${encodeURIComponent(runId)}`);
         setAppBackendStatus(installJobText(data), installJobLevel(data));
+        setWorkflowReceiptStatus(data);
         setAppBackendLog(data);
         if (data.jobStatus !== "running") {
           return data;
@@ -3318,6 +3392,7 @@
       while (Date.now() - startedAt < timeoutMs) {
         const data = await callAppBackend(`/api/quest-replay-job?runId=${encodeURIComponent(runId)}`);
         setAppBackendStatus(questReplayJobText(data), questReplayJobLevel(data));
+        setWorkflowReceiptStatus(data);
         setAppBackendLog(data);
         if (data.jobStatus !== "running") {
           return data;
@@ -3377,6 +3452,7 @@
       while (Date.now() - startedAt < timeoutMs) {
         const data = await callAppBackend(`/api/direct-handoff-job?runId=${encodeURIComponent(runId)}`);
         setAppBackendStatus(directHandoffJobText(data), directHandoffJobLevel(data));
+        setWorkflowReceiptStatus(data);
         setAppBackendLog(data);
         if (data.jobStatus !== "running") {
           return data;
@@ -3524,20 +3600,24 @@
       try {
         const apkPath = lastGeneratedApkPath || expectedGeneratedApkPath();
         setAppBackendStatus("Starting Quest APK install...", "");
+        setWorkflowReceiptStatus(null);
         const data = await callAppBackend("/api/install-apk", {
           apk: apkPath,
           questSerial: byId("workflowQuestSerial").value.trim(),
           waitSeconds: 0
         });
         setAppBackendStatus(installJobText(data), installJobLevel(data));
+        setWorkflowReceiptStatus(data);
         setAppBackendLog(data);
         if (data.jobStatus === "running" && (data.runId || data.jobId)) {
           const finalData = await pollInstallApkJob(data.runId || data.jobId);
           setAppBackendStatus(installJobText(finalData), installJobLevel(finalData));
+          setWorkflowReceiptStatus(finalData);
           setAppBackendLog(finalData);
         }
       } catch (error) {
         setAppBackendStatus(error.message || String(error), "error");
+        setWorkflowReceiptStatus(error.backendData || null);
         setAppBackendLog(error.backendData || error.message || String(error));
       } finally {
         button.disabled = wasDisabled;
@@ -3552,20 +3632,24 @@
       try {
         const apkPath = lastGeneratedApkPath || expectedGeneratedApkPath();
         setAppBackendStatus("Starting Quest replay/export validation...", "");
+        setWorkflowReceiptStatus(null);
         const data = await callAppBackend("/api/quest-replay", {
           apk: apkPath,
           questSerial: byId("workflowQuestSerial").value.trim(),
           waitSeconds: 20
         });
         setAppBackendStatus(questReplayJobText(data), questReplayJobLevel(data));
+        setWorkflowReceiptStatus(data);
         setAppBackendLog(data);
         if (data.jobStatus === "running" && (data.runId || data.jobId)) {
           const finalData = await pollQuestReplayJob(data.runId || data.jobId);
           setAppBackendStatus(questReplayJobText(finalData), questReplayJobLevel(finalData));
+          setWorkflowReceiptStatus(finalData);
           setAppBackendLog(finalData);
         }
       } catch (error) {
         setAppBackendStatus(error.message || String(error), "error");
+        setWorkflowReceiptStatus(error.backendData || null);
         setAppBackendLog(error.backendData || error.message || String(error));
       } finally {
         button.disabled = wasDisabled;
@@ -3582,6 +3666,7 @@
         const waitForReadySeconds = directHandoffWaitSeconds();
         const trialCount = directHandoffTrialCount();
         setAppBackendStatus("Starting direct PendingIntent handoff trials...", "");
+        setWorkflowReceiptStatus(null);
         const data = await callAppBackend("/api/direct-handoff", {
           questionnaireApk: apkPath,
           questSerial: byId("workflowQuestSerial").value.trim(),
@@ -3590,14 +3675,17 @@
           waitSeconds: 95
         });
         setAppBackendStatus(directHandoffJobText(data), directHandoffJobLevel(data));
+        setWorkflowReceiptStatus(data);
         setAppBackendLog(data);
         if (data.jobStatus === "running" && (data.runId || data.jobId)) {
           const finalData = await pollDirectHandoffJob(data.runId || data.jobId, waitForReadySeconds, trialCount);
           setAppBackendStatus(directHandoffJobText(finalData), directHandoffJobLevel(finalData));
+          setWorkflowReceiptStatus(finalData);
           setAppBackendLog(finalData);
         }
       } catch (error) {
         setAppBackendStatus(error.message || String(error), "error");
+        setWorkflowReceiptStatus(error.backendData || null);
         setAppBackendLog(error.backendData || error.message || String(error));
       } finally {
         button.disabled = wasDisabled;

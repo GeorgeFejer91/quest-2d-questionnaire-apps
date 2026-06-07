@@ -175,3 +175,12 @@ Use absolute dates.
   `dryRun=true` and `skipInstall=true` by default for package/catalog
   preflight, and the companion advertises `direct-handoff-preflight` so stale
   local launchers can be detected.
+- Wired the same `Preflight only` mode into the aggregate `Validate workflow`
+  button. The GUI now sends `dryRunQuestDirectHandoff=true` and
+  `skipInstall=true` to `/api/validate-workflow` by default, and the builder
+  smoke test asserts the dry-run and live-trial payloads separately.
+- Fixed two browser-started workflow gaps exposed by clicking the real
+  `Validate workflow` button: aggregate dry-run direct handoff no longer
+  requires a Quest serial, and the default companion launcher now discovers the
+  legacy `MyQuestionnaireVR` reference project as a workspace sibling when it
+  is not nested inside the repo.

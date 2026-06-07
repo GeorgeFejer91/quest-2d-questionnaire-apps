@@ -72,6 +72,9 @@ The direct handoff runner should keep `Preflight only` available for the hosted
 and offline GUI. That mode calls `/api/direct-handoff` with `dryRun=true` and
 `skipInstall=true` so users can prove package/activity/catalog preflight
 without installing or launching on Quest.
+`Validate workflow` should use the same `Preflight only` toggle to include
+direct handoff preflight in the aggregate workflow matrix by sending
+`dryRunQuestDirectHandoff=true` and `skipInstall=true` to `/api/validate-workflow`.
 
 ## Important Files
 

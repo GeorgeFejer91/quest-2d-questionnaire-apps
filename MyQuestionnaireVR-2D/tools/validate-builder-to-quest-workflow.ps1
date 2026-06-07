@@ -931,7 +931,7 @@ $directQuestEvidence = 'Direct Quest handoff trials were not requested.'
 $directQuestSummary = $null
 $directQuestFacts = $null
 if ($RunQuestDirectHandoff) {
-    if ([string]::IsNullOrWhiteSpace($Serial)) {
+    if ([string]::IsNullOrWhiteSpace($Serial) -and -not $DryRunQuestDirectHandoff) {
         $directQuestStatus = 'blocked'
         $directQuestEvidence = 'RunQuestDirectHandoff requires -Serial.'
     } elseif ([string]::IsNullOrWhiteSpace($QuestionnaireApk) -or -not (Test-Path -LiteralPath $QuestionnaireApk)) {
@@ -945,8 +945,6 @@ if ($RunQuestDirectHandoff) {
             'Bypass',
             '-File',
             (Join-Path $ProjectPath 'tools\quest-direct-handoff-validate.ps1'),
-            '-Serial',
-            $Serial,
             '-QuestionnaireApk',
             $QuestionnaireApk,
             '-TemporalTracerApk',
@@ -962,6 +960,9 @@ if ($RunQuestDirectHandoff) {
             '-FastVideoForValidation',
             '-AutoTraceForValidation'
         )
+        if (-not [string]::IsNullOrWhiteSpace($Serial)) {
+            $directArgs += @('-Serial', $Serial)
+        }
         if ($SkipInstall) {
             $directArgs += '-SkipInstall'
         }

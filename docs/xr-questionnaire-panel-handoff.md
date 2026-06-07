@@ -192,6 +192,12 @@ job endpoint with `dryRun=true` and `skipInstall=true` to prove the real APK
 package/activity/catalog contract without launching the headset. Clear that
 toggle only for operator-supervised or explicitly scheduled product-path
 trials.
+When `Preflight only` remains checked, the aggregate `Validate workflow` button
+also includes the direct handoff preflight row by sending
+`dryRunQuestDirectHandoff=true` and `skipInstall=true` to the companion
+workflow job. This mode does not require a Quest serial. It keeps the
+one-button workflow matrix aligned with the dedicated direct handoff runner
+while preserving the dry-run versus physical evidence boundary.
 The `/api/generate-apk` endpoint returns a `generationReceipt` so the GUI's
 APK-generation step can immediately show the generated APK byte/hash evidence
 and local render-preview artifact gate.

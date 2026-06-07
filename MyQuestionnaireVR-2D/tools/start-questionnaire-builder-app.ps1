@@ -18,11 +18,17 @@ if ([string]::IsNullOrWhiteSpace($ProjectPath)) {
 $ProjectPath = [System.IO.Path]::GetFullPath($ProjectPath)
 
 if ([string]::IsNullOrWhiteSpace($ReferenceProjectPath)) {
-    $siblingReference = Join-Path (Split-Path -Parent $ProjectPath) 'MyQuestionnaireVR'
-    if (Test-Path -LiteralPath $siblingReference) {
-        $ReferenceProjectPath = [System.IO.Path]::GetFullPath($siblingReference)
+    $referenceCandidates = @(
+        (Join-Path (Split-Path -Parent $ProjectPath) 'MyQuestionnaireVR'),
+        (Join-Path (Split-Path -Parent (Split-Path -Parent $ProjectPath)) 'MyQuestionnaireVR')
+    )
+    foreach ($candidate in $referenceCandidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            $ReferenceProjectPath = [System.IO.Path]::GetFullPath($candidate)
+            break
+        }
     }
-    else {
+    if ([string]::IsNullOrWhiteSpace($ReferenceProjectPath)) {
         $ReferenceProjectPath = $ProjectPath
     }
 }

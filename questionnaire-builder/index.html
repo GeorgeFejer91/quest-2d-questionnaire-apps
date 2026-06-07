@@ -3650,6 +3650,38 @@
       return Boolean(byId("directHandoffPreflightOnly")?.checked);
     }
 
+    function directHandoffWorkflowOptions() {
+      const preflightOnly = directHandoffPreflightOnly();
+      const liveTrialsRequested = Boolean(byId("workflowDirectHandoff").checked);
+      const liveTrials = liveTrialsRequested && !preflightOnly;
+      const runDirect = preflightOnly || liveTrials;
+      return {
+        preflightOnly,
+        liveTrials,
+        runDirect,
+        runReadiness: Boolean(byId("workflowQuestReadiness").checked) || liveTrials,
+        trialCount: preflightOnly ? 1 : directHandoffTrialCount(),
+        waitForReadySeconds: preflightOnly ? 0 : directHandoffWaitSeconds()
+      };
+    }
+
+    function workflowValidationPayload() {
+      const directOptions = directHandoffWorkflowOptions();
+      return {
+        config: buildConfig(),
+        skipBuild: false,
+        skipQuestionnaireRender: false,
+        skipTemporalRender: false,
+        runQuestReadiness: directOptions.runReadiness,
+        runQuestDirectHandoff: directOptions.runDirect,
+        dryRunQuestDirectHandoff: directOptions.preflightOnly,
+        skipInstall: directOptions.preflightOnly,
+        questSerial: byId("workflowQuestSerial").value.trim(),
+        questTrials: directOptions.trialCount,
+        waitForReadySeconds: directOptions.waitForReadySeconds
+      };
+    }
+
     function directHandoffJobLevel(data) {
       if (data?.jobStatus === "failed" || data?.handoffStatus === "fail" || data?.handoffStatus === "error") {
         return "error";
@@ -3955,29 +3987,16 @@
       const wasDisabled = button.disabled;
       button.disabled = true;
       try {
-        const runDirect = byId("workflowDirectHandoff").checked;
-        const runReadiness = byId("workflowQuestReadiness").checked || runDirect;
-        const trialCount = directHandoffTrialCount();
-        const waitForReadySeconds = directHandoffWaitSeconds();
-        setAppBackendStatus("Starting builder-to-Quest workflow validation...", "");
+        const directOptions = directHandoffWorkflowOptions();
+        setAppBackendStatus(directOptions.preflightOnly ? "Starting builder-to-Quest workflow validation with direct handoff preflight..." : "Starting builder-to-Quest workflow validation...", "");
         setWorkflowReceiptStatus(null);
-        const data = await callAppBackend("/api/validate-workflow", {
-          config: buildConfig(),
-          skipBuild: false,
-          skipQuestionnaireRender: false,
-          skipTemporalRender: false,
-          runQuestReadiness: runReadiness,
-          runQuestDirectHandoff: runDirect,
-          questSerial: byId("workflowQuestSerial").value.trim(),
-          questTrials: runDirect ? trialCount : 1,
-          waitForReadySeconds: runDirect ? waitForReadySeconds : 0
-        });
+        const data = await callAppBackend("/api/validate-workflow", workflowValidationPayload());
         setAppBackendStatus(workflowJobText(data), workflowJobLevel(data));
         setWorkflowReceiptStatus(data);
         setAppBackendLog(data);
         await showArtifactPreviews(data);
         if (data.jobStatus === "running" && (data.runId || data.jobId)) {
-          const finalData = await pollWorkflowJob(data.runId || data.jobId, waitForReadySeconds, trialCount, runDirect);
+          const finalData = await pollWorkflowJob(data.runId || data.jobId, directOptions.waitForReadySeconds, directOptions.trialCount, directOptions.runDirect && !directOptions.preflightOnly);
           setAppBackendStatus(workflowJobText(finalData), workflowJobLevel(finalData));
           setWorkflowReceiptStatus(finalData);
           await showArtifactPreviews(finalData);

@@ -142,7 +142,7 @@ function loadEditor() {
   };
   context.window = context;
   vm.createContext(context);
-  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, refresh, buildExperimentBlockRegistry, buildChainPlan };`, context, {
+  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, refresh, buildExperimentBlockRegistry, buildChainPlan, directHandoffWorkflowOptions, workflowValidationPayload };`, context, {
     filename: htmlPath
   });
   return { context, document };
@@ -177,6 +177,34 @@ assert(document.getElementById("pipelineCommands").textContent.includes("render-
 assert(document.getElementById("pipelineCommands").textContent.includes("quest-chain-validate.ps1"), "Quest chain validation command was not rendered.");
 assert(document.getElementById("pipelineCommands").textContent.includes("quest-broker-chain-validate.ps1"), "Quest broker chain validation command was not rendered.");
 assert(document.getElementById("pipelineCommands").textContent.includes("validate-builder-to-quest-workflow.ps1"), "Full builder-to-Quest workflow command was not rendered.");
+assert(document.getElementById("directHandoffPreflightOnly").checked === true, "Direct handoff preflight toggle should default on.");
+const defaultWorkflowDirect = context.__api.directHandoffWorkflowOptions();
+const defaultWorkflowPayload = context.__api.workflowValidationPayload();
+assert(defaultWorkflowDirect.preflightOnly === true, "Default workflow direct handoff mode should be preflight.");
+assert(defaultWorkflowDirect.runDirect === true, "Default workflow should include direct handoff preflight.");
+assert(defaultWorkflowDirect.liveTrials === false, "Default workflow should not request live direct handoff trials.");
+assert(defaultWorkflowDirect.trialCount === 1, "Default workflow preflight should clamp to one direct handoff trial.");
+assert(defaultWorkflowDirect.waitForReadySeconds === 0, "Default workflow preflight should not wait for product-path readiness.");
+assert(defaultWorkflowPayload.runQuestDirectHandoff === true, "Workflow payload should request direct handoff when preflight is enabled.");
+assert(defaultWorkflowPayload.dryRunQuestDirectHandoff === true, "Workflow payload should dry-run direct handoff by default.");
+assert(defaultWorkflowPayload.skipInstall === true, "Workflow payload should skip install for direct handoff preflight.");
+assert(defaultWorkflowPayload.questTrials === 1, "Workflow payload should send one dry-run direct handoff trial.");
+assert(defaultWorkflowPayload.waitForReadySeconds === 0, "Workflow payload should send zero readiness wait for dry-run preflight.");
+document.getElementById("directHandoffPreflightOnly").checked = false;
+document.getElementById("workflowDirectHandoff").checked = true;
+document.getElementById("directHandoffTrials").value = "8";
+document.getElementById("directHandoffWaitSeconds").value = "60";
+const liveWorkflowDirect = context.__api.directHandoffWorkflowOptions();
+const liveWorkflowPayload = context.__api.workflowValidationPayload();
+assert(liveWorkflowDirect.preflightOnly === false, "Live workflow should clear preflight mode.");
+assert(liveWorkflowDirect.liveTrials === true, "Live workflow should mark direct handoff trials requested.");
+assert(liveWorkflowDirect.runReadiness === true, "Live workflow should require Quest readiness.");
+assert(liveWorkflowPayload.dryRunQuestDirectHandoff === false, "Live workflow payload should not dry-run direct handoff.");
+assert(liveWorkflowPayload.skipInstall === false, "Live workflow payload should not skip install.");
+assert(liveWorkflowPayload.questTrials === 8, "Live workflow payload should keep bounded trial count.");
+assert(liveWorkflowPayload.waitForReadySeconds === 60, "Live workflow payload should keep readiness wait.");
+document.getElementById("directHandoffPreflightOnly").checked = true;
+document.getElementById("workflowDirectHandoff").checked = false;
 
 context.__api.applyTriggerCatalog({
   schemaVersion: "mq.quest_questionnaire_trigger_catalog.v1",
@@ -274,6 +302,7 @@ const summary = {
   qualityReportDownloadAction: "pass",
   blockRegistryDownloadAction: "pass",
   chainPlanDownloadAction: "pass",
+  workflowPreflightPayloadAction: "pass",
   defaultRegisteredBlocks: initial.experimentBlockRegistry.blocks.length,
   pipelineCommands: 7
 };

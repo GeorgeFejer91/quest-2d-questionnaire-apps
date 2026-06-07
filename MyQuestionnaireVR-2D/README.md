@@ -217,12 +217,15 @@ Quest gates remain pending or blocked.
 In the builder runner, `Run direct handoff` defaults to `Preflight only`. That
 mode sends `dryRun=true` and `skipInstall=true` to `/api/direct-handoff`, uses
 the real questionnaire, temporal tracer, and Unity APK package/catalog
-contract, and does not launch the headset. Clear `Preflight only`, then use
-`Ready wait (s)` before `Run direct handoff` or `Validate workflow` when
-collecting supervised or unattended Quest evidence. The value is bounded to
-0-28800 seconds and does not bypass product-path readiness: if the headset
-stays asleep or Horizon keeps the launch-check dialog focused, the run remains
-`blocked` with readiness samples instead of launching Unity.
+contract, and does not launch the headset. The same toggle also makes
+`Validate workflow` include the aggregate direct handoff dry-run matrix row
+without performing installation or launch side effects; it does not require a
+Quest serial. Clear `Preflight only`, then use `Ready wait (s)` before
+`Run direct handoff` or `Validate workflow` when collecting supervised or
+unattended Quest evidence. The value is bounded to 0-28800 seconds and does
+not bypass product-path readiness: if the headset stays asleep or Horizon
+keeps the launch-check dialog focused, the run remains `blocked` with
+readiness samples instead of launching Unity.
 
 Run the full local ladder from builder smoke test through generated APK and
 Android render preview:

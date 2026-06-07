@@ -525,3 +525,57 @@ Generalizable rule: architecture-decision buttons should separate safe
 contract preflight from live product-path evidence. Make the dry-run mode
 visible, keep it covered by the companion stress ladder, and require explicit
 operator intent before launching physical-device trials.
+
+## Aggregate Workflow Buttons Need Dry-Run Parity
+
+Problem: the dedicated direct handoff button could run safe package/catalog
+preflight, while the aggregate `Validate workflow` button still skipped direct
+handoff unless live headset trials were requested. That created an awkward
+split: the one-button evidence matrix omitted the same non-physical contract
+gate that reviewers could run separately.
+
+Solution: reuse the same `Preflight only` toggle for the aggregate workflow
+payload. With the toggle checked, the GUI sends
+`runQuestDirectHandoff=true`, `dryRunQuestDirectHandoff=true`,
+`skipInstall=true`, `questTrials=1`, and `waitForReadySeconds=0` to
+`/api/validate-workflow`; clearing it and checking live trials restores the
+operator-supervised product-path path.
+
+Generalizable rule: if a dashboard has both a dedicated evidence button and an
+aggregate validation button, keep their dry-run safety semantics aligned. The
+aggregate matrix should not silently omit a safe preflight gate just because
+the live physical gate is not being run.
+
+## Dry-Run Gates Should Not Inherit Live Device Preconditions
+
+Problem: once the GUI started the aggregate workflow with
+`dryRunQuestDirectHandoff=true`, the matrix still blocked the direct handoff
+row when no Quest serial was provided. That made an offline package/catalog
+preflight depend on a live-device field it never uses.
+
+Solution: let `validate-builder-to-quest-workflow.ps1` run
+`quest-direct-handoff-validate.ps1 -DryRun` without `-Serial`. Keep the serial
+requirement for real product-path trials, but do not apply it to dry-run
+preflight, which returns before ADB discovery.
+
+Generalizable rule: dry-run validation should prove the contract it actually
+exercises. Do not copy live-device prerequisites into non-physical preflight
+unless the dry-run itself reads that device.
+
+## Local Companions Need Workspace-Aware Defaults
+
+Problem: launching the companion directly from the repo defaulted
+`ReferenceProjectPath` to the 2D app project when `MyQuestionnaireVR` was not
+inside the repo root. The browser-started workflow then saved a config whose
+legacy MAIA, pictographic, and slider source paths could not be resolved.
+
+Solution: resolve the reference project from both likely layouts:
+`<repo>\MyQuestionnaireVR` and the workspace sibling
+`<workspace>\MyQuestionnaireVR`, falling back to the 2D app only when neither
+exists. The explicit `-ReferenceProjectPath` path still wins for validators and
+custom checkouts.
+
+Generalizable rule: desktop companions launched by humans need the same
+path-resolution behavior as validators. If a workflow depends on a sibling
+reference project, discover the common workspace layout instead of relying on a
+validator-only parameter.

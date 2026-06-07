@@ -102,6 +102,15 @@ example APK catalog is loaded. The public example folder lives at
 `../example-scenario-apk/apk/` and the matching Unity project or build folder
 under `../example-scenario-apk/unity-project/`.
 
+For a participant-facing run where the questionnaire should be the first thing
+opened from Meta Home, load the Unity trigger catalog and use `Use 2D-first
+launcher defaults` in `Experiment handoff`. The generated config packages a
+normal-launch default that runs demographics, saves the first block, and opens
+the Unity APK through `finishBehavior=openNext`. Later Unity-triggered blocks
+still return to Unity with `resumeCaller`; this does not replace the Unity
+input-modality requirement that generic stimulus APKs support both hands and
+controllers.
+
 Generate a named APK from any config:
 
 ```powershell

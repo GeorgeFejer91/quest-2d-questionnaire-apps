@@ -63,6 +63,36 @@ public final class ChainLaunchContractTest {
     }
 
     @Test
+    public void packagedDefaultsCanStartDemographicsAndOpenUnity() throws Exception {
+        QuestionnaireData.RuntimeConfig config = QuestionnaireData.RuntimeConfig.fromJson(
+            "{\"schemaVersion\":\"my-questionnaire-vr.config.v1\",\"chainDefaults\":{"
+                + "\"finishBehavior\":\"openNext\","
+                + "\"nextPackage\":\"org.example.unity\","
+                + "\"nextActivity\":\"org.example.unity.UnityPlayerActivity\","
+                + "\"questionnaireMode\":\"demographics\","
+                + "\"triggerId\":\"trigger_1_launch_questionnaire\","
+                + "\"blockNumber\":\"001\","
+                + "\"blockId\":\"001_trigger_trigger_1_launch_questionnaire\","
+                + "\"saveNamespace\":\"trigger_trigger_1_launch_questionnaire\","
+                + "\"autoCloseDelayMs\":0"
+                + "}}");
+
+        Intent launcher = new Intent(Intent.ACTION_MAIN);
+        QuestionnaireLaunchContext context = QuestionnaireLaunchContext.fromIntent(launcher, config);
+
+        assertFalse(context.chained);
+        assertTrue(context.isDemographicsOnly());
+        assertTrue(context.shouldOpenNext());
+        assertEquals("org.example.unity", context.nextPackage);
+        assertEquals("org.example.unity.UnityPlayerActivity", context.nextActivity);
+        assertEquals("trigger_1_launch_questionnaire", context.triggerId);
+        assertEquals("001", context.blockNumber);
+        assertEquals("001_trigger_trigger_1_launch_questionnaire", context.blockId);
+        assertEquals("trigger_trigger_1_launch_questionnaire", context.saveNamespace);
+        assertEquals(0L, context.autoCloseDelayMs);
+    }
+
+    @Test
     public void openNextLaunchesTargetWithResultExtrasAfterCommandReplay() throws Exception {
         File filesDir = RuntimeEnvironment.getApplication().getExternalFilesDir(null);
         deleteRecursively(filesDir);

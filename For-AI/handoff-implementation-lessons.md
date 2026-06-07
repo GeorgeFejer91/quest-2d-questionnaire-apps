@@ -811,6 +811,26 @@ build/input-modality preflight issue for generic demo APKs.
 Generalizable rule: broad input modality is the default for workflow demos;
 controller-only is an explicit study constraint, not a casual Unity default.
 
+## 2D-First Launcher Is A Valid Front Door
+
+Problem: when Unity is the first app in the chain, Horizon controller-required
+launch prompts and Unity focus recovery can block the participant before the
+demographics questionnaire is even collected. Rebuilding Unity every time to
+change the front door also makes the study flow brittle.
+
+Solution: support a questionnaire-first start mode in packaged config. The 2D
+questionnaire APK can default to demographics on a normal launcher start, save
+block 1, and then open the Unity APK with `finishBehavior=openNext` plus the
+same `mq.handoff.v1` completion extras that Unity expects after trigger 1.
+This is a builder/config preset, not a source-level hard-code to one Unity
+package. Unity still owns later XR triggers and still needs hand+controller
+metadata so Horizon does not show controller-required launch dialogs for
+generic demo/stimulus APKs.
+
+Generalizable rule: choose the participant-facing front door by config. Starting
+with the 2D panel can simplify demographics collection, but it does not move
+raw XR input ownership out of Unity.
+
 ## Mid-Run Headset Sleep Is A Blocker, Not A Strategy Failure
 
 Problem: a direct handoff trial can launch Unity, return from the first

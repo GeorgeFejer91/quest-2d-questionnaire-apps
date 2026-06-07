@@ -142,7 +142,7 @@ function loadEditor() {
   };
   context.window = context;
   vm.createContext(context);
-  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, refresh, buildExperimentBlockRegistry, buildChainPlan, directHandoffWorkflowOptions, workflowValidationPayload, runHeadsetSequenceWithApp };`, context, {
+  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, applyQuestionnaireFirstDefaults, refresh, buildExperimentBlockRegistry, buildChainPlan, directHandoffWorkflowOptions, workflowValidationPayload, runHeadsetSequenceWithApp };`, context, {
     filename: htmlPath
   });
   return { context, document };
@@ -264,6 +264,17 @@ assert(handoff.experimentBlockRegistry.blocks.some(block => block.type === "temp
 assert(handoffPlan.steps.some(step => step.type === "temporalTracer" && step.action === "org.viscereality.temporaltracer2d.RUN"), "Handoff chain plan should launch the temporal tracer action.");
 assert(handoffQuality.status === "pass", "Handoff demo config should pass quality report.");
 
+context.__api.applyQuestionnaireFirstDefaults();
+const twoDStart = context.__api.buildConfig();
+const twoDStartQuality = context.__api.qualityReport(twoDStart);
+assert(twoDStart.chainDefaults.startMode === "questionnaireFirst", "2D-first preset should mark questionnaire-first start mode.");
+assert(twoDStart.chainDefaults.finishBehavior === "openNext", "2D-first preset should open the Unity APK after demographics.");
+assert(twoDStart.chainDefaults.questionnaireMode === "demographics", "2D-first preset should run demographics from a normal launcher start.");
+assert(twoDStart.chainDefaults.triggerId === "trigger_1_launch_questionnaire", "2D-first preset should reuse the first demographics trigger id.");
+assert(twoDStart.chainDefaults.nextPackage === "org.questionnairebuilder.stimulusdemo", "2D-first preset should target the Unity package as nextPackage.");
+assert(twoDStart.experimentBlockRegistry.blocks.every(block => block.extras && block.extras["mq.finishBehavior"] === "resumeCaller"), "Unity-triggered blocks should still return to Unity in 2D-first mode.");
+assert(twoDStartQuality.status === "pass", "2D-first handoff demo config should pass quality report.");
+
 const csv = fs.readFileSync(csvPath, "utf8");
 context.__api.applyCsvText(csv, "two-item-slider-template.csv");
 const imported = JSON.parse(document.getElementById("preview").textContent);
@@ -301,6 +312,9 @@ const summary = {
   handoffQualityStatus: handoffQuality.status,
   handoffTriggerCount: handoff.triggerQuestionnaireMapping.triggers.length,
   handoffRegisteredBlocks: handoff.experimentBlockRegistry.blocks.length,
+  twoDStartQualityStatus: twoDStartQuality.status,
+  twoDStartFinishBehavior: twoDStart.chainDefaults.finishBehavior,
+  twoDStartNextPackage: twoDStart.chainDefaults.nextPackage,
   importedQuestionnaireId: imported.questionnaireId,
   importedMode: "slider-only",
   importedSliderItems: slider.expectedItemCount,
@@ -324,6 +338,8 @@ if (outputDir) {
   const handoffConfigPath = path.join(outputDir, "awe-great-dictator-handoff.config.json");
   const handoffQualityPath = path.join(outputDir, "awe-great-dictator-handoff.quality-report.json");
   const handoffChainPlanPath = path.join(outputDir, "awe-great-dictator-handoff.chainlink-plan.json");
+  const twoDStartConfigPath = path.join(outputDir, "awe-great-dictator-2d-first.config.json");
+  const twoDStartQualityPath = path.join(outputDir, "awe-great-dictator-2d-first.quality-report.json");
   const summaryPath = path.join(outputDir, "builder-smoke-summary.json");
   const importedQualityPath = path.join(outputDir, "demo-slider.quality-report.json");
   const initialChainPlanPath = path.join(outputDir, "viscereality-maia2.chainlink-plan.json");
@@ -332,6 +348,8 @@ if (outputDir) {
   fs.writeFileSync(handoffConfigPath, `${JSON.stringify(handoff, null, 2)}\n`, "utf8");
   fs.writeFileSync(handoffQualityPath, `${JSON.stringify(handoffQuality, null, 2)}\n`, "utf8");
   fs.writeFileSync(handoffChainPlanPath, `${JSON.stringify(handoffPlan, null, 2)}\n`, "utf8");
+  fs.writeFileSync(twoDStartConfigPath, `${JSON.stringify(twoDStart, null, 2)}\n`, "utf8");
+  fs.writeFileSync(twoDStartQualityPath, `${JSON.stringify(twoDStartQuality, null, 2)}\n`, "utf8");
   fs.writeFileSync(importedConfigPath, `${JSON.stringify(imported, null, 2)}\n`, "utf8");
   fs.writeFileSync(importedQualityPath, `${JSON.stringify(importedQuality, null, 2)}\n`, "utf8");
   summary.initialConfig = initialConfigPath;
@@ -339,6 +357,8 @@ if (outputDir) {
   summary.handoffConfig = handoffConfigPath;
   summary.handoffQualityReport = handoffQualityPath;
   summary.handoffChainPlan = handoffChainPlanPath;
+  summary.twoDStartConfig = twoDStartConfigPath;
+  summary.twoDStartQualityReport = twoDStartQualityPath;
   summary.importedConfig = importedConfigPath;
   summary.importedQualityReport = importedQualityPath;
   summary.summary = summaryPath;

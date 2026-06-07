@@ -909,15 +909,19 @@
                 <input id="chainFinishBehavior" value="resumeCaller" placeholder="staySaved, resumeCaller, or openNext">
               </label>
               <label>
+                Study start mode
+                <input id="chainStartMode" value="unityFirst" placeholder="unityFirst or questionnaireFirst">
+              </label>
+              <label>
                 Auto close delay ms
                 <input id="chainAutoCloseDelayMs" type="number" min="0" step="100" value="2000">
               </label>
+            </div>
+            <div class="grid">
               <label>
                 Caller package
                 <input id="chainCallerPackage" placeholder="org.example.scenario">
               </label>
-            </div>
-            <div class="grid">
               <label>
                 Caller activity
                 <input id="chainCallerActivity" placeholder="org.example.scenario.MainActivity">
@@ -929,6 +933,34 @@
               <label>
                 Next activity
                 <input id="chainNextActivity" placeholder="org.example.nextscenario.MainActivity">
+              </label>
+            </div>
+            <div class="grid">
+              <label>
+                Default questionnaire mode
+                <input id="chainQuestionnaireMode" placeholder="demographics, baseline, pictographic, or full">
+              </label>
+              <label>
+                Default trigger id
+                <input id="chainTriggerId" placeholder="trigger_1_launch_questionnaire">
+              </label>
+              <label>
+                Default block number
+                <input id="chainBlockNumber" placeholder="001">
+              </label>
+            </div>
+            <div class="grid">
+              <label>
+                Default block id
+                <input id="chainBlockId" placeholder="001_trigger_trigger_1_launch_questionnaire">
+              </label>
+              <label>
+                Default save namespace
+                <input id="chainSaveNamespace" placeholder="trigger_trigger_1_launch_questionnaire">
+              </label>
+              <label class="button-label">
+                Launcher preset
+                <button id="questionnaireFirstDefaultsButton" type="button">Use 2D-first launcher defaults</button>
               </label>
             </div>
           </div>
@@ -1255,10 +1287,16 @@
     function chainDefaults() {
       return {
         finishBehavior: byId("chainFinishBehavior").value.trim() || "staySaved",
+        startMode: byId("chainStartMode").value.trim() || "unityFirst",
         callerPackage: byId("chainCallerPackage").value.trim(),
         callerActivity: byId("chainCallerActivity").value.trim(),
         nextPackage: byId("chainNextPackage").value.trim(),
         nextActivity: byId("chainNextActivity").value.trim(),
+        questionnaireMode: byId("chainQuestionnaireMode").value.trim(),
+        triggerId: byId("chainTriggerId").value.trim(),
+        blockNumber: byId("chainBlockNumber").value.trim(),
+        blockId: byId("chainBlockId").value.trim(),
+        saveNamespace: byId("chainSaveNamespace").value.trim(),
         autoCloseDelayMs: numberValue("chainAutoCloseDelayMs", 2000)
       };
     }
@@ -1362,6 +1400,45 @@
       };
     }
 
+    function preferredStartupMapping() {
+      return triggerMappings.find(mapping => mapping.questionnaireMode === "demographics")
+        || triggerMappings.find(mapping => mapping.enabled && mapping.questionnaireMode !== "none")
+        || triggerMappings[0]
+        || null;
+    }
+
+    function applyQuestionnaireFirstDefaults(refreshAfter = true) {
+      const startup = preferredStartupMapping();
+      const targetPackage = byId("chainlinkScenarioPackage").value.trim()
+        || byId("chainCallerPackage").value.trim()
+        || (triggerCatalog && triggerCatalog.package ? triggerCatalog.package : "");
+      const targetActivity = byId("chainlinkScenarioActivity").value.trim()
+        || byId("chainCallerActivity").value.trim()
+        || (triggerCatalog && triggerCatalog.activity ? triggerCatalog.activity : "");
+      const fallbackTriggerId = "study_start_demographics";
+      const triggerId = startup && startup.triggerId ? startup.triggerId : fallbackTriggerId;
+      const blockNumberValue = startup && startup.blockNumber ? startup.blockNumber : "001";
+      const normalizedBlockNumber = /^\d{3}$/.test(String(blockNumberValue)) ? blockNumberValue : "001";
+      const safeTriggerStem = safeFileStem(triggerId, fallbackTriggerId);
+
+      byId("chainStartMode").value = "questionnaireFirst";
+      byId("chainFinishBehavior").value = "openNext";
+      byId("chainQuestionnaireMode").value = "demographics";
+      byId("chainTriggerId").value = triggerId;
+      byId("chainBlockNumber").value = normalizedBlockNumber;
+      byId("chainBlockId").value = startup && startup.blockId ? startup.blockId : `${normalizedBlockNumber}_trigger_${safeTriggerStem}`;
+      byId("chainSaveNamespace").value = startup && startup.saveNamespace ? startup.saveNamespace : `trigger_${safeTriggerStem}`;
+      if (targetPackage) {
+        byId("chainNextPackage").value = targetPackage;
+      }
+      if (targetActivity) {
+        byId("chainNextActivity").value = targetActivity;
+      }
+      if (refreshAfter) {
+        refresh();
+      }
+    }
+
     function applyTriggerCatalog(catalog, sourceApkName = "") {
       triggerCatalog = normalizeTriggerCatalog(catalog, sourceApkName);
       const existingById = new Map(triggerMappings.map(mapping => [String(mapping.triggerId).toLowerCase(), mapping]));
@@ -1372,10 +1449,16 @@
       if (triggerCatalog.package) {
         byId("chainlinkScenarioPackage").value = triggerCatalog.package;
         byId("chainCallerPackage").value = triggerCatalog.package;
+        if (!byId("chainNextPackage").value) {
+          byId("chainNextPackage").value = triggerCatalog.package;
+        }
       }
       if (triggerCatalog.activity) {
         byId("chainlinkScenarioActivity").value = triggerCatalog.activity;
         byId("chainCallerActivity").value = triggerCatalog.activity;
+        if (!byId("chainNextActivity").value) {
+          byId("chainNextActivity").value = triggerCatalog.activity;
+        }
       }
       if (triggerCatalog.label) {
         byId("chainlinkScenarioLabel").value = triggerCatalog.label;
@@ -1384,6 +1467,9 @@
         byId("experimentId").value = triggerCatalog.scenarioId;
       }
       renderTriggerMappingList();
+      if (byId("chainStartMode").value.trim() === "questionnaireFirst") {
+        applyQuestionnaireFirstDefaults(false);
+      }
       setTriggerCatalogStatus(`Loaded ${triggerMappings.length} trigger${triggerMappings.length === 1 ? "" : "s"} from ${sourceApkName || "catalog JSON"}.`, "ok");
       refresh();
     }
@@ -1759,6 +1845,7 @@
       const temporalTracerPackage = "org.viscereality.temporaltracer2d";
       const temporalTracerActivity = "org.viscereality.temporaltracer2d.MainActivity";
       const temporalTracerAction = "org.viscereality.temporaltracer2d.RUN";
+      const triggerFinishBehavior = defaults.startMode === "questionnaireFirst" ? "resumeCaller" : (defaults.finishBehavior || "resumeCaller");
       const mappedTriggers = readTriggerMappingsFromDom()
         .filter(mapping => mapping.enabled && mapping.questionnaireMode !== "none");
 
@@ -1793,7 +1880,7 @@
               ...modeExtras,
               "mq.handoffSchema": "mq.handoff.v1",
               "mq.triggerId": mapping.triggerId,
-              "mq.finishBehavior": defaults.finishBehavior || "resumeCaller",
+              "mq.finishBehavior": triggerFinishBehavior,
               "mq.callerPackage": scenarioPackage,
               "mq.callerActivity": scenarioActivity,
               "mq.autoCloseDelayMs": mapping.autoCloseDelayMs ?? defaults.autoCloseDelayMs,
@@ -2174,14 +2261,41 @@
       }
       const allowedFinishBehaviors = ["staySaved", "resumeCaller", "openNext"];
       const finishBehavior = config.chainDefaults?.finishBehavior || "staySaved";
+      const allowedStartModes = ["unityFirst", "questionnaireFirst"];
+      const startMode = config.chainDefaults?.startMode || "unityFirst";
+      const allowedDefaultQuestionnaireModes = ["", "demographics", "baseline", "pictographic", "full"];
+      const defaultQuestionnaireMode = config.chainDefaults?.questionnaireMode || "";
       if (!allowedFinishBehaviors.includes(finishBehavior)) {
         issues.push({ level: "error", text: "Finish behavior must be staySaved, resumeCaller, or openNext." });
+      }
+      if (!allowedStartModes.includes(startMode)) {
+        issues.push({ level: "error", text: "Study start mode must be unityFirst or questionnaireFirst." });
+      }
+      if (!allowedDefaultQuestionnaireModes.includes(defaultQuestionnaireMode)) {
+        issues.push({ level: "error", text: "Default questionnaire mode must be demographics, baseline, pictographic, full, or blank." });
+      }
+      if (config.chainDefaults?.blockNumber && !/^\d{3}$/.test(String(config.chainDefaults.blockNumber))) {
+        issues.push({ level: "error", text: "Default block number must use three digits." });
       }
       if (finishBehavior === "openNext" && !config.chainDefaults?.nextPackage) {
         issues.push({ level: "warn", text: "openNext needs a next package at launch time or in chain defaults." });
       }
       if (finishBehavior === "resumeCaller" && !config.chainDefaults?.callerPackage) {
         issues.push({ level: "warn", text: "resumeCaller needs a caller package at launch time or in chain defaults." });
+      }
+      if (startMode === "questionnaireFirst") {
+        if (finishBehavior !== "openNext") {
+          issues.push({ level: "error", text: "2D-first launcher mode requires finish behavior openNext." });
+        }
+        if (defaultQuestionnaireMode !== "demographics") {
+          issues.push({ level: "error", text: "2D-first launcher mode must default to demographics." });
+        }
+        if (!config.chainDefaults?.triggerId) {
+          issues.push({ level: "error", text: "2D-first launcher mode needs a default trigger id for the Unity completion handoff." });
+        }
+        if (!config.chainDefaults?.nextPackage) {
+          issues.push({ level: "error", text: "2D-first launcher mode needs the Unity package as the next package." });
+        }
       }
       if (!config.triggerQuestionnaireMapping || !Array.isArray(config.triggerQuestionnaireMapping.triggers) || config.triggerQuestionnaireMapping.triggers.length === 0) {
         issues.push({ level: "error", text: "Load an APK trigger catalog before exporting a questionnaire APK." });
@@ -2556,10 +2670,16 @@
       byId("questionnaireVersion").value = config.questionnaireVersion || "";
       byId("appVersion").value = config.appVersion || "";
       byId("chainFinishBehavior").value = config.chainDefaults?.finishBehavior || "staySaved";
+      byId("chainStartMode").value = config.chainDefaults?.startMode || "unityFirst";
       byId("chainCallerPackage").value = config.chainDefaults?.callerPackage || "";
       byId("chainCallerActivity").value = config.chainDefaults?.callerActivity || "";
       byId("chainNextPackage").value = config.chainDefaults?.nextPackage || "";
       byId("chainNextActivity").value = config.chainDefaults?.nextActivity || "";
+      byId("chainQuestionnaireMode").value = config.chainDefaults?.questionnaireMode || "";
+      byId("chainTriggerId").value = config.chainDefaults?.triggerId || "";
+      byId("chainBlockNumber").value = config.chainDefaults?.blockNumber || "";
+      byId("chainBlockId").value = config.chainDefaults?.blockId || "";
+      byId("chainSaveNamespace").value = config.chainDefaults?.saveNamespace || "";
       byId("chainAutoCloseDelayMs").value = config.chainDefaults?.autoCloseDelayMs ?? 2000;
       const registry = config.experimentBlockRegistry || {};
       byId("experimentId").value = registry.experimentId || byId("experimentId").value || "peripersonal-space-right-orbit";
@@ -4296,6 +4416,14 @@
     byId("headsetSequenceAppButton").addEventListener("click", runHeadsetSequenceWithApp);
     byId("validateWorkflowAppButton").addEventListener("click", validateWorkflowWithApp);
     byId("downloadEvidenceBundleButton").addEventListener("click", downloadEvidenceBundleWithApp);
+    byId("questionnaireFirstDefaultsButton").addEventListener("click", () => applyQuestionnaireFirstDefaults());
+    byId("chainStartMode").addEventListener("change", () => {
+      if (byId("chainStartMode").value.trim() === "questionnaireFirst") {
+        applyQuestionnaireFirstDefaults();
+        return;
+      }
+      refresh();
+    });
     byId("includeMaia").addEventListener("change", () => {
       blocks = normalizeBlocks(blocks);
       makeBlockList();

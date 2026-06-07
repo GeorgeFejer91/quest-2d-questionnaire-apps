@@ -236,6 +236,11 @@ final class QuestionnaireData {
         String callerActivity = "";
         String nextPackage = "";
         String nextActivity = "";
+        String questionnaireMode = "";
+        String triggerId = "";
+        String blockNumber = "";
+        String blockId = "";
+        String saveNamespace = "";
         long autoCloseDelayMs = 2000L;
 
         static RuntimeChainDefaults fromJson(JSONObject json) {
@@ -245,6 +250,11 @@ final class QuestionnaireData {
             defaults.callerActivity = json.optString("callerActivity", defaults.callerActivity);
             defaults.nextPackage = json.optString("nextPackage", defaults.nextPackage);
             defaults.nextActivity = json.optString("nextActivity", defaults.nextActivity);
+            defaults.questionnaireMode = json.optString("questionnaireMode", defaults.questionnaireMode);
+            defaults.triggerId = json.optString("triggerId", defaults.triggerId);
+            defaults.blockNumber = json.optString("blockNumber", defaults.blockNumber);
+            defaults.blockId = json.optString("blockId", defaults.blockId);
+            defaults.saveNamespace = json.optString("saveNamespace", defaults.saveNamespace);
             defaults.autoCloseDelayMs = Math.max(0L, json.optLong("autoCloseDelayMs", defaults.autoCloseDelayMs));
             return defaults;
         }

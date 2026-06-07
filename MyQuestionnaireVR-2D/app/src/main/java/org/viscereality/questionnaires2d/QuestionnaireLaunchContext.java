@@ -168,12 +168,12 @@ final class QuestionnaireLaunchContext {
             longValue(intent, EXTRA_AUTO_CLOSE_DELAY_MS, "autoCloseDelayMs", defaults.autoCloseDelayMs),
             pendingIntentExtra(intent, EXTRA_RETURN_PENDING_INTENT),
             firstNonEmpty(value(intent, EXTRA_HANDOFF_SCHEMA, "handoffSchema"), HANDOFF_SCHEMA_V1),
-            value(intent, EXTRA_TRIGGER_ID, "triggerId"),
+            firstNonEmpty(value(intent, EXTRA_TRIGGER_ID, "triggerId"), defaults.triggerId),
             chained,
-            firstNonEmpty(value(intent, EXTRA_QUESTIONNAIRE_MODE, "questionnaireMode"), value(intent, EXTRA_FLOW_MODE, "flowMode")),
-            value(intent, EXTRA_BLOCK_NUMBER, "blockNumber"),
-            value(intent, EXTRA_BLOCK_ID, "blockId"),
-            value(intent, EXTRA_SAVE_NAMESPACE, "saveNamespace"));
+            firstNonEmpty(firstNonEmpty(value(intent, EXTRA_QUESTIONNAIRE_MODE, "questionnaireMode"), value(intent, EXTRA_FLOW_MODE, "flowMode")), defaults.questionnaireMode),
+            firstNonEmpty(value(intent, EXTRA_BLOCK_NUMBER, "blockNumber"), defaults.blockNumber),
+            firstNonEmpty(value(intent, EXTRA_BLOCK_ID, "blockId"), defaults.blockId),
+            firstNonEmpty(value(intent, EXTRA_SAVE_NAMESPACE, "saveNamespace"), defaults.saveNamespace));
     }
 
     boolean shouldResumeCaller() {

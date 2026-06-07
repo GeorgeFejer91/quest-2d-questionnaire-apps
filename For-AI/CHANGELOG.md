@@ -47,6 +47,10 @@ Use absolute dates.
   should support both hands and controllers, advertise optional hand tracking,
   and treat Horizon controller-required launch dialogs as build/preflight
   issues unless controller-only input is an explicit study constraint.
+- Added builder/runtime support for 2D-first launcher mode: a generated
+  questionnaire APK can default to demographics from Meta Home and then open
+  the Unity APK with `finishBehavior=openNext`, while later Unity-triggered
+  blocks still use `resumeCaller`.
 
 ## 2026-06-07
 

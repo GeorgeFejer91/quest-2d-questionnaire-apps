@@ -199,7 +199,12 @@ $runtimeConfig = [ordered]@{
             callerActivity = if ($config.chainDefaults.callerActivity) { $config.chainDefaults.callerActivity } else { '' }
             nextPackage = if ($config.chainDefaults.nextPackage) { $config.chainDefaults.nextPackage } else { '' }
             nextActivity = if ($config.chainDefaults.nextActivity) { $config.chainDefaults.nextActivity } else { '' }
-            autoCloseDelayMs = if ($config.chainDefaults.autoCloseDelayMs) { [int]$config.chainDefaults.autoCloseDelayMs } else { 2000 }
+            questionnaireMode = if ($config.chainDefaults.questionnaireMode) { $config.chainDefaults.questionnaireMode } else { '' }
+            triggerId = if ($config.chainDefaults.triggerId) { $config.chainDefaults.triggerId } else { '' }
+            blockNumber = if ($config.chainDefaults.blockNumber) { $config.chainDefaults.blockNumber } else { '' }
+            blockId = if ($config.chainDefaults.blockId) { $config.chainDefaults.blockId } else { '' }
+            saveNamespace = if ($config.chainDefaults.saveNamespace) { $config.chainDefaults.saveNamespace } else { '' }
+            autoCloseDelayMs = if ($config.chainDefaults.PSObject.Properties.Name -contains 'autoCloseDelayMs' -and $null -ne $config.chainDefaults.autoCloseDelayMs) { [int]$config.chainDefaults.autoCloseDelayMs } else { 2000 }
         }
     } else {
         [ordered]@{
@@ -208,6 +213,11 @@ $runtimeConfig = [ordered]@{
             callerActivity = ''
             nextPackage = ''
             nextActivity = ''
+            questionnaireMode = ''
+            triggerId = ''
+            blockNumber = ''
+            blockId = ''
+            saveNamespace = ''
             autoCloseDelayMs = 2000
         }
     }

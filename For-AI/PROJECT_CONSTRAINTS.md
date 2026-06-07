@@ -25,6 +25,10 @@ Use it for:
   "2D panel app for Meta Horizon OS".
 - Quest app switching should use explicit Android package/activity/action
   contracts and launch extras.
+- 2D-first launcher mode is allowed for participant-facing studies: the
+  questionnaire APK can default to demographics and `openNext` into Unity after
+  saving block 1. Keep that behavior in builder config, not hard-coded source,
+  and keep later trigger/input ownership in Unity.
 - Background 2D apps, Android shell helpers, and ADB do not own raw controller
   input while a foreground immersive Unity/XR app owns focus.
 - The questionnaire owns questionnaire state and exports. ChainLink or the

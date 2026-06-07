@@ -119,10 +119,41 @@ if ($blocks.Count -gt 0) {
 
 if ($config.PSObject.Properties.Name -contains 'chainDefaults' -and $null -ne $config.chainDefaults) {
     $allowedFinishBehaviors = @('resumeCaller', 'openNext', 'staySaved')
+    $allowedStartModes = @('unityFirst', 'questionnaireFirst')
+    $allowedDefaultQuestionnaireModes = @('', 'demographics', 'baseline', 'pictographic', 'full')
+    $finishBehavior = if ($config.chainDefaults.finishBehavior) { [string]$config.chainDefaults.finishBehavior } else { 'staySaved' }
+    $startMode = if ($config.chainDefaults.startMode) { [string]$config.chainDefaults.startMode } else { 'unityFirst' }
+    $questionnaireMode = if ($config.chainDefaults.questionnaireMode) { [string]$config.chainDefaults.questionnaireMode } else { '' }
     if ($config.chainDefaults.finishBehavior -and $allowedFinishBehaviors -notcontains $config.chainDefaults.finishBehavior) {
         Add-ConfigError "chainDefaults.finishBehavior must be one of: $($allowedFinishBehaviors -join ', ')."
     }
-    if ($config.chainDefaults.autoCloseDelayMs -and [int]$config.chainDefaults.autoCloseDelayMs -lt 0) {
+    if ($allowedStartModes -notcontains $startMode) {
+        Add-ConfigError "chainDefaults.startMode must be unityFirst or questionnaireFirst when present."
+    }
+    if ($allowedDefaultQuestionnaireModes -notcontains $questionnaireMode) {
+        Add-ConfigError "chainDefaults.questionnaireMode must be one of: demographics, baseline, pictographic, full, or blank."
+    }
+    if ($config.chainDefaults.blockNumber -and -not ([string]$config.chainDefaults.blockNumber -match '^\d{3}$')) {
+        Add-ConfigError "chainDefaults.blockNumber must be a three-digit block number when present."
+    }
+    if ($finishBehavior -eq 'openNext' -and -not $config.chainDefaults.nextPackage) {
+        Add-ConfigError "chainDefaults.finishBehavior=openNext requires chainDefaults.nextPackage."
+    }
+    if ($startMode -eq 'questionnaireFirst') {
+        if ($finishBehavior -ne 'openNext') {
+            Add-ConfigError "chainDefaults.startMode=questionnaireFirst requires chainDefaults.finishBehavior=openNext."
+        }
+        if ($questionnaireMode -ne 'demographics') {
+            Add-ConfigError "chainDefaults.startMode=questionnaireFirst requires chainDefaults.questionnaireMode=demographics."
+        }
+        if (-not $config.chainDefaults.triggerId) {
+            Add-ConfigError "chainDefaults.startMode=questionnaireFirst requires chainDefaults.triggerId so Unity receives the completed first-block handoff."
+        }
+        if (-not $config.chainDefaults.nextPackage) {
+            Add-ConfigError "chainDefaults.startMode=questionnaireFirst requires the Unity APK package in chainDefaults.nextPackage."
+        }
+    }
+    if ($config.chainDefaults.PSObject.Properties.Name -contains 'autoCloseDelayMs' -and $null -ne $config.chainDefaults.autoCloseDelayMs -and [int]$config.chainDefaults.autoCloseDelayMs -lt 0) {
         Add-ConfigError "chainDefaults.autoCloseDelayMs must be 0 or greater."
     }
 }

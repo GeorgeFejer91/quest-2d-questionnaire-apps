@@ -103,3 +103,7 @@ Use absolute dates.
   companion, and dry-run coverage in
   `tools/validate-builder-companion-workflow.ps1` using the real questionnaire,
   tracer, and Unity APKs for package/catalog preflight.
+- Added a bounded `Ready wait (s)` control to the builder runner so direct
+  handoff and full workflow jobs can wait longer for product-path readiness
+  during supervised or unattended headset attempts without bypassing the
+  asleep/headset-launch-dialog block classification.

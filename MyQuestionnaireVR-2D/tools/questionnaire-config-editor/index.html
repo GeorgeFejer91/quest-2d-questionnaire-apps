@@ -972,6 +972,10 @@
                 <input id="directHandoffTrials" type="number" min="1" max="10" step="1" value="10">
               </label>
               <label>
+                Ready wait (s)
+                <input id="directHandoffWaitSeconds" type="number" min="0" max="28800" step="30" value="30">
+              </label>
+              <label>
                 Quest serial
                 <input id="workflowQuestSerial" placeholder="2G0YC1ZG1002QL" spellcheck="false">
               </label>
@@ -3227,6 +3231,14 @@
       return 10;
     }
 
+    function directHandoffWaitSeconds() {
+      const value = Number.parseInt(byId("directHandoffWaitSeconds").value, 10);
+      if (Number.isFinite(value)) {
+        return Math.max(0, Math.min(28800, value));
+      }
+      return 30;
+    }
+
     function directHandoffJobLevel(data) {
       if (data?.jobStatus === "failed" || data?.handoffStatus === "fail" || data?.handoffStatus === "error") {
         return "error";
@@ -3257,7 +3269,10 @@
 
     async function pollDirectHandoffJob(runId) {
       const startedAt = Date.now();
-      const timeoutMs = 30 * 60 * 1000;
+      const timeoutMs = Math.max(
+        30 * 60 * 1000,
+        (directHandoffWaitSeconds() + (directHandoffTrialCount() * 120) + 120) * 1000
+      );
       while (Date.now() - startedAt < timeoutMs) {
         const data = await callAppBackend(`/api/direct-handoff-job?runId=${encodeURIComponent(runId)}`);
         setAppBackendStatus(directHandoffJobText(data), directHandoffJobLevel(data));
@@ -3463,12 +3478,13 @@
       button.disabled = true;
       try {
         const apkPath = lastGeneratedApkPath || expectedGeneratedApkPath();
+        const waitForReadySeconds = directHandoffWaitSeconds();
         setAppBackendStatus("Starting direct PendingIntent handoff trials...", "");
         const data = await callAppBackend("/api/direct-handoff", {
           questionnaireApk: apkPath,
           questSerial: byId("workflowQuestSerial").value.trim(),
           trialCount: directHandoffTrialCount(),
-          waitForReadySeconds: 30,
+          waitForReadySeconds,
           waitSeconds: 95
         });
         setAppBackendStatus(directHandoffJobText(data), directHandoffJobLevel(data));
@@ -3495,6 +3511,7 @@
         const runDirect = byId("workflowDirectHandoff").checked;
         const runReadiness = byId("workflowQuestReadiness").checked || runDirect;
         const trialCount = directHandoffTrialCount();
+        const waitForReadySeconds = directHandoffWaitSeconds();
         setAppBackendStatus("Starting builder-to-Quest workflow validation...", "");
         const data = await callAppBackend("/api/validate-workflow", {
           config: buildConfig(),
@@ -3505,7 +3522,7 @@
           runQuestDirectHandoff: runDirect,
           questSerial: byId("workflowQuestSerial").value.trim(),
           questTrials: runDirect ? trialCount : 1,
-          waitForReadySeconds: runDirect ? 30 : 0
+          waitForReadySeconds: runDirect ? waitForReadySeconds : 0
         });
         setAppBackendStatus(workflowJobText(data), workflowJobLevel(data));
         setAppBackendLog(data);

@@ -184,5 +184,8 @@ The hosted/offline GUI exposes the same gate through the companion
 `/api/validate-workflow` endpoint. It also exposes the direct handoff gate as a
 dedicated `Run direct handoff` action backed by `/api/direct-handoff` and
 `/api/direct-handoff-job`, placed after replay/export in the sequential runner.
+The runner's `Ready wait (s)` field controls how long these jobs wait for
+product-path readiness before classifying the attempt as blocked; the companion
+clamps it to 0-28800 seconds.
 A `warn` status is expected when the physical 10/10 direct PendingIntent Quest
 trials are not requested or cannot start because the headset is asleep.

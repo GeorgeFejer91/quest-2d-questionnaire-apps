@@ -335,10 +335,12 @@ function New-WorkflowValidationArguments {
         $arguments += @('-Serial', [string]$Payload.questSerial)
     }
     if ($Payload.PSObject.Properties.Name -contains 'questTrials' -and [int]$Payload.questTrials -gt 0) {
-        $arguments += @('-QuestTrials', [string][int]$Payload.questTrials)
+        $questTrials = [Math]::Min(10, [Math]::Max(1, [int]$Payload.questTrials))
+        $arguments += @('-QuestTrials', [string]$questTrials)
     }
     if ($Payload.PSObject.Properties.Name -contains 'waitForReadySeconds' -and [int]$Payload.waitForReadySeconds -ge 0) {
-        $arguments += @('-WaitForReadySeconds', [string][int]$Payload.waitForReadySeconds)
+        $waitForReadySeconds = [Math]::Min(28800, [Math]::Max(0, [int]$Payload.waitForReadySeconds))
+        $arguments += @('-WaitForReadySeconds', [string]$waitForReadySeconds)
     }
 
     return $arguments
@@ -939,7 +941,7 @@ function Start-DirectHandoffJob {
     $dryRun = ($Payload.PSObject.Properties.Name -contains 'dryRun' -and [bool]$Payload.dryRun)
     $skipInstall = ($Payload.PSObject.Properties.Name -contains 'skipInstall' -and [bool]$Payload.skipInstall)
     $trialCount = if ($Payload.PSObject.Properties.Name -contains 'trialCount') { [Math]::Min(10, [Math]::Max(1, [int]$Payload.trialCount)) } else { 10 }
-    $waitForReadySeconds = if ($Payload.PSObject.Properties.Name -contains 'waitForReadySeconds') { [Math]::Max(0, [int]$Payload.waitForReadySeconds) } else { 30 }
+    $waitForReadySeconds = if ($Payload.PSObject.Properties.Name -contains 'waitForReadySeconds') { [Math]::Min(28800, [Math]::Max(0, [int]$Payload.waitForReadySeconds)) } else { 30 }
     $waitSeconds = if ($Payload.PSObject.Properties.Name -contains 'waitSeconds') { [Math]::Max(1, [int]$Payload.waitSeconds) } else { 95 }
 
     $stdoutPath = Join-Path $jobDir 'direct-handoff-stdout.txt'

@@ -245,3 +245,21 @@ polling, and summary artifacts are covered without launching the headset.
 Generalizable rule: if a validation step decides the long-term architecture,
 give it a first-class GUI button, job endpoint, and dry-run contract test
 instead of hiding it inside an aggregate validator.
+
+## Physical Gates Need Operator-Controlled Wait Windows
+
+Problem: direct handoff and replay/export trials can be validly blocked by
+ordinary headset state: the Quest is online over ADB but asleep, display-off,
+or stuck on Horizon's controller-required launch check. A hard-coded short wait
+turns unattended or overnight trials into predictable blocked artifacts even
+when the rest of the software is ready.
+
+Solution: keep the product-path readiness gate strict, but expose the wait
+window as a runner control. The builder now lets the operator set a bounded
+`Ready wait (s)` value for direct handoff and full workflow validation; the
+companion clamps that value to 0-28800 seconds and still refuses to launch when
+readiness never clears.
+
+Generalizable rule: physical-device validation should be patient but not
+reckless. Make wait windows explicit, bounded, and visible in the evidence
+instead of baking in a magic sleep.

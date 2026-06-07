@@ -96,6 +96,11 @@ The hosted page should expose download links for the companion software package
 and Windows launchers in the left rail at all times. Dependency check/install
 controls are product-facing because the hosted page needs local PC software to
 generate and load APKs.
+Companion setup must not sit behind the APK gate in hosted final-product mode:
+download links, dependency status/install controls, connector URL/token fields,
+and Quest detection should be usable before an APK trigger catalog is loaded.
+Keep only APK-dependent actions such as Generate APK and Install APK gated on
+the loaded trigger manifest.
 
 The old development controls still matter for engineering confidence. Keep
 their implementation in offline/local mode and in validators, but do not expose

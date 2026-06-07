@@ -195,6 +195,11 @@ assert(html.includes("operator-guardrail-receipts"), "Hosted/offline GUI should 
 assert(html.includes("packet-bundle-audit-receipts"), "Hosted/offline GUI should require the packet-bundle audit receipt capability.");
 assert(html.includes("hosted-final-product"), "Hosted GUI should include final-product mode styling.");
 assert(html.includes("data-dev-only"), "Hosted GUI should mark development-only controls.");
+assert(html.includes('runnerStage.removeAttribute("data-requires-apk")'), "Hosted product mode should keep companion setup available before APK load.");
+assert(html.includes('id="dependencyStatusButton" type="button">Dependency status'), "Dependency status should be available before APK load.");
+assert(html.includes('id="installDependenciesButton" type="button">Install dependencies'), "Dependency install should be available before APK load.");
+assert(html.includes('id="generateApkAppButton" class="primary" type="button" data-requires-apk-control'), "Generate APK should remain APK-gated.");
+assert(html.includes('id="installApkAppButton" type="button" data-requires-apk-control'), "Install APK should remain APK-gated.");
 assert(html.includes('id="validateWorkflowAppButton" type="button" data-dev-only'), "Validate workflow button should be hidden in hosted product mode.");
 assert(html.includes('id="review-stage" class="stage" data-requires-apk data-dev-only'), "Review pipeline stage should be hidden in hosted product mode.");
 context.location = { protocol: "https:", hostname: "georgefejer91.github.io" };

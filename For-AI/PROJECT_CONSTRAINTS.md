@@ -91,11 +91,14 @@ commit, push, and verify the public URL so the change actually goes online.
 The questionnaire builder is an APK-first workflow. The first user action in a
 fresh build should be loading an existing scenario APK or trigger catalog with a
 questionnaire trigger manifest. Downstream block building, questionnaire
-editing, validation, export, dependency, and APK-generation controls may remain
-visible for orientation, but they should be disabled until a trigger manifest or
-the repository example APK catalog is loaded. Each enabled manifest trigger maps
-to a questionnaire block, and questionnaire completion should default to
-returning to the calling scenario APK.
+editing, validation, export, and APK-generation controls may remain visible for
+orientation, but they should be disabled until a trigger manifest or the
+repository example APK catalog is loaded. Companion setup and dependency
+controls are the exception: they must remain reachable before APK load because
+the hosted product needs the local PC companion before it can scan, generate, or
+install anything. Each enabled manifest trigger maps to a questionnaire block,
+and questionnaire completion should default to returning to the calling scenario
+APK.
 
 The questionnaire builder layout should behave like a one-page website: a fixed
 left navigation menu with vertically arranged links, and a single scrolling
@@ -105,7 +108,10 @@ the builder workflow. The left rail should include an always-visible Downloads
 group for the accompanying local companion software and launchers, because the
 hosted static GUI depends on that local companion for trusted PC actions.
 Hosted mode should hide developer-only pipeline sections marked with
-`data-dev-only`.
+`data-dev-only`. Companion download links, dependency status/install controls,
+connector URL/token fields, and Quest detection should be reachable before an
+APK is loaded; only APK-dependent actions such as generating or installing the
+questionnaire APK should remain gated on the trigger manifest.
 Section 1 should also include a user-friendly "Load example APK" fallback that
 loads `example-scenario-apk/questionnaire-trigger-catalog.json` from the repo
 and displays the GitHub folder URL where the example APK and Unity project live.

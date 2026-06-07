@@ -350,3 +350,7 @@ Use absolute dates.
   handoff options, and keeps the visible path focused on companion downloads,
   APK trigger scan, questionnaire-type assignment, APK generation, Quest
   detection, and APK install.
+- Kept companion/dependency setup outside the APK gate in hosted final-product
+  mode: download links, dependency status/install controls, connector URL/token
+  fields, and Quest detection are available before an APK trigger catalog is
+  loaded, while Generate APK and Install APK remain trigger-manifest gated.

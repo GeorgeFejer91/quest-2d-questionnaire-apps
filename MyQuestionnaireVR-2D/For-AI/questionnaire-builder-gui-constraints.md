@@ -23,6 +23,11 @@ HTML/JavaScript UI with mode-specific visibility:
   local companion, load or scan an APK trigger catalog, assign questionnaire
   types to detected trigger blocks, generate the questionnaire APK, detect a
   Quest, and install/load the APK onto the headset.
+- Companion setup belongs before the APK gate. In hosted mode, dependency
+  download/status/install controls, connector URL/token fields, and Quest
+  detection must remain reachable before an APK trigger manifest is loaded.
+  Keep only APK-dependent actions such as Generate APK and Install APK gated on
+  the trigger catalog.
 - Development-only controls such as workflow validation, direct handoff trials,
   replay/export stress runners, audit packets, raw logs, and pipeline commands
   may remain in the shared source for offline engineering, but must be hidden

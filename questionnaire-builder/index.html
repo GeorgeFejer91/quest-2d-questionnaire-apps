@@ -675,8 +675,8 @@
 
       <div class="side-group">
         <div class="side-group-title">Local companion</div>
-        <button id="dependencyStatusButton" type="button" data-requires-apk-control>Dependency status</button>
-        <button id="installDependenciesButton" type="button" data-requires-apk-control>Install dependencies</button>
+        <button id="dependencyStatusButton" type="button">Dependency status</button>
+        <button id="installDependenciesButton" type="button">Install dependencies</button>
       </div>
 
       <div class="side-group">
@@ -1093,8 +1093,8 @@
               <button id="questReadinessButton" type="button">Detect Quest</button>
               <button id="saveConfigAppButton" type="button" data-dev-only>Save config</button>
               <button id="validateConfigAppButton" type="button" data-dev-only>Validate config</button>
-              <button id="generateApkAppButton" class="primary" type="button">Generate APK</button>
-              <button id="installApkAppButton" type="button">Install APK on Quest</button>
+              <button id="generateApkAppButton" class="primary" type="button" data-requires-apk-control>Generate APK</button>
+              <button id="installApkAppButton" type="button" data-requires-apk-control>Install APK on Quest</button>
               <button id="questReplayAppButton" type="button" data-dev-only>Run replay/export</button>
               <button id="twoDFirstLauncherAppButton" type="button" data-dev-only>Run 2D-first launch</button>
               <button id="directHandoffAppButton" type="button" data-dev-only>Run direct handoff</button>
@@ -3180,6 +3180,10 @@
       if (byId("runnerStageSubtitle")) {
         byId("runnerStageSubtitle").textContent = "Generate the questionnaire APK through the local companion, then install it on the connected Quest.";
       }
+      const runnerStage = byId("runner-stage");
+      if (runnerStage && typeof runnerStage.removeAttribute === "function") {
+        runnerStage.removeAttribute("data-requires-apk");
+      }
       if (byId("appRunTests")) {
         byId("appRunTests").checked = false;
       }
@@ -3874,7 +3878,13 @@
       if (byId("navApkState")) {
         byId("navApkState").textContent = unlocked ? "Done" : "Required";
       }
-      ["Triggers", "Questionnaires", "Project", "Runner", "Review"].forEach(id => setNavState(id, unlocked));
+      const navIds = isHostedFinalProductPage()
+        ? ["Triggers"]
+        : ["Triggers", "Questionnaires", "Project", "Runner", "Review"];
+      navIds.forEach(id => setNavState(id, unlocked));
+      if (isHostedFinalProductPage()) {
+        setNavState("Runner", true);
+      }
       updateEvidenceBundleButton();
     }
 

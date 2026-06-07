@@ -600,3 +600,25 @@ Generalizable rule: validation scripts may build temporary runtime assets, but
 they should leave source assets exactly as they found them unless the user is
 explicitly running a generation command whose purpose is to rewrite those
 assets.
+
+## Evidence Bundles Need Typed Local Packaging
+
+Problem: GUI-triggered workflows now produce compact receipts and preview
+PNGs, but the evidence still lives in nested local artifact folders. A reviewer
+can see the status line in the dashboard, yet still has to chase summary paths,
+render summaries, job logs, and PNG references by hand to carry evidence to
+another machine or another reviewer.
+
+Solution: the local companion exposes a token-protected
+`/api/evidence-bundle` route. It accepts a JSON summary path only when that
+path is under known artifact roots, recursively collects referenced
+JSON/TXT/LOG/CSV/PNG files under those same roots, writes a manifest, and
+returns a zip. The GUI enables `Download evidence bundle` only after a
+generation, runner, or workflow receipt names an inspectable summary path, and
+the companion stress validator downloads and opens the zip before marking
+offline evidence fully inspectable.
+
+Generalizable rule: hosted dashboards should package local evidence through a
+typed, authenticated companion endpoint. Do not expose arbitrary local paths;
+bundle only known artifact-file types under known artifact roots, and include a
+manifest so the zip itself is auditable.

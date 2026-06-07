@@ -58,8 +58,9 @@ profile, or repository path.
 `GET /api/status` is also the compatibility check. It advertises the companion
 `apiVersion`, `receiptSchemaVersion`, and capabilities such as
 `generate-apk-receipt`, `artifact-preview`, `workflow-render-previews`,
-`workflow-receipt`, `direct-handoff-preflight`, and `runner-job-receipts` so
-the hosted GUI can warn when a user connects an older local companion package.
+`evidence-bundle`, `workflow-receipt`, `direct-handoff-preflight`, and
+`runner-job-receipts` so the hosted GUI can warn when a user connects an older
+local companion package.
 
 Render preview thumbnails are fetched from the companion through
 `GET /api/artifact-preview?path=...`. That route must stay token-protected,
@@ -68,6 +69,10 @@ turn it into a general local file browser.
 The GUI can show samples from both `generationReceipt` and `workflowReceipt`;
 workflow receipts should expose questionnaire and temporal tracer
 `samplePngs` when their local render gates run.
+Evidence bundles are fetched from the companion through
+`GET /api/evidence-bundle?summaryPath=...`. That route must stay
+token-protected, constrained to generated artifact roots, and limited to
+reviewable evidence file types such as JSON, TXT, LOG, CSV, and PNG.
 The direct handoff runner should keep `Preflight only` available for the hosted
 and offline GUI. That mode calls `/api/direct-handoff` with `dryRun=true` and
 `skipInstall=true` so users can prove package/activity/catalog preflight

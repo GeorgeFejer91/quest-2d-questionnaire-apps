@@ -27,6 +27,7 @@ $ExpectedCompanionReceiptApiVersion = '2026-06-07.receipts.v1'
 $RequiredCompanionCapabilities = @(
     'generate-apk-receipt',
     'artifact-preview',
+    'evidence-bundle',
     'workflow-render-previews',
     'workflow-receipt',
     'direct-handoff-preflight',
@@ -98,6 +99,56 @@ function Invoke-ArtifactPreview {
     $encodedPath = [System.Uri]::EscapeDataString($Path)
     Invoke-WebRequest -Method GET -Uri "$BaseUrl/api/artifact-preview?path=$encodedPath" -Headers $Headers -OutFile $OutFile -TimeoutSec $TimeoutSec -UseBasicParsing | Out-Null
     return Get-PngEvidence -Path $OutFile
+}
+
+function Get-ZipEvidence {
+    param([string]$Path)
+
+    $evidence = Get-FileEvidence -Path $Path
+    $evidence.validZip = $false
+    $evidence.entryCount = 0
+    $evidence.hasManifest = $false
+    $evidence.jsonEntryCount = 0
+    $evidence.pngEntryCount = 0
+    if (-not [bool]$evidence.exists) {
+        return $evidence
+    }
+
+    try {
+        Add-Type -AssemblyName System.IO.Compression
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $archive = [System.IO.Compression.ZipFile]::OpenRead($Path)
+        try {
+            $entries = @($archive.Entries)
+            $evidence.validZip = $true
+            $evidence.entryCount = $entries.Count
+            $evidence.hasManifest = @($entries | Where-Object { $_.FullName -eq 'evidence-bundle-manifest.json' }).Count -eq 1
+            $evidence.jsonEntryCount = @($entries | Where-Object { $_.FullName -match '\.json$' }).Count
+            $evidence.pngEntryCount = @($entries | Where-Object { $_.FullName -match '\.png$' }).Count
+            $evidence.sampleEntries = @($entries | Select-Object -First 10 | ForEach-Object { $_.FullName })
+        }
+        finally {
+            $archive.Dispose()
+        }
+    }
+    catch {
+        $evidence.zipReadError = $_.Exception.Message
+    }
+    return $evidence
+}
+
+function Invoke-EvidenceBundle {
+    param(
+        [string]$BaseUrl,
+        [hashtable]$Headers,
+        [string]$SummaryPath,
+        [string]$OutFile,
+        [int]$TimeoutSec = 180
+    )
+
+    $encodedPath = [System.Uri]::EscapeDataString($SummaryPath)
+    Invoke-WebRequest -Method GET -Uri "$BaseUrl/api/evidence-bundle?summaryPath=$encodedPath" -Headers $Headers -OutFile $OutFile -TimeoutSec $TimeoutSec -UseBasicParsing | Out-Null
+    return Get-ZipEvidence -Path $OutFile
 }
 
 function Read-JsonIfExists {
@@ -528,6 +579,16 @@ try {
             throw "Unauthorized artifact-preview expected 401, got $unauthorizedArtifactPreviewStatus"
         }
     }
+    try {
+        Invoke-WebRequest -Method GET -Uri "$baseUrl/api/evidence-bundle?summaryPath=missing.json" -UseBasicParsing | Out-Null
+        throw "Unauthorized evidence-bundle call unexpectedly succeeded."
+    }
+    catch {
+        $unauthorizedEvidenceBundleStatus = Get-HttpErrorStatusCode -Exception $_.Exception
+        if ($unauthorizedEvidenceBundleStatus -ne 401) {
+            throw "Unauthorized evidence-bundle expected 401, got $unauthorizedEvidenceBundleStatus"
+        }
+    }
 
     Write-Host "== Dependency status =="
     $dependency = Invoke-Json -Method GET -Uri "$baseUrl/api/dependency-status" -Headers $headers
@@ -819,6 +880,12 @@ try {
             png = $pngEvidence
         }
     }
+    $evidenceBundlePath = Join-Path $artifactDir 'workflow-evidence-bundle.zip'
+    $evidenceBundle = Invoke-EvidenceBundle -BaseUrl $baseUrl -Headers $headers -SummaryPath ([string]$workflow.summaryPath) -OutFile $evidenceBundlePath
+    Add-Progress "evidence-bundle-complete entries=$($evidenceBundle.entryCount) bytes=$($evidenceBundle.bytes) validZip=$($evidenceBundle.validZip)"
+    if (-not [bool]$evidenceBundle.exists -or -not [bool]$evidenceBundle.validZip -or -not [bool]$evidenceBundle.hasManifest -or [int]$evidenceBundle.entryCount -lt 3) {
+        throw "Companion evidence-bundle endpoint did not return a usable zip for $($workflow.summaryPath)."
+    }
 
     Write-Host "== Validate workflow direct handoff clamp dry run through companion =="
     $workflowClampBody = @{
@@ -903,6 +970,13 @@ try {
         $workflowArtifactPreviewEvidence.Count -eq 2 -and
         @($workflowArtifactPreviewEvidence | Where-Object { -not [bool]$_.png.exists -or -not [bool]$_.png.validPng -or [int64]$_.png.bytes -le 0 }).Count -eq 0
     )
+    $evidenceBundlePass = (
+        $evidenceBundle -and
+        [bool]$evidenceBundle.exists -and
+        [bool]$evidenceBundle.validZip -and
+        [bool]$evidenceBundle.hasManifest -and
+        [int]$evidenceBundle.entryCount -ge 3
+    )
     $workflowMatrixInspectable = (
         $workflowSummary -and
         $workflowCounts -and
@@ -949,6 +1023,7 @@ try {
         $renderPreviewPass -and
         $artifactPreviewPass -and
         $workflowArtifactPreviewPass -and
+        $evidenceBundlePass -and
         [string]$generateReceipt.status -eq 'pass' -and
         $workflowMatrixInspectable -and
         [string]$installApk.installStatus -eq 'pass' -and
@@ -970,6 +1045,7 @@ try {
         $generateReceipt -and
         $artifactPreviewPass -and
         $workflowArtifactPreviewPass -and
+        $evidenceBundlePass -and
         $workflowMatrixInspectable -and
         [string]$installApk.installStatus -eq 'pass' -and
         [string]$questReplay.replayStatus -ne 'fail' -and
@@ -1007,6 +1083,7 @@ try {
             renderPreviewArtifactGatePass = $renderPreviewPass
             artifactPreviewEndpointPass = $artifactPreviewPass
             workflowArtifactPreviewEndpointPass = $workflowArtifactPreviewPass
+            evidenceBundleEndpointPass = $evidenceBundlePass
             workflowMatrixInspectable = $workflowMatrixInspectable
             workflowReceiptInspectable = [bool]$workflowReceipt.offlineEvidenceReady
             runnerJobReceiptsInspectable = $stepJobReceiptsInspectable
@@ -1029,6 +1106,7 @@ try {
             workflowCounts = $workflowCounts
             workflowReceipt = $workflowReceipt
             workflowArtifactPreviews = $workflowArtifactPreviewEvidence
+            evidenceBundle = $evidenceBundle
             directHandoffSummaryPath = $directHandoff.summaryPath
             workflowClampSummaryPath = $workflowClamp.summaryPath
             workflowClampReceipt = $workflowClampReceipt
@@ -1067,6 +1145,7 @@ try {
             unauthorizedQuestReplayStatus = $unauthorizedQuestReplayStatus
             unauthorizedDirectHandoffStatus = $unauthorizedDirectHandoffStatus
             unauthorizedArtifactPreviewStatus = $unauthorizedArtifactPreviewStatus
+            unauthorizedEvidenceBundleStatus = $unauthorizedEvidenceBundleStatus
         }
         companionApi = [ordered]@{
             schemaVersion = $statusWithToken.schemaVersion
@@ -1163,6 +1242,7 @@ try {
             workflowStatus = $workflow.workflowStatus
             workflowReceipt = $workflowReceipt
             workflowArtifactPreviews = $workflowArtifactPreviewEvidence
+            evidenceBundle = $evidenceBundle
             workflowSummaryPath = $workflow.summaryPath
         }
         workflowDirectHandoffClampDryRun = [ordered]@{

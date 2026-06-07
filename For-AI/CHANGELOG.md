@@ -189,3 +189,7 @@ Use absolute dates.
   temporary APK-generation checks. The matrix now includes
   `workflow-preserves-source-assets`, so future workflow stress runs should not
   leave tracked Android asset files dirty.
+- Added a token-protected companion evidence-bundle endpoint and GUI download
+  button. Bundles are built from artifact-root JSON summaries and referenced
+  JSON/TXT/LOG/CSV/PNG evidence, include a manifest, and are now covered by the
+  companion workflow validator.

@@ -1046,6 +1046,7 @@
               <button id="questReplayAppButton" type="button">Run replay/export</button>
               <button id="directHandoffAppButton" type="button">Run direct handoff</button>
               <button id="validateWorkflowAppButton" type="button">Validate workflow</button>
+              <button id="downloadEvidenceBundleButton" type="button" disabled>Download evidence bundle</button>
             </div>
             <pre id="appBackendLog" style="margin-top: 10px; max-height: 280px;"></pre>
           </div>
@@ -1144,6 +1145,7 @@
     let triggerCatalog = null;
     let triggerMappings = [];
     let lastGeneratedApkPath = "";
+    let lastEvidenceData = null;
     let artifactPreviewObjectUrls = [];
     const exampleApkFolderUrl = "https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/tree/main/example-scenario-apk";
     const exampleTriggerCatalogUrlCandidates = [
@@ -1154,6 +1156,7 @@
     const requiredAppBackendCapabilities = [
       { id: "generate-apk-receipt", label: "APK generation receipts" },
       { id: "artifact-preview", label: "local render previews" },
+      { id: "evidence-bundle", label: "evidence bundles" },
       { id: "workflow-render-previews", label: "workflow render previews" },
       { id: "workflow-receipt", label: "workflow receipts" },
       { id: "direct-handoff-preflight", label: "direct handoff preflight" },
@@ -3021,7 +3024,7 @@
         return "";
       }
       if (!Array.isArray(data?.capabilities)) {
-        return "update the local companion because this older API cannot show APK generation, local render previews, workflow render previews, direct handoff preflight, workflow, or runner receipts";
+        return "update the local companion because this older API cannot show APK generation, local render previews, evidence bundles, workflow render previews, direct handoff preflight, workflow, or runner receipts";
       }
       return `update the local companion to enable ${missing.map(item => item.label).join(" and ")}`;
     }
@@ -3235,7 +3238,27 @@
       return `${pieces.join("; ")}.`;
     }
 
+    function evidenceBundleSummaryPath(data) {
+      return String(
+        data?.workflowReceipt?.artifacts?.summaryPath ||
+        data?.generationReceipt?.artifacts?.summaryPath ||
+        data?.jobReceipt?.artifacts?.summaryPath ||
+        data?.summaryPath ||
+        ""
+      ).trim();
+    }
+
+    function updateEvidenceBundleButton() {
+      const button = byId("downloadEvidenceBundleButton");
+      if (!button) {
+        return;
+      }
+      button.disabled = !evidenceBundleSummaryPath(lastEvidenceData);
+    }
+
     function setWorkflowReceiptStatus(data) {
+      lastEvidenceData = data || null;
+      updateEvidenceBundleButton();
       const target = byId("workflowReceiptStatus");
       const text = workflowReceiptText(data);
       if (!data || artifactPreviewPaths(data).length === 0) {
@@ -3431,6 +3454,7 @@
         byId("navApkState").textContent = unlocked ? "Done" : "Required";
       }
       ["Triggers", "Questionnaires", "Project", "Runner", "Review"].forEach(id => setNavState(id, unlocked));
+      updateEvidenceBundleButton();
     }
 
     async function callAppBackend(path, payload = null) {
@@ -3494,6 +3518,60 @@
         throw new Error(message);
       }
       return response.blob();
+    }
+
+    function contentDispositionFileName(value, fallback) {
+      const header = String(value || "");
+      const match = header.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i);
+      if (!match) {
+        return fallback;
+      }
+      try {
+        return decodeURIComponent(match[1].replace(/^"|"$/g, ""));
+      } catch (error) {
+        return match[1].replace(/^"|"$/g, "") || fallback;
+      }
+    }
+
+    function downloadBlobFile(fileName, blob) {
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    async function callAppBackendEvidenceBundle(summaryPath) {
+      const base = appBackendAvailableUrl();
+      if (!base) {
+        throw new Error("Local companion URL is required.");
+      }
+      const token = appBackendToken();
+      const headers = {};
+      if (token) {
+        headers["X-MQ-Builder-Token"] = token;
+      }
+      const response = await fetch(`${base}/api/evidence-bundle?summaryPath=${encodeURIComponent(summaryPath)}`, {
+        method: "GET",
+        headers,
+        cache: "no-store"
+      });
+      if (!response.ok) {
+        let message = `Evidence bundle failed: ${response.status}`;
+        const text = await response.text();
+        try {
+          const data = text ? JSON.parse(text) : {};
+          message = data.message || message;
+        } catch (error) {
+          message = text || message;
+        }
+        throw new Error(message);
+      }
+      const fileName = contentDispositionFileName(response.headers.get("Content-Disposition"), "questionnaire-evidence-bundle.zip");
+      return {
+        fileName,
+        blob: await response.blob()
+      };
     }
 
     function delay(ms) {
@@ -4012,6 +4090,27 @@
       }
     }
 
+    async function downloadEvidenceBundleWithApp() {
+      const button = byId("downloadEvidenceBundleButton");
+      const wasDisabled = button.disabled;
+      button.disabled = true;
+      try {
+        const summaryPath = evidenceBundleSummaryPath(lastEvidenceData);
+        if (!summaryPath) {
+          throw new Error("Run APK generation, a runner job, or workflow validation before downloading evidence.");
+        }
+        setAppBackendStatus("Preparing evidence bundle...", "");
+        const bundle = await callAppBackendEvidenceBundle(summaryPath);
+        downloadBlobFile(bundle.fileName, bundle.blob);
+        setAppBackendStatus(`Evidence bundle ready: ${bundle.fileName}`, "ok");
+      } catch (error) {
+        setAppBackendStatus(error.message || String(error), "error");
+      } finally {
+        button.disabled = wasDisabled;
+        updateEvidenceBundleButton();
+      }
+    }
+
     initializeAppBackendControls();
     initializeQuestionnairePalette();
     byId("exampleApkFolderLink").href = exampleApkFolderUrl;
@@ -4032,6 +4131,7 @@
     byId("questReplayAppButton").addEventListener("click", runQuestReplayWithApp);
     byId("directHandoffAppButton").addEventListener("click", runDirectHandoffWithApp);
     byId("validateWorkflowAppButton").addEventListener("click", validateWorkflowWithApp);
+    byId("downloadEvidenceBundleButton").addEventListener("click", downloadEvidenceBundleWithApp);
     byId("includeMaia").addEventListener("change", () => {
       blocks = normalizeBlocks(blocks);
       makeBlockList();

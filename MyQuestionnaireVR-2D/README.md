@@ -182,6 +182,8 @@ handoff config through HTTP, and drives `/api/generate-apk` so the PC software
 creates the APK and local render evidence. It also proves
 `/api/artifact-preview` can return token-protected sample render PNGs from both
 the APK-generation receipt and the full workflow receipt for GUI inspection.
+It proves `/api/evidence-bundle` can package the workflow summary, nested JSON
+receipts/logs, and render PNG evidence into a token-protected zip for review.
 It calls `/api/quest-readiness` for a read-only ADB device check with separate
 product-path readiness, dry-runs `/api/install-apk` so the install job contract
 is covered without changing the headset, dry-runs `/api/quest-replay` so

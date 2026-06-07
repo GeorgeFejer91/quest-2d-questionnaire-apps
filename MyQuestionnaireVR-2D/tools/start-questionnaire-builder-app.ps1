@@ -169,7 +169,8 @@ function Write-BinaryFileResponse {
         [System.Net.HttpListenerContext]$Context,
         [int]$StatusCode,
         [string]$ContentType,
-        [string]$Path
+        [string]$Path,
+        [string]$DownloadFileName = ""
     )
 
     Set-CorsHeaders -Context $Context
@@ -180,6 +181,10 @@ function Write-BinaryFileResponse {
         $Context.Response.ContentLength64 = $stream.Length
         $Context.Response.Headers['Cache-Control'] = 'no-store'
         $Context.Response.Headers['X-Content-Type-Options'] = 'nosniff'
+        if (-not [string]::IsNullOrWhiteSpace($DownloadFileName)) {
+            $safeName = (Get-SafeName -Value ([System.IO.Path]::GetFileNameWithoutExtension($DownloadFileName))) + [System.IO.Path]::GetExtension($DownloadFileName)
+            $Context.Response.Headers['Content-Disposition'] = "attachment; filename=`"$safeName`""
+        }
         $stream.CopyTo($Context.Response.OutputStream)
     }
     finally {
@@ -393,6 +398,214 @@ function Resolve-ArtifactPreviewPath {
         throw "Artifact preview path is a directory: $fullPath"
     }
     return $fullPath
+}
+
+function Test-PathInArtifactRoots {
+    param([string]$Path)
+
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    foreach ($root in Get-ArtifactPreviewRoots) {
+        $rootPrefix = Get-NormalizedDirectoryPrefix -Path $root
+        if ($fullPath.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Get-ArtifactZipEntryName {
+    param([string]$Path)
+
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    foreach ($root in Get-ArtifactPreviewRoots) {
+        $rootPrefix = Get-NormalizedDirectoryPrefix -Path $root
+        if ($fullPath.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $trimmedRoot = $rootPrefix.TrimEnd([char[]]@('\', '/'))
+            $owner = Split-Path -Leaf (Split-Path -Parent $trimmedRoot)
+            $relative = $fullPath.Substring($rootPrefix.Length).TrimStart('\', '/')
+            return (($owner + '-artifacts/' + $relative) -replace '\\', '/')
+        }
+    }
+    return ([System.IO.Path]::GetFileName($fullPath) -replace '\\', '/')
+}
+
+function Resolve-EvidenceBundleSummaryPath {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        throw 'Evidence bundle summaryPath is required.'
+    }
+
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    $extension = [System.IO.Path]::GetExtension($fullPath)
+    if (-not $extension.Equals('.json', [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Evidence bundle only accepts JSON summary paths.'
+    }
+    if (-not (Test-PathInArtifactRoots -Path $fullPath)) {
+        throw "Evidence bundle summary path is not allowed: $fullPath"
+    }
+    if (-not (Test-Path -LiteralPath $fullPath)) {
+        throw "Evidence bundle summary path not found: $fullPath"
+    }
+    if ((Get-Item -LiteralPath $fullPath).PSIsContainer) {
+        throw "Evidence bundle summary path is a directory: $fullPath"
+    }
+    return $fullPath
+}
+
+function Add-EvidenceBundleCandidate {
+    param(
+        [string]$Path,
+        [hashtable]$Seen,
+        [System.Collections.Generic.List[string]]$Files
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return
+    }
+
+    try {
+        $fullPath = [System.IO.Path]::GetFullPath($Path)
+    }
+    catch {
+        return
+    }
+
+    if (-not (Test-Path -LiteralPath $fullPath)) {
+        return
+    }
+    $item = Get-Item -LiteralPath $fullPath
+    if ($item.PSIsContainer) {
+        return
+    }
+    if (-not (Test-PathInArtifactRoots -Path $fullPath)) {
+        return
+    }
+    $extension = [System.IO.Path]::GetExtension($fullPath).ToLowerInvariant()
+    $allowedExtensions = @('.json', '.txt', '.log', '.png', '.csv')
+    if (-not ($allowedExtensions -contains $extension)) {
+        return
+    }
+
+    $key = $fullPath.ToLowerInvariant()
+    if ($Seen.ContainsKey($key)) {
+        return
+    }
+    $Seen[$key] = $true
+    $Files.Add($fullPath) | Out-Null
+
+    if ($extension -eq '.json') {
+        try {
+            $json = Get-Content -LiteralPath $fullPath -Encoding UTF8 -Raw | ConvertFrom-Json
+            Add-EvidenceBundlePathsFromObject -Object $json -Seen $Seen -Files $Files
+        }
+        catch {
+            return
+        }
+    }
+}
+
+function Add-EvidenceBundlePathsFromObject {
+    param(
+        [object]$Object,
+        [hashtable]$Seen,
+        [System.Collections.Generic.List[string]]$Files
+    )
+
+    if ($null -eq $Object) {
+        return
+    }
+    if ($Object -is [string]) {
+        Add-EvidenceBundleCandidate -Path $Object -Seen $Seen -Files $Files
+        return
+    }
+    if ($Object -is [System.Collections.IEnumerable] -and -not ($Object -is [string])) {
+        foreach ($item in $Object) {
+            Add-EvidenceBundlePathsFromObject -Object $item -Seen $Seen -Files $Files
+        }
+        return
+    }
+    if ($Object.PSObject -and $Object.PSObject.Properties) {
+        foreach ($property in $Object.PSObject.Properties) {
+            Add-EvidenceBundlePathsFromObject -Object $property.Value -Seen $Seen -Files $Files
+        }
+    }
+}
+
+function New-EvidenceBundle {
+    param([string]$SummaryPath)
+
+    $summaryPathFull = Resolve-EvidenceBundleSummaryPath -Path $SummaryPath
+    $bundleId = 'evidence-bundle-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    $bundleDir = Join-Path $ProjectPath ("artifacts\builder-evidence-bundles\$bundleId")
+    New-Item -ItemType Directory -Force -Path $bundleDir | Out-Null
+
+    $seen = @{}
+    $files = New-Object 'System.Collections.Generic.List[string]'
+    Add-EvidenceBundleCandidate -Path $summaryPathFull -Seen $seen -Files $files
+
+    $manifestFiles = @($files.ToArray() | ForEach-Object {
+        $evidence = Get-FileEvidence -Path $_
+        [ordered]@{
+            sourcePath = $_
+            entryName = Get-ArtifactZipEntryName -Path $_
+            bytes = $evidence.bytes
+            sha256 = $evidence.sha256
+        }
+    })
+    $manifest = [ordered]@{
+        schemaVersion = 'mq.builder_evidence_bundle.v1'
+        bundleId = $bundleId
+        sourceSummaryPath = $summaryPathFull
+        fileCount = $manifestFiles.Count
+        files = $manifestFiles
+        createdAt = (Get-Date).ToUniversalTime().ToString('o')
+    }
+    $manifestPath = Join-Path $bundleDir 'evidence-bundle-manifest.json'
+    $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+
+    $zipPath = Join-Path $bundleDir ($bundleId + '.zip')
+    if (Test-Path -LiteralPath $zipPath) {
+        Remove-Item -LiteralPath $zipPath -Force
+    }
+    Add-Type -AssemblyName System.IO.Compression
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
+    $entryNames = @{}
+    try {
+        [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $manifestPath, 'evidence-bundle-manifest.json', [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+        $entryNames['evidence-bundle-manifest.json'] = $true
+        foreach ($file in @($files.ToArray())) {
+            $entryName = Get-ArtifactZipEntryName -Path $file
+            $baseEntryName = $entryName
+            $suffix = 1
+            while ($entryNames.ContainsKey($entryName.ToLowerInvariant())) {
+                $directory = [System.IO.Path]::GetDirectoryName($baseEntryName) -replace '\\', '/'
+                $leaf = [System.IO.Path]::GetFileNameWithoutExtension($baseEntryName)
+                $extension = [System.IO.Path]::GetExtension($baseEntryName)
+                $candidate = "$leaf-$suffix$extension"
+                if (-not [string]::IsNullOrWhiteSpace($directory)) {
+                    $candidate = "$directory/$candidate"
+                }
+                $entryName = $candidate
+                $suffix += 1
+            }
+            $entryNames[$entryName.ToLowerInvariant()] = $true
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $file, $entryName, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+        }
+    }
+    finally {
+        $archive.Dispose()
+    }
+
+    return [ordered]@{
+        status = 'ok'
+        bundleId = $bundleId
+        zipPath = $zipPath
+        fileName = [System.IO.Path]::GetFileName($zipPath)
+        fileCount = $manifestFiles.Count
+        manifestPath = $manifestPath
+    }
 }
 
 function Get-WorkflowCount {
@@ -1817,6 +2030,7 @@ function New-StatusPayload {
             'generate-apk',
             'generate-apk-receipt',
             'artifact-preview',
+            'evidence-bundle',
             'workflow-render-previews',
             'validate-workflow',
             'workflow-job-status',
@@ -1888,6 +2102,13 @@ function Handle-Request {
         Assert-OriginAndToken -Request $request
         $artifactPath = Resolve-ArtifactPreviewPath -Path ([string]$request.QueryString['path'])
         Write-BinaryFileResponse -Context $Context -StatusCode 200 -ContentType 'image/png' -Path $artifactPath
+        return
+    }
+
+    if ($request.HttpMethod -eq 'GET' -and $path -eq '/api/evidence-bundle') {
+        Assert-OriginAndToken -Request $request
+        $bundle = New-EvidenceBundle -SummaryPath ([string]$request.QueryString['summaryPath'])
+        Write-BinaryFileResponse -Context $Context -StatusCode 200 -ContentType 'application/zip' -Path ([string]$bundle.zipPath) -DownloadFileName ([string]$bundle.fileName)
         return
     }
 
@@ -2192,6 +2413,21 @@ try {
                 $statusCode = 404
             }
             elseif ($message -like 'Artifact preview only supports*') {
+                $statusCode = 415
+            }
+            elseif ($message -like 'Evidence bundle summaryPath is required*') {
+                $statusCode = 400
+            }
+            elseif ($message -like 'Evidence bundle summary path is not allowed*') {
+                $statusCode = 403
+            }
+            elseif ($message -like 'Evidence bundle summary path not found*') {
+                $statusCode = 404
+            }
+            elseif ($message -like 'Evidence bundle summary path is a directory*') {
+                $statusCode = 400
+            }
+            elseif ($message -like 'Evidence bundle only accepts*') {
                 $statusCode = 415
             }
             Write-JsonResponse -Context $context -StatusCode $statusCode -Value ([ordered]@{

@@ -746,6 +746,27 @@ Generalizable rule: make the happy path explicit in the GUI, but do not fork
 validation semantics. A sequence button should compose already-tested jobs so
 the one-click path and the step-by-step path produce comparable receipts.
 
+## Sequence Buttons Need Composition Smoke Tests
+
+Problem: a hosted/static validator can prove that a one-button runner label and
+endpoint names exist while missing whether the actual sequence still calls the
+trusted companion endpoints in the required order. That is especially risky
+when the final steps are non-device-changing evidence boundaries such as
+readiness audit and physical packet preparation.
+
+Solution: the questionnaire builder smoke test now inspects
+`runHeadsetSequenceWithApp()` and asserts the ordered endpoint spine: save,
+validate, generate with `runTests` and local render preview, Quest readiness,
+install, replay/export, 2D-first launcher gate, direct handoff gate, readiness
+audit, and physical packet preparation. It also unit-checks
+`physicalGatePacketPayloadFromEvidence()` so the packet prefers the visible
+audit summary before falling back to companion summary discovery.
+
+Generalizable rule: GUI sequence buttons should have a smoke gate that proves
+composition, not only existence. When a one-button path is supposed to reuse
+individual controls, assert the endpoint order and evidence handoff payloads
+directly.
+
 ## Front-Door Gates Belong In The GUI
 
 Problem: `quest-2d-first-launcher-validate.ps1` made the participant-facing

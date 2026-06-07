@@ -142,10 +142,19 @@ function loadEditor() {
   };
   context.window = context;
   vm.createContext(context);
-  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, applyQuestionnaireFirstDefaults, refresh, buildExperimentBlockRegistry, buildChainPlan, directHandoffWorkflowOptions, workflowValidationPayload, runHeadsetSequenceWithApp };`, context, {
+  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, applyQuestionnaireFirstDefaults, refresh, buildExperimentBlockRegistry, buildChainPlan, directHandoffWorkflowOptions, workflowValidationPayload, runHeadsetSequenceWithApp, physicalGatePacketPayloadFromEvidence };`, context, {
     filename: htmlPath
   });
   return { context, document };
+}
+
+function assertOrderedText(text, tokens, label) {
+  let offset = -1;
+  tokens.forEach(token => {
+    const index = text.indexOf(token, offset + 1);
+    assert(index > offset, `${label} should contain ${token} after offset ${offset}.`);
+    offset = index;
+  });
 }
 
 const { context, document } = loadEditor();
@@ -174,6 +183,49 @@ assert(document.getElementById("downloadBlockRegistryButton"), "Block registry d
 assert(document.getElementById("downloadChainPlanButton"), "Chain plan download button was not rendered.");
 assert(document.getElementById("headsetSequenceAppButton"), "Headset sequence button was not rendered.");
 assert(typeof context.__api.runHeadsetSequenceWithApp === "function", "Headset sequence runner should be exposed.");
+assert(typeof context.__api.physicalGatePacketPayloadFromEvidence === "function", "Physical packet payload helper should be exposed.");
+const sequenceSource = context.__api.runHeadsetSequenceWithApp.toString();
+assertOrderedText(sequenceSource, [
+  "\"Save config\"",
+  "\"/api/save-config\"",
+  "\"Validate config\"",
+  "\"/api/validate-config\"",
+  "\"Generate APK and local render\"",
+  "\"/api/generate-apk\"",
+  "runTests: true",
+  "renderPreview: true",
+  "\"Detect Quest\"",
+  "\"/api/quest-readiness\"",
+  "\"Install APK on Quest\"",
+  "\"/api/install-apk\"",
+  "\"Run replay/export\"",
+  "\"/api/quest-replay\"",
+  "\"/api/2d-first-launcher\"",
+  "\"/api/direct-handoff\"",
+  "\"Audit readiness\"",
+  "\"/api/handoff-readiness-audit\"",
+  "\"Prepare physical packet\"",
+  "\"/api/physical-gate-packet\"",
+  "physicalGatePacketPayloadFromEvidence(latestData)"
+], "Headset sequence");
+assert(sequenceSource.includes("payload.dryRun = true"), "Headset sequence should dry-run launch gates in preflight mode.");
+assert(sequenceSource.includes("payload.skipInstall = true"), "Headset sequence should skip install inside preflight launch gates.");
+assert(sequenceSource.includes("preflightOnly ? false : directHandoffWakeBeforeReadiness()"), "Headset sequence should ignore wake-before-readiness in preflight mode.");
+document.getElementById("workflowQuestSerial").value = "QUEST-SMOKE-001";
+const auditPacketPayload = context.__api.physicalGatePacketPayloadFromEvidence({
+  auditReceipt: { artifacts: { summaryPath: "C:\\artifacts\\audit-summary.json" } }
+});
+assert(auditPacketPayload.questSerial === "QUEST-SMOKE-001", "Physical packet payload should include the current Quest serial.");
+assert(auditPacketPayload.auditSummaryPath === "C:\\artifacts\\audit-summary.json", "Physical packet payload should prefer the visible audit summary.");
+assert(!Object.prototype.hasOwnProperty.call(auditPacketPayload, "companionSummaryPath"), "Visible audit payload should not fall back to companion summary discovery.");
+const priorPacketPayload = context.__api.physicalGatePacketPayloadFromEvidence({
+  physicalGatePacketReceipt: { artifacts: { auditSummaryPath: "C:\\artifacts\\packet-audit-summary.json" } }
+});
+assert(priorPacketPayload.auditSummaryPath === "C:\\artifacts\\packet-audit-summary.json", "Physical packet payload should reuse the visible packet's audit summary.");
+const companionPacketPayload = context.__api.physicalGatePacketPayloadFromEvidence({
+  endToEndReceipt: { artifacts: { summaryPath: "C:\\artifacts\\companion-summary.json" } }
+});
+assert(companionPacketPayload.companionSummaryPath === "C:\\artifacts\\companion-summary.json", "Physical packet payload should fall back to the visible companion workflow summary.");
 assert(document.getElementById("pipelineCommands").textContent.includes("quest-validate.ps1"), "Quest validation command was not rendered.");
 assert(document.getElementById("pipelineCommands").textContent.includes("render-questionnaire-visuals.ps1"), "Foreground render command was not rendered.");
 assert(document.getElementById("pipelineCommands").textContent.includes("quest-chain-validate.ps1"), "Quest chain validation command was not rendered.");
@@ -326,6 +378,8 @@ const summary = {
   blockRegistryDownloadAction: "pass",
   chainPlanDownloadAction: "pass",
   headsetSequenceAction: "pass",
+  headsetSequenceOrderAction: "pass",
+  physicalGatePacketPayloadAction: "pass",
   workflowPreflightPayloadAction: "pass",
   defaultRegisteredBlocks: initial.experimentBlockRegistry.blocks.length,
   pipelineCommands: 7

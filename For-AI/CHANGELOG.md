@@ -105,6 +105,10 @@ Use absolute dates.
   Future agents should not make the first demographics block depend on
   launching a panel over an already-playing Unity video when the study can
   start cleanly from the 2D questionnaire APK.
+- Hardened the questionnaire builder smoke test so `Run headset sequence`
+  proves its ordered companion-endpoint spine and verifies the physical packet
+  payload prefers the visible readiness audit before falling back to companion
+  summary discovery.
 
 ## 2026-06-07
 

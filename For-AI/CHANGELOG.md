@@ -132,3 +132,7 @@ Use absolute dates.
   and temporal tracer render packs must reference real PNG artifacts with
   bytes, valid PNG dimensions, matching recorded hashes, and zero failed render
   rows before the matrix marks them as pass.
+- Strengthened the companion workflow summary for `/api/generate-apk`: it now
+  records generated APK file evidence, verifies the APK SHA-256 against the
+  generator summary when builds are enabled, and records the render preview
+  artifact gate produced by the same endpoint.

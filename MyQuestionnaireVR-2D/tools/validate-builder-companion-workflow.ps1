@@ -76,6 +76,181 @@ function Invoke-Json {
     return Invoke-RestMethod @arguments
 }
 
+function Read-JsonIfExists {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path)) {
+        return $null
+    }
+    return Get-Content -LiteralPath $Path -Encoding UTF8 -Raw | ConvertFrom-Json
+}
+
+function Get-FileEvidence {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return [ordered]@{
+            exists = $false
+            path = $Path
+        }
+    }
+
+    $exists = Test-Path -LiteralPath $Path
+    $evidence = [ordered]@{
+        exists = $exists
+        path = $Path
+    }
+    if ($exists -and -not (Get-Item -LiteralPath $Path).PSIsContainer) {
+        $item = Get-Item -LiteralPath $Path
+        $evidence.bytes = $item.Length
+        $evidence.sha256 = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash
+        $evidence.lastWriteTimeUtc = $item.LastWriteTimeUtc.ToString('o')
+    }
+    return $evidence
+}
+
+function ConvertFrom-PngBigEndianUInt32 {
+    param([byte[]]$Bytes, [int]$Offset)
+
+    return (
+        ([uint32]$Bytes[$Offset] -shl 24) -bor
+        ([uint32]$Bytes[$Offset + 1] -shl 16) -bor
+        ([uint32]$Bytes[$Offset + 2] -shl 8) -bor
+        [uint32]$Bytes[$Offset + 3]
+    )
+}
+
+function Get-PngEvidence {
+    param([string]$Path, [object]$Render = $null)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return [ordered]@{
+            exists = $false
+            path = $Path
+            validPng = $false
+        }
+    }
+
+    $evidence = Get-FileEvidence -Path $Path
+    $evidence.validPng = $false
+    $evidence.width = 0
+    $evidence.height = 0
+
+    if (-not $evidence.exists) {
+        return $evidence
+    }
+
+    try {
+        $buffer = New-Object byte[] 24
+        $stream = [System.IO.File]::OpenRead($Path)
+        try {
+            $read = $stream.Read($buffer, 0, $buffer.Length)
+        } finally {
+            $stream.Dispose()
+        }
+        $signature = [byte[]](137, 80, 78, 71, 13, 10, 26, 10)
+        $signatureMatches = $read -ge 24
+        for ($i = 0; $i -lt $signature.Length -and $signatureMatches; $i++) {
+            if ($buffer[$i] -ne $signature[$i]) {
+                $signatureMatches = $false
+            }
+        }
+        if ($signatureMatches) {
+            $evidence.validPng = $true
+            $evidence.width = [int](ConvertFrom-PngBigEndianUInt32 -Bytes $buffer -Offset 16)
+            $evidence.height = [int](ConvertFrom-PngBigEndianUInt32 -Bytes $buffer -Offset 20)
+        }
+    } catch {
+        $evidence.pngReadError = $_.Exception.Message
+    }
+
+    if ($null -ne $Render) {
+        $expectedBytes = if ($Render.PSObject.Properties.Name -contains 'byteLength') { [int64]$Render.byteLength } else { 0 }
+        $expectedHash = if ($Render.PSObject.Properties.Name -contains 'sha256') { [string]$Render.sha256 } else { "" }
+        $expectedWidth = if ($Render.PSObject.Properties.Name -contains 'widthDp') { [int]$Render.widthDp } else { 0 }
+        $expectedHeight = if ($Render.PSObject.Properties.Name -contains 'heightDp') { [int]$Render.heightDp } else { 0 }
+
+        $evidence.matchesSummaryByteLength = ($expectedBytes -le 0 -or [int64]$evidence.bytes -eq $expectedBytes)
+        $evidence.matchesSummarySha256 = ([string]::IsNullOrWhiteSpace($expectedHash) -or [string]$evidence.sha256 -eq $expectedHash)
+        $evidence.matchesRenderDimensions = (
+            ($expectedWidth -le 0 -or [int]$evidence.width -eq $expectedWidth) -and
+            ($expectedHeight -le 0 -or [int]$evidence.height -eq $expectedHeight)
+        )
+    }
+
+    return $evidence
+}
+
+function Get-RenderEvidence {
+    param([string]$SummaryPath)
+
+    $summary = Read-JsonIfExists -Path $SummaryPath
+    if ($null -eq $summary) {
+        return [ordered]@{
+            exists = $false
+            summaryPath = $SummaryPath
+            passesArtifactGate = $false
+        }
+    }
+
+    $renders = @($summary.renders)
+    $pngs = @($renders | ForEach-Object { $_.png } | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
+    $pngFiles = @($renders | ForEach-Object {
+        $pngEvidence = Get-PngEvidence -Path ([string]$_.png) -Render $_
+        [pscustomobject][ordered]@{
+            stageName = [string]$_.stageName
+            language = [string]$_.language
+            size = "$($_.widthDp)x$($_.heightDp)"
+            status = [string]$_.status
+            png = $pngEvidence
+        }
+    })
+    $missingPngs = @($pngFiles | Where-Object { -not $_.png.exists })
+    $invalidPngs = @($pngFiles | Where-Object { $_.png.exists -and -not $_.png.validPng })
+    $zeroBytePngs = @($pngFiles | Where-Object { $_.png.exists -and [int64]$_.png.bytes -le 0 })
+    $dimensionMismatches = @($pngFiles | Where-Object { $_.png.exists -and ($_.png.PSObject.Properties.Name -contains 'matchesRenderDimensions') -and -not $_.png.matchesRenderDimensions })
+    $byteMismatches = @($pngFiles | Where-Object { $_.png.exists -and ($_.png.PSObject.Properties.Name -contains 'matchesSummaryByteLength') -and -not $_.png.matchesSummaryByteLength })
+    $hashMismatches = @($pngFiles | Where-Object { $_.png.exists -and ($_.png.PSObject.Properties.Name -contains 'matchesSummarySha256') -and -not $_.png.matchesSummarySha256 })
+    $artifactGatePass = (
+        $renders.Count -gt 0 -and
+        $pngs.Count -gt 0 -and
+        @($renders | Where-Object { $_.status -eq 'fail' }).Count -eq 0 -and
+        $missingPngs.Count -eq 0 -and
+        $invalidPngs.Count -eq 0 -and
+        $zeroBytePngs.Count -eq 0 -and
+        $dimensionMismatches.Count -eq 0 -and
+        $byteMismatches.Count -eq 0 -and
+        $hashMismatches.Count -eq 0
+    )
+
+    return [ordered]@{
+        exists = $true
+        summaryPath = $SummaryPath
+        schemaVersion = $summary.schemaVersion
+        status = if ($summary.PSObject.Properties.Name -contains 'status') { $summary.status } else { '' }
+        renderer = if ($summary.PSObject.Properties.Name -contains 'renderer') { $summary.renderer } else { '' }
+        renderCount = $renders.Count
+        passCount = @($renders | Where-Object { $_.status -eq 'pass' }).Count
+        warnCount = @($renders | Where-Object { $_.status -eq 'warn' }).Count
+        failCount = @($renders | Where-Object { $_.status -eq 'fail' }).Count
+        pngCount = $pngs.Count
+        pngFileCount = @($pngFiles | Where-Object { $_.png.exists }).Count
+        missingPngCount = $missingPngs.Count
+        invalidPngCount = $invalidPngs.Count
+        zeroBytePngCount = $zeroBytePngs.Count
+        dimensionMismatchCount = $dimensionMismatches.Count
+        byteLengthMismatchCount = $byteMismatches.Count
+        sha256MismatchCount = $hashMismatches.Count
+        uniquePngHashes = @($pngFiles | Where-Object { $_.png.exists -and $_.png.sha256 } | ForEach-Object { $_.png.sha256 } | Select-Object -Unique).Count
+        passesArtifactGate = $artifactGatePass
+        stages = @($renders | ForEach-Object { $_.stageName } | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Select-Object -Unique)
+        sizes = @($renders | ForEach-Object { "$($_.widthDp)x$($_.heightDp)" } | Where-Object { $_ -notmatch '^x$' } | Select-Object -Unique)
+        languages = @($renders | ForEach-Object { $_.language } | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Select-Object -Unique)
+        samplePngs = @($pngs | Select-Object -First 3)
+        samplePngEvidence = @($pngFiles | Select-Object -First 3)
+    }
+}
+
 function Get-HttpErrorStatusCode {
     param([System.Exception]$Exception)
 
@@ -441,10 +616,11 @@ try {
     }
 
     Write-Host "== Generate APK through companion =="
+    $renderPreviewRequested = -not $SkipRenderPreview
     $generateBody = @{
         config = $handoffConfig
         runTests = $false
-        renderPreview = -not $SkipRenderPreview
+        renderPreview = $renderPreviewRequested
         skipBuild = [bool]$SkipApkBuild
     }
     $generate = Invoke-Json -Method POST -Uri "$baseUrl/api/generate-apk" -Headers $headers -Body $generateBody -TimeoutSec 1800
@@ -457,6 +633,24 @@ try {
     }
     if ($generate.summaryPath -and -not (Test-Path -LiteralPath $generate.summaryPath)) {
         throw "Companion generator summary was not written: $($generate.summaryPath)"
+    }
+    $generateSummary = Read-JsonIfExists -Path ([string]$generate.summaryPath)
+    if ($null -eq $generateSummary) {
+        throw "Companion generator summary could not be read: $($generate.summaryPath)"
+    }
+    $generatedApkEvidence = Get-FileEvidence -Path ([string]$generate.apk)
+    if (-not $SkipApkBuild) {
+        if (-not $generatedApkEvidence.exists) {
+            throw "Companion generate-apk reported a missing APK: $($generate.apk)"
+        }
+        if ([string]::IsNullOrWhiteSpace([string]$generateSummary.apkSha256) -or [string]$generatedApkEvidence.sha256 -ne [string]$generateSummary.apkSha256) {
+            throw "Companion generated APK hash mismatch. Summary=$($generateSummary.apkSha256) actual=$($generatedApkEvidence.sha256)"
+        }
+    }
+    $generateRenderSummaryPath = if ($generateSummary -and $generateSummary.PSObject.Properties.Name -contains 'renderSummary') { [string]$generateSummary.renderSummary } else { "" }
+    $generateRenderEvidence = if (-not [string]::IsNullOrWhiteSpace($generateRenderSummaryPath)) { Get-RenderEvidence -SummaryPath $generateRenderSummaryPath } else { $null }
+    if ($renderPreviewRequested -and ($null -eq $generateRenderEvidence -or -not $generateRenderEvidence.exists -or -not $generateRenderEvidence.passesArtifactGate)) {
+        throw "Companion generate-apk render preview did not produce a usable render artifact gate."
     }
 
     Write-Host "== Validate builder-to-Quest workflow through companion =="
@@ -525,7 +719,6 @@ try {
         throw "Companion validate-workflow clamp summary missing dry-run direct handoff facts."
     }
 
-    $renderPreviewRequested = -not $SkipRenderPreview
     $summaryStatus = 'pass'
     $summary = [ordered]@{
         schemaVersion = 'my-questionnaire-2d.builder-companion-workflow.v1'
@@ -601,9 +794,13 @@ try {
             validateExitCode = $validate.exitCode
             generateRunId = $generate.runId
             generateSummaryPath = $generate.summaryPath
+            generateStatus = if ($generateSummary) { $generateSummary.status } else { '' }
             apk = $generate.apk
+            apkEvidence = $generatedApkEvidence
             skipBuild = [bool]$SkipApkBuild
             renderPreview = $renderPreviewRequested
+            renderSummaryPath = $generateRenderSummaryPath
+            renderEvidence = $generateRenderEvidence
             workflowStatus = $workflow.workflowStatus
             workflowSummaryPath = $workflow.summaryPath
         }

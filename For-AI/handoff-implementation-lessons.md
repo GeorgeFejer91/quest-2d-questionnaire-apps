@@ -86,6 +86,24 @@ Generalizable rule: when a static web GUI delegates work to local software,
 stress the HTTP boundary itself, including auth failures and long-running
 commands.
 
+## Companion Generate Needs Artifact Receipts
+
+Problem: a local companion endpoint can return `status=ok` for APK generation
+while the top-level workflow summary only records a nested summary path. That
+is too indirect for the user-facing promise "the website tells the PC software
+to create an APK"; reviewers should not have to open multiple nested JSON files
+to know whether an APK and render pack actually exist.
+
+Solution: the companion workflow validator now reads the `/api/generate-apk`
+generator summary immediately, verifies the generated APK exists and matches
+the recorded SHA-256 when a build is requested, and verifies the endpoint's
+render-preview PNG artifact gate when previews are requested. The companion
+summary promotes those facts as `apkEvidence` and `renderEvidence`.
+
+Generalizable rule: every trusted local endpoint that produces a user-visible
+artifact should return or promote a compact receipt for that artifact: path,
+existence, bytes, hash, and the status of any visual preview gate.
+
 ## Native stderr Is Not Failure By Itself
 
 Problem: Gradle can write harmless notes to stderr while exiting successfully.

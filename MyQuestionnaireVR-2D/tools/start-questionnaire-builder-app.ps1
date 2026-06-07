@@ -1821,6 +1821,7 @@ function New-StatusPayload {
             'quest-replay',
             'quest-replay-job-status',
             'direct-handoff',
+            'direct-handoff-preflight',
             'direct-handoff-job-status',
             'runner-job-receipts',
             'dependency-status',

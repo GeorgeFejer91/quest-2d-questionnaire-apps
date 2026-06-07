@@ -505,3 +505,23 @@ non-empty images.
 Generalizable rule: when a compact receipt claims a visual gate passed, include
 enough sample artifact references for the dashboard to inspect the same
 evidence. Counts alone are not enough for user-facing visual validation.
+
+## Architecture Gates Need Visible Preflight Modes
+
+Problem: the direct handoff endpoint could already dry-run package/activity
+and trigger-catalog checks, but the dedicated GUI button looked like a live
+headset action. That made the safest repeatable evidence path less visible and
+encouraged users to wait for physical Quest readiness before checking the APK
+contract.
+
+Solution: keep the live direct handoff runner, but add a `Preflight only`
+toggle that defaults on for the dedicated button. In that mode the GUI calls
+`/api/direct-handoff` with `dryRun=true`, `skipInstall=true`,
+`trialCount=1`, and `waitForReadySeconds=0`; the companion advertises
+`direct-handoff-preflight` so hosted pages can warn about stale local
+launchers.
+
+Generalizable rule: architecture-decision buttons should separate safe
+contract preflight from live product-path evidence. Make the dry-run mode
+visible, keep it covered by the companion stress ladder, and require explicit
+operator intent before launching physical-device trials.

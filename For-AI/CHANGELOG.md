@@ -170,3 +170,8 @@ Use absolute dates.
   `workflowReceipt` and added the `workflow-render-previews` companion
   capability so the GUI's full workflow validation step can visually inspect
   both local render families through the same protected preview endpoint.
+- Added a GUI-visible `Preflight only` mode for the dedicated direct handoff
+  runner. The hosted/offline builder now calls `/api/direct-handoff` with
+  `dryRun=true` and `skipInstall=true` by default for package/catalog
+  preflight, and the companion advertises `direct-handoff-preflight` so stale
+  local launchers can be detected.

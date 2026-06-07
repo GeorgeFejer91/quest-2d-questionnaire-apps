@@ -187,6 +187,11 @@ The hosted/offline GUI exposes the same gate through the companion
 `/api/validate-workflow` endpoint. It also exposes the direct handoff gate as a
 dedicated `Run direct handoff` action backed by `/api/direct-handoff` and
 `/api/direct-handoff-job`, placed after replay/export in the sequential runner.
+That button defaults to `Preflight only`, which uses the same direct handoff
+job endpoint with `dryRun=true` and `skipInstall=true` to prove the real APK
+package/activity/catalog contract without launching the headset. Clear that
+toggle only for operator-supervised or explicitly scheduled product-path
+trials.
 The `/api/generate-apk` endpoint returns a `generationReceipt` so the GUI's
 APK-generation step can immediately show the generated APK byte/hash evidence
 and local render-preview artifact gate.
@@ -200,8 +205,9 @@ direct PendingIntent is still awaiting product-path evidence.
 The companion `/api/status` health payload advertises `apiVersion`,
 `receiptSchemaVersion`, and receipt capabilities such as
 `generate-apk-receipt`, `artifact-preview`, `workflow-render-previews`,
-`workflow-receipt`, and `runner-job-receipts`; the hosted GUI should warn if a
-user connects an older local companion that lacks those capabilities. The
+`workflow-receipt`, `direct-handoff-preflight`, and `runner-job-receipts`; the
+hosted GUI should warn if a user connects an older local companion that lacks
+those capabilities. The
 `artifact-preview` capability means the companion can serve generation-receipt
 and workflow-receipt sample PNGs through the token-protected
 `/api/artifact-preview` route. That route is only for generated local PNG

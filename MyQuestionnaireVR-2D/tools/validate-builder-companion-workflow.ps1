@@ -29,6 +29,7 @@ $RequiredCompanionCapabilities = @(
     'artifact-preview',
     'workflow-render-previews',
     'workflow-receipt',
+    'direct-handoff-preflight',
     'runner-job-receipts'
 )
 

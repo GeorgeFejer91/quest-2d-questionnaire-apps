@@ -214,12 +214,15 @@ local questionnaire and tracer render evidence, checks the Unity
 preflight, records Quest ADB versus product-path readiness, and records which
 Quest gates remain pending or blocked.
 
-In the builder runner, use `Ready wait (s)` before `Run direct handoff` or
-`Validate workflow` when collecting supervised or unattended Quest evidence.
-The value is bounded to 0-28800 seconds and does not bypass product-path
-readiness: if the headset stays asleep or Horizon keeps the launch-check dialog
-focused, the run remains `blocked` with readiness samples instead of launching
-Unity.
+In the builder runner, `Run direct handoff` defaults to `Preflight only`. That
+mode sends `dryRun=true` and `skipInstall=true` to `/api/direct-handoff`, uses
+the real questionnaire, temporal tracer, and Unity APK package/catalog
+contract, and does not launch the headset. Clear `Preflight only`, then use
+`Ready wait (s)` before `Run direct handoff` or `Validate workflow` when
+collecting supervised or unattended Quest evidence. The value is bounded to
+0-28800 seconds and does not bypass product-path readiness: if the headset
+stays asleep or Horizon keeps the launch-check dialog focused, the run remains
+`blocked` with readiness samples instead of launching Unity.
 
 Run the full local ladder from builder smoke test through generated APK and
 Android render preview:

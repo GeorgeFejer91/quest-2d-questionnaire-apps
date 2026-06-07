@@ -1019,6 +1019,10 @@
                 <input id="workflowDirectHandoff" type="checkbox">
                 <span>Run direct PendingIntent headset trials</span>
               </label>
+              <label class="toggle-row">
+                <input id="directHandoffPreflightOnly" type="checkbox" checked>
+                <span>Preflight only</span>
+              </label>
               <label>
                 Direct trials
                 <input id="directHandoffTrials" type="number" min="1" max="10" step="1" value="10">
@@ -1152,6 +1156,7 @@
       { id: "artifact-preview", label: "local render previews" },
       { id: "workflow-render-previews", label: "workflow render previews" },
       { id: "workflow-receipt", label: "workflow receipts" },
+      { id: "direct-handoff-preflight", label: "direct handoff preflight" },
       { id: "runner-job-receipts", label: "runner job receipts" }
     ];
 
@@ -3016,7 +3021,7 @@
         return "";
       }
       if (!Array.isArray(data?.capabilities)) {
-        return "update the local companion because this older API cannot show APK generation, local render previews, workflow render previews, workflow, or runner receipts";
+        return "update the local companion because this older API cannot show APK generation, local render previews, workflow render previews, direct handoff preflight, workflow, or runner receipts";
       }
       return `update the local companion to enable ${missing.map(item => item.label).join(" and ")}`;
     }
@@ -3641,6 +3646,10 @@
       return 30;
     }
 
+    function directHandoffPreflightOnly() {
+      return Boolean(byId("directHandoffPreflightOnly")?.checked);
+    }
+
     function directHandoffJobLevel(data) {
       if (data?.jobStatus === "failed" || data?.handoffStatus === "fail" || data?.handoffStatus === "error") {
         return "error";
@@ -3656,7 +3665,11 @@
 
     function directHandoffJobText(data) {
       const runId = data?.runId || data?.jobId || "direct-handoff";
+      const isPreflight = Boolean(data?.dryRun || data?.jobReceipt?.dryRun);
       if (data?.jobStatus === "running") {
+        if (isPreflight) {
+          return `Direct handoff preflight running: ${runId}.`;
+        }
         return `Direct handoff trials running: ${runId}.`;
       }
       if (data?.handoffStatus === "blocked") {
@@ -3664,6 +3677,9 @@
         return `Direct handoff blocked${blocked}; summary: ${data?.summaryPath || "not written yet"}`;
       }
       if (data?.handoffStatus === "pass") {
+        if (isPreflight) {
+          return `Direct handoff preflight passed; summary: ${data?.summaryPath || "not written yet"}`;
+        }
         return `Direct handoff passed ${data?.passCount || 0}/${data?.trialCount || directHandoffTrialCount()} trials; summary: ${data?.summaryPath || "not written yet"}`;
       }
       return `Direct handoff ${data?.handoffStatus || data?.jobStatus}; summary: ${data?.summaryPath || "not written yet"}`;
@@ -3898,17 +3914,23 @@
       button.disabled = true;
       try {
         const apkPath = lastGeneratedApkPath || expectedGeneratedApkPath();
-        const waitForReadySeconds = directHandoffWaitSeconds();
-        const trialCount = directHandoffTrialCount();
-        setAppBackendStatus("Starting direct PendingIntent handoff trials...", "");
+        const preflightOnly = directHandoffPreflightOnly();
+        const waitForReadySeconds = preflightOnly ? 0 : directHandoffWaitSeconds();
+        const trialCount = preflightOnly ? 1 : directHandoffTrialCount();
+        setAppBackendStatus(preflightOnly ? "Starting direct handoff package/catalog preflight..." : "Starting direct PendingIntent handoff trials...", "");
         setWorkflowReceiptStatus(null);
-        const data = await callAppBackend("/api/direct-handoff", {
+        const payload = {
           questionnaireApk: apkPath,
           questSerial: byId("workflowQuestSerial").value.trim(),
           trialCount,
           waitForReadySeconds,
-          waitSeconds: 95
-        });
+          waitSeconds: preflightOnly ? 1 : 95
+        };
+        if (preflightOnly) {
+          payload.dryRun = true;
+          payload.skipInstall = true;
+        }
+        const data = await callAppBackend("/api/direct-handoff", payload);
         setAppBackendStatus(directHandoffJobText(data), directHandoffJobLevel(data));
         setWorkflowReceiptStatus(data);
         setAppBackendLog(data);

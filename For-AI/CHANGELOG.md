@@ -204,3 +204,11 @@ Use absolute dates.
   pause before launching panels, poll for matching trigger completions, clear
   handled result intents, and use per-trigger return callbacks rather than
   relying on Quest foreground switching as a video pause/resume contract.
+- Updated direct handoff validation so final headset/display sleep after the
+  product path has begun is classified as a blocked evidence window rather than
+  a direct handoff failure when no fatal app logs are present.
+- Captured a one-trial live Quest direct-handoff pass at
+  `quest-direct-handoff\20260607T111059Z`: trigger 1 questionnaire return,
+  Unity video resume/non-black frame markers, trigger 2 Temporal Tracer export,
+  and final Unity completion all passed. Candidate A still requires 10 clean
+  trials plus the manual headset gate before default approval.

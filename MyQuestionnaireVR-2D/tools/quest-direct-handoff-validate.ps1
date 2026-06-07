@@ -304,6 +304,9 @@ function New-DirectHandoffDecisionGate {
     $blockedBeforeProductPathCount = @($trialArray | Where-Object {
         $_.productPath -and [bool]$_.productPath.blockedBeforeProductPath
     }).Count
+    $blockedDuringProductPathCount = @($trialArray | Where-Object {
+        $_.blockedReasons -and (@($_.blockedReasons) -contains 'headset-asleep-or-display-off-during-product-path')
+    }).Count
     $automatedTrialGatePassed = (
         -not $IsDryRun -and
         [string]$PreflightStatus -eq 'pass' -and
@@ -351,8 +354,8 @@ function New-DirectHandoffDecisionGate {
         $candidateAStatus = 'dry-run-only'
     } elseif ([string]$PreflightStatus -ne 'pass') {
         $candidateAStatus = 'preflight-failed'
-    } elseif ($blockedBeforeProductPathCount -gt 0 -and $PassCount -eq 0 -and $FailCount -eq 0) {
-        $candidateAStatus = 'blocked-before-product-path'
+    } elseif ($PassCount -eq 0 -and $FailCount -eq 0 -and ($blockedBeforeProductPathCount -gt 0 -or $blockedDuringProductPathCount -gt 0)) {
+        $candidateAStatus = if ($blockedBeforeProductPathCount -gt 0) { 'blocked-before-product-path' } else { 'blocked-during-product-path' }
     } elseif ($PassCount -gt 0 -and $FailCount -eq 0) {
         $candidateAStatus = 'inconclusive-clean-10-required'
     }
@@ -366,6 +369,8 @@ function New-DirectHandoffDecisionGate {
         $recommendedStrategy = 'collect-real-quest-product-path-trials'
     } elseif ($blockedBeforeProductPathCount -gt 0 -and $PassCount -eq 0) {
         $recommendedStrategy = 'wait-for-product-path-ready-headset'
+    } elseif ($blockedDuringProductPathCount -gt 0 -and $PassCount -eq 0 -and $FailCount -eq 0) {
+        $recommendedStrategy = 'keep-headset-awake-for-full-product-path'
     } elseif ($FailCount -gt 0) {
         $recommendedStrategy = 'investigate-candidate-a-and-compare-chainlink-fallback'
     }
@@ -386,6 +391,7 @@ function New-DirectHandoffDecisionGate {
         preflightStatus = $PreflightStatus
         shellDrivenForegroundSwitchAfterInitialLaunchCount = $shellSwitchCount
         blockedBeforeProductPathCount = $blockedBeforeProductPathCount
+        blockedDuringProductPathCount = $blockedDuringProductPathCount
         passedRequiredTrials = $automatedTrialGatePassed
         automatedQuestTrialGatePassed = $automatedTrialGatePassed
         manualHeadsetPassRequired = $true
@@ -873,6 +879,7 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
     $powerBefore = Get-Content -LiteralPath (Join-Path $trialDir 'power-before-launch.txt') -Raw
     $powerFinal = Get-Content -LiteralPath (Join-Path $trialDir 'power-final.txt') -Raw
     $headsetAsleep = $powerFinal -match 'mWakefulness=Asleep' -or $finalFocus -match 'isSleeping=true'
+    $displayOffFinal = $powerFinal -match 'mInteractive=false|Display Power:\s*state=OFF'
 
     $markerCounts = [ordered]@{
         fatalLogs = Count-Matches -Text $allLogText -Pattern 'FATAL EXCEPTION|\bE\s+AndroidRuntime\b'
@@ -925,6 +932,12 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
     if ($headsetAsleep -and $markerCounts.questionnaireReplayStart -lt 1) {
         $blockedReasons.Add('headset-asleep-or-display-off-before-unity') | Out-Null
     }
+    $productPathStarted = $markerCounts.questionnaireReplayStart -ge 1 -or
+        $markerCounts.unityVideoPrepare -ge 1 -or
+        $markerCounts.temporalTracerRunStart -ge 1
+    if (($headsetAsleep -or $displayOffFinal) -and $productPathStarted -and -not $handoffOk -and $markerCounts.fatalLogs -eq 0) {
+        $blockedReasons.Add('headset-asleep-or-display-off-during-product-path') | Out-Null
+    }
 
     $trialStatus = 'fail'
     if ($blockedReasons.Count -gt 0) {
@@ -957,6 +970,7 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
         blockedReasons = @($blockedReasons)
         power = [ordered]@{
             headsetAsleep = $headsetAsleep
+            displayOff = $displayOffFinal
             before = (Join-Path $trialDir 'power-before-launch.txt')
             final = (Join-Path $trialDir 'power-final.txt')
             beforeWakefulness = if ($powerBefore -match 'mWakefulness=([^\r\n]+)') { $Matches[1].Trim() } else { "" }

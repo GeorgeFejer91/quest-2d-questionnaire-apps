@@ -98,3 +98,10 @@ once and avoid any ADB foreground switch after that launch.
 `-WaitForReadySeconds 30` for supervised runs; if the headset remains asleep or
 the Horizon launch-check dialog is already focused, the script records
 `blocked` with `initialUnityLaunchAttempted=false` instead of starting Unity.
+
+The same distinction applies after Unity has started. If logcat shows that the
+product path began but final power/window evidence says the headset or display
+fell asleep before all required handoff markers arrived, classify the trial as
+blocked during the product path, not as a direct-PendingIntent strategy failure.
+Keep fatal app logs as failures, but do not use an unworn/asleep headset window
+to reject an otherwise plausible app contract.

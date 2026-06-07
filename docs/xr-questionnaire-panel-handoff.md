@@ -151,10 +151,25 @@ records `blocked` with `initialUnityLaunchAttempted=false` and does not begin
 the product path. Use `-AllowLaunchWhenNotReady` only when deliberately
 diagnosing the Horizon launch gate.
 
+The 2026-06-07 live Quest pass
+`quest-direct-handoff\20260607T111059Z` proved one end-to-end direct
+PendingIntent product-path trial: Unity launched once, trigger 1 returned from
+the questionnaire, video playback resumed and produced non-black frame markers,
+trigger 2 launched Temporal Tracer, Temporal Tracer exported 12 SVG/JSON traces
+plus CSV/session files, and Unity received `AWE_DEMO_COMPLETE` after the tracer
+return. The trial still leaves the production decision gate open because the
+validator requires 10 clean real Quest trials and a manual headset pass before
+defaulting Candidate A.
+
 Use `/api/quest-readiness` or `quest-adb-readiness.ps1` before live trials to
 separate transport from launch readiness. `readiness=online` means ADB can see
 the Quest; `productPathStatus=ready` is the stronger evidence needed before
 replay/export, foreground render, or direct handoff launch attempts.
+If the product path has started but final power/window evidence shows the
+headset or display fell asleep before required app markers arrived, the direct
+handoff validator classifies the trial as `blocked` with
+`headset-asleep-or-display-off-during-product-path` instead of counting it as a
+Candidate A failure.
 
 ## Local Validation
 

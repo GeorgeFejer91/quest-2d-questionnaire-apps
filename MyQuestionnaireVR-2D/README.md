@@ -230,7 +230,19 @@ Quest serial. Clear `Preflight only`, then use `Ready wait (s)` before
 unattended Quest evidence. The value is bounded to 0-28800 seconds and does
 not bypass product-path readiness: if the headset stays asleep or Horizon
 keeps the launch-check dialog focused, the run remains `blocked` with
-readiness samples instead of launching Unity.
+readiness samples instead of launching Unity. If the headset or display falls
+asleep after the product path has already begun, the direct handoff validator
+now records a blocked product-path evidence window instead of treating missing
+markers as a direct handoff failure when no fatal app logs are present.
+
+One live Quest direct-handoff pass was captured on 2026-06-07 in
+`artifacts\quest-direct-handoff\20260607T111059Z`: the questionnaire returned
+to Unity, Unity resumed video and logged non-black frames, the video-complete
+trigger launched Temporal Tracer, the tracer exported SVG/CSV/JSON evidence,
+and Unity received the final completion callback. This proves one product-path
+trial only; the decision gate still requires 10 clean trials plus a manual
+headset pass before direct PendingIntent is approved as the default production
+strategy.
 
 Use `Run headset sequence` in the builder runner for the ordered GUI path:
 save config, validate config, generate the APK with unit tests and a local

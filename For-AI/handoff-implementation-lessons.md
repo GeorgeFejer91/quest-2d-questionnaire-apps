@@ -660,3 +660,21 @@ distinct return `PendingIntent` per trigger or chain step.
 Generalizable rule: Android/Quest can move focus between APKs, but experiment
 continuity belongs to the source app. Treat panel launch as a source-app state
 transition, not as an OS-level media pause guarantee.
+
+## Mid-Run Headset Sleep Is A Blocker, Not A Strategy Failure
+
+Problem: a direct handoff trial can launch Unity, return from the first
+questionnaire, and even show video playback markers, then lose the remaining
+evidence because the headset falls asleep before trigger 2. Reporting that run
+as `fail` makes the direct `PendingIntent` strategy look broken when the
+evidence window itself was interrupted.
+
+Solution: classify final sleep/display-off evidence as a blocked product-path
+trial when the product path has started, required markers are still missing,
+and no fatal app logs were observed. Preserve actual crashes as failures, but
+route unworn/asleep headset interruptions to `blocked` with a specific
+`headset-asleep-or-display-off-during-product-path` reason.
+
+Generalizable rule: a validator should distinguish app-contract evidence from
+operator/headset-state evidence. Do not let missing markers caused by an
+invalid evidence window become a negative strategy decision.

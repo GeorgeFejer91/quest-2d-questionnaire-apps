@@ -154,3 +154,20 @@ the workflow matrix reaches a terminal status.
 Generalizable rule: static dashboards should launch long trusted PC actions as
 observable jobs, not synchronous button calls; the useful contract is job id,
 status, artifact paths, and compact log tails.
+
+## Device Readiness Should Be A First-Class GUI Step
+
+Problem: the builder could run the full workflow matrix with Quest readiness
+enabled, but the runner panel did not give users a small, read-only way to see
+which headset ADB actually detected before opting into install, launch, or
+direct handoff trials.
+
+Solution: expose the existing `quest-adb-readiness.ps1` probe through the
+local companion as `/api/quest-readiness`. The GUI's `Detect Quest` button
+reports readiness/recommendations and fills the serial field from the detected
+target without installing, launching, force-stopping, or changing headset
+settings.
+
+Generalizable rule: make the next irreversible or physical validation gate
+visible by placing a read-only readiness probe immediately before it in the
+dashboard workflow.

@@ -974,6 +974,7 @@
             </div>
             <div class="button-row" style="margin-top: 10px;">
               <button id="checkBackendButton" type="button">Check backend</button>
+              <button id="questReadinessButton" type="button">Detect Quest</button>
               <button id="saveConfigAppButton" type="button">Save config</button>
               <button id="validateConfigAppButton" type="button">Validate config</button>
               <button id="generateApkAppButton" class="primary" type="button">Generate APK</button>
@@ -3136,11 +3137,42 @@
       return `Missing required: ${missing.join(", ")}.`;
     }
 
+    function formatQuestReadiness(data) {
+      if (data?.readiness === "online") {
+        const model = data.model ? ` (${String(data.model).trim()})` : "";
+        return `Quest ready: ${data.targetSerial || "online device"}${model}.`;
+      }
+      const recommendation = Array.isArray(data?.recommendations) && data.recommendations.length > 0
+        ? ` ${data.recommendations[0]}`
+        : "";
+      return `Quest ${data?.readiness || "not ready"}.${recommendation}`;
+    }
+
     async function checkAppBackend() {
       try {
         const data = await callAppBackend("/api/status");
         const tokenState = data.authorized ? "pairing token accepted" : "pairing token needed for local actions";
         setAppBackendStatus(`Connected to local app backend on ${data.url}; ${tokenState}.`, data.authorized ? "ok" : "warn");
+        setAppBackendLog(data);
+      } catch (error) {
+        setAppBackendStatus(error.message || String(error), "error");
+        setAppBackendLog(error.backendData || error.message || String(error));
+      }
+    }
+
+    async function checkQuestReadinessWithApp() {
+      try {
+        setAppBackendStatus("Checking connected Quest over ADB...", "");
+        const serialInput = byId("workflowQuestSerial");
+        const data = await callAppBackend("/api/quest-readiness", {
+          questSerial: serialInput.value.trim(),
+          waitSeconds: 0
+        });
+        if (data.targetSerial) {
+          serialInput.value = data.targetSerial;
+        }
+        const level = data.readiness === "online" ? "ok" : "warn";
+        setAppBackendStatus(formatQuestReadiness(data), level);
         setAppBackendLog(data);
       } catch (error) {
         setAppBackendStatus(error.message || String(error), "error");
@@ -3257,6 +3289,7 @@
     byId("downloadChainPlanButton").addEventListener("click", downloadChainPlan);
     byId("downloadQualityButton").addEventListener("click", downloadQualityReport);
     byId("checkBackendButton").addEventListener("click", checkAppBackend);
+    byId("questReadinessButton").addEventListener("click", checkQuestReadinessWithApp);
     byId("dependencyStatusButton").addEventListener("click", checkDependencyStatusWithApp);
     byId("installDependenciesButton").addEventListener("click", installDependenciesWithApp);
     byId("saveConfigAppButton").addEventListener("click", saveConfigWithApp);

@@ -180,6 +180,7 @@ try {
     }
 
     $unauthorizedDependencyStatus = $null
+    $unauthorizedQuestReadinessStatus = $null
     try {
         Invoke-Json -Method GET -Uri "$baseUrl/api/dependency-status" | Out-Null
         throw "Unauthorized dependency-status call unexpectedly succeeded."
@@ -190,12 +191,29 @@ try {
             throw "Unauthorized dependency-status expected 401, got $unauthorizedDependencyStatus"
         }
     }
+    try {
+        Invoke-Json -Method POST -Uri "$baseUrl/api/quest-readiness" -Body @{ waitSeconds = 0 } | Out-Null
+        throw "Unauthorized quest-readiness call unexpectedly succeeded."
+    }
+    catch {
+        $unauthorizedQuestReadinessStatus = Get-HttpErrorStatusCode -Exception $_.Exception
+        if ($unauthorizedQuestReadinessStatus -ne 401) {
+            throw "Unauthorized quest-readiness expected 401, got $unauthorizedQuestReadinessStatus"
+        }
+    }
 
     Write-Host "== Dependency status =="
     $dependency = Invoke-Json -Method GET -Uri "$baseUrl/api/dependency-status" -Headers $headers
     Add-Progress 'dependency-status-complete'
     if ($dependency.status -ne 'ok') {
         throw "Required local dependencies are missing. See companion summary."
+    }
+
+    Write-Host "== Quest readiness through companion =="
+    $questReadiness = Invoke-Json -Method POST -Uri "$baseUrl/api/quest-readiness" -Headers $headers -Body @{ waitSeconds = 0 } -TimeoutSec 120
+    Add-Progress "quest-readiness-complete readiness=$($questReadiness.readiness) status=$($questReadiness.readinessStatus)"
+    if ($questReadiness.status -ne 'ok' -or [string]::IsNullOrWhiteSpace([string]$questReadiness.summaryPath) -or -not (Test-Path -LiteralPath $questReadiness.summaryPath)) {
+        throw "Companion quest-readiness did not produce a usable readiness summary."
     }
 
     Write-Host "== Save config through companion =="
@@ -268,8 +286,16 @@ try {
             withoutTokenAuthorized = [bool]$statusNoToken.authorized
             withTokenAuthorized = [bool]$statusWithToken.authorized
             unauthorizedDependencyStatus = $unauthorizedDependencyStatus
+            unauthorizedQuestReadinessStatus = $unauthorizedQuestReadinessStatus
         }
         dependency = $dependency
+        questReadiness = [ordered]@{
+            status = $questReadiness.readinessStatus
+            readiness = $questReadiness.readiness
+            targetSerial = $questReadiness.targetSerial
+            onlineCount = $questReadiness.onlineCount
+            summaryPath = $questReadiness.summaryPath
+        }
         builder = [ordered]@{
             outputDir = $builderOut
             handoffConfig = $handoffConfigPath

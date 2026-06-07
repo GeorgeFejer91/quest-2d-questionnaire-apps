@@ -83,3 +83,6 @@ Use absolute dates.
   `/api/validate-workflow` returns a `runId`/`jobId`, `/api/workflow-job`
   exposes status/log tails/summary paths, and the builder polls instead of
   blocking the page during long validation.
+- Added a paired `Detect Quest` runner-panel action and `/api/quest-readiness`
+  companion endpoint that performs a read-only ADB readiness probe and fills the
+  Quest serial field before install/launch/direct-handoff gates.

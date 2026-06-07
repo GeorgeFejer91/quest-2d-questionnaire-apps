@@ -466,6 +466,58 @@ function Start-WorkflowValidationJob {
     return Get-WorkflowJobStatus -RunId $runId
 }
 
+function Invoke-QuestReadinessCheck {
+    param([object]$Payload)
+
+    $runId = 'builder-quest-readiness-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    $outputRoot = Join-Path $ProjectPath ("artifacts\builder-app-quest-readiness\$runId")
+    $script = Join-Path $ProjectPath 'tools\quest-adb-readiness.ps1'
+    $arguments = @(
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        $script,
+        '-ProjectPath',
+        $ProjectPath,
+        '-OutputRoot',
+        $outputRoot,
+        '-RunId',
+        $runId
+    )
+
+    if ($Payload.PSObject.Properties.Name -contains 'questSerial' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.questSerial)) {
+        $arguments += @('-ExpectedSerial', [string]$Payload.questSerial)
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'waitSeconds' -and [int]$Payload.waitSeconds -gt 0) {
+        $arguments += @('-WaitSeconds', [string][int]$Payload.waitSeconds)
+    }
+
+    $result = Invoke-ProjectPowerShell -Arguments $arguments
+    $summaryPath = Join-Path $outputRoot 'quest-adb-readiness-summary.json'
+    $summary = Read-JsonFileIfExists -Path $summaryPath
+    return [ordered]@{
+        status = if ($result.exitCode -eq 0 -and $summary) { 'ok' } else { 'error' }
+        readinessStatus = if ($summary) { $summary.status } else { 'missing-summary' }
+        readiness = if ($summary) { $summary.readiness } else { '' }
+        runId = $runId
+        exitCode = $result.exitCode
+        targetSerial = if ($summary) { $summary.targetSerial } else { '' }
+        onlineCount = if ($summary) { $summary.onlineCount } else { 0 }
+        unauthorizedCount = if ($summary) { $summary.unauthorizedCount } else { 0 }
+        offlineCount = if ($summary) { $summary.offlineCount } else { 0 }
+        offlineEmulatorCount = if ($summary) { $summary.offlineEmulatorCount } else { 0 }
+        model = if ($summary) { $summary.deviceProps.model } else { '' }
+        androidRelease = if ($summary) { $summary.deviceProps.androidRelease } else { '' }
+        wmSize = if ($summary) { $summary.deviceProps.wmSize } else { '' }
+        wmDensity = if ($summary) { $summary.deviceProps.wmDensity } else { '' }
+        recommendations = if ($summary) { @($summary.recommendations) } else { @() }
+        summaryPath = $summaryPath
+        summary = $summary
+        output = $result.output
+    }
+}
+
 function Receive-JsonPayload {
     param([System.Net.HttpListenerRequest]$Request)
 
@@ -613,6 +665,7 @@ function New-StatusPayload {
             'generate-apk',
             'validate-workflow',
             'workflow-job-status',
+            'quest-readiness',
             'dependency-status',
             'install-dependencies'
         )
@@ -693,6 +746,14 @@ function Handle-Request {
     if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/install-dependencies') {
         Assert-OriginAndToken -Request $request
         $result = Handle-DependencyInstall
+        Write-JsonResponse -Context $Context -StatusCode ($(if ($result.status -eq 'ok') { 200 } else { 500 })) -Value $result
+        return
+    }
+
+    if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/quest-readiness') {
+        Assert-OriginAndToken -Request $request
+        $payload = Receive-JsonPayload -Request $request
+        $result = Invoke-QuestReadinessCheck -Payload $payload
         Write-JsonResponse -Context $Context -StatusCode ($(if ($result.status -eq 'ok') { 200 } else { 500 })) -Value $result
         return
     }

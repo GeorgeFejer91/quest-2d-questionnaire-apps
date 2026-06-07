@@ -311,6 +311,10 @@ function New-DirectHandoffDecisionGate {
     $wakeBeforeReadinessCount = @($trialArray | Where-Object {
         $_.productPath -and [bool]$_.productPath.wakeBeforeReadiness
     }).Count
+    $videoLivenessFailureCount = @($trialArray | Where-Object {
+        $failureReasons = @($_.failureReasons)
+        @($failureReasons | Where-Object { $_ -like 'unity-video-*' }).Count -gt 0
+    }).Count
     $automatedTrialGatePassed = (
         -not $IsDryRun -and
         [string]$PreflightStatus -eq 'pass' -and
@@ -346,6 +350,9 @@ function New-DirectHandoffDecisionGate {
     }
     if ($shellSwitchCount -gt 0) {
         $reasons.Add("shell-driven-foreground-switch-after-initial-launch-$shellSwitchCount") | Out-Null
+    }
+    if ($videoLivenessFailureCount -gt 0) {
+        $reasons.Add("unity-video-liveness-failures-$videoLivenessFailureCount") | Out-Null
     }
     if ($automatedTrialGatePassed) {
         $reasons.Add('manual-headset-pass-still-required-before-default-approval') | Out-Null
@@ -397,6 +404,7 @@ function New-DirectHandoffDecisionGate {
         blockedBeforeProductPathCount = $blockedBeforeProductPathCount
         blockedDuringProductPathCount = $blockedDuringProductPathCount
         wakeBeforeReadinessCount = $wakeBeforeReadinessCount
+        unityVideoLivenessFailureCount = $videoLivenessFailureCount
         passedRequiredTrials = $automatedTrialGatePassed
         automatedQuestTrialGatePassed = $automatedTrialGatePassed
         manualHeadsetPassRequired = $true
@@ -413,6 +421,24 @@ function New-DirectHandoffDecisionGate {
 function Count-Matches {
     param([string]$Text, [string]$Pattern)
     return @([regex]::Matches($Text, $Pattern)).Count
+}
+
+function Test-LogOrder {
+    param(
+        [string]$Text,
+        [string]$FirstPattern,
+        [string]$SecondPattern
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Text)) {
+        return $false
+    }
+    $first = [regex]::Match($Text, $FirstPattern)
+    if (-not $first.Success) {
+        return $false
+    }
+    $remaining = $Text.Substring($first.Index + $first.Length)
+    return [regex]::IsMatch($remaining, $SecondPattern)
 }
 
 function Get-FocusPackage {
@@ -438,12 +464,20 @@ function New-EmptyMarkerCounts {
         fatalLogs = 0
         controllerRequiredDialogs = 0
         unityValidationAutoTrace = 0
+        unityValidationAutoStart = 0
         unityValidationFastVideo = 0
+        unityStartGateReady = 0
+        unityStartGateClicked = 0
+        unityStartGateAutoStart = 0
+        unityExperimentStart = 0
         unityVideoPause = 0
         unityVideoPrepare = 0
         unityVideoPlay = 0
         unityVideoResume = 0
+        unityVideoFirstFrame = 0
+        unityVideoNonBlackFrame = 0
         unityVideoLoopPoint = 0
+        unityPanelCompletion = 0
         unityComplete = 0
         questionnaireReplayStart = 0
         questionnaireExportComplete = 0
@@ -772,6 +806,13 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
             readiness = $readiness
             markerCounts = (New-EmptyMarkerCounts)
             blockedReasons = @($readinessBlockedReasons)
+            failureReasons = @()
+            mediaLiveness = [ordered]@{
+                panelCompletionObserved = $false
+                playbackStartedAfterPanelReturn = $false
+                videoFrameAfterPanelReturn = $false
+                videoLiveAfterPanelReturn = $false
+            }
             power = [ordered]@{
                 headsetAsleep = [bool]$readiness.last.headsetAsleep
                 before = $readiness.last.power
@@ -828,7 +869,8 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
     $launchArgs = @(
         'shell', 'am', 'start',
         '-n', "$UnityPackage/$UnityActivity",
-        '--es', 'mq.validationRunId', $trialId
+        '--es', 'mq.validationRunId', $trialId,
+        '--es', 'mq.validationAutoStart', 'true'
     )
     if ($AutoTraceForValidation) {
         $launchArgs += @('--es', 'mq.validationAutoTrace', 'true')
@@ -896,12 +938,20 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
         fatalLogs = Count-Matches -Text $allLogText -Pattern 'FATAL EXCEPTION|\bE\s+AndroidRuntime\b'
         controllerRequiredDialogs = Count-Matches -Text $allLogText -Pattern 'LaunchCheckControllerRequiredDialogActivity|controller required'
         unityValidationAutoTrace = Count-Matches -Text $allLogText -Pattern 'AWE_DEMO_VALIDATION_AUTO_TRACE'
+        unityValidationAutoStart = Count-Matches -Text $allLogText -Pattern 'AWE_START_GATE_AUTO_START'
         unityValidationFastVideo = Count-Matches -Text $allLogText -Pattern 'AWE_DEMO_VALIDATION_FAST_VIDEO'
+        unityStartGateReady = Count-Matches -Text $allLogText -Pattern 'AWE_START_GATE_READY'
+        unityStartGateClicked = Count-Matches -Text $allLogText -Pattern 'AWE_START_GATE_CLICKED'
+        unityStartGateAutoStart = Count-Matches -Text $allLogText -Pattern 'AWE_START_GATE_AUTO_START'
+        unityExperimentStart = Count-Matches -Text $allLogText -Pattern 'AWE_EXPERIMENT_START'
         unityVideoPause = Count-Matches -Text $allLogText -Pattern 'VIDEO_PAUSE_FOR_PANEL'
         unityVideoPrepare = Count-Matches -Text $allLogText -Pattern 'VIDEO_PREPARE_START'
         unityVideoPlay = Count-Matches -Text $allLogText -Pattern 'VIDEO_PLAY'
         unityVideoResume = Count-Matches -Text $allLogText -Pattern 'VIDEO_RESUME_AFTER_PANEL'
+        unityVideoFirstFrame = Count-Matches -Text $allLogText -Pattern 'VIDEO_FIRST_FRAME'
+        unityVideoNonBlackFrame = Count-Matches -Text $allLogText -Pattern 'VIDEO_NONBLACK_FRAME'
         unityVideoLoopPoint = Count-Matches -Text $allLogText -Pattern 'VIDEO_LOOP_POINT|VIDEO_VALIDATION_LOOPPOINT_FALLBACK'
+        unityPanelCompletion = Count-Matches -Text $allLogText -Pattern 'PANEL_COMPLETION_RECEIVED'
         unityComplete = Count-Matches -Text $allLogText -Pattern 'AWE_DEMO_COMPLETE'
         questionnaireReplayStart = Count-Matches -Text $allLogText -Pattern 'MYQUESTIONNAIRE_COMMAND_REPLAY_START'
         questionnaireExportComplete = Count-Matches -Text $allLogText -Pattern 'MYQUESTIONNAIRE_EXPORT_COMPLETE'
@@ -916,6 +966,9 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
     $tJsonCount = @($tracerPull.files | Where-Object { $_.local -match '\.json$' -and $_.local -notmatch 'in_progress' }).Count
     $tCsvCount = @($tracerPull.files | Where-Object { $_.local -match '\.csv$' -and $_.local -notmatch 'in_progress' }).Count
     $tSvgCount = @($tracerPull.files | Where-Object { $_.local -match '\.svg$' }).Count
+    $videoPlaybackAfterPanelReturn = Test-LogOrder -Text $logText -FirstPattern 'PANEL_COMPLETION_RECEIVED' -SecondPattern 'VIDEO_PLAY|VIDEO_RESUME_AFTER_PANEL'
+    $videoFrameAfterPanelReturn = Test-LogOrder -Text $logText -FirstPattern 'PANEL_COMPLETION_RECEIVED' -SecondPattern 'VIDEO_FIRST_FRAME|VIDEO_NONBLACK_FRAME'
+    $videoLiveAfterPanelReturn = $videoPlaybackAfterPanelReturn -and $videoFrameAfterPanelReturn
 
     $handoffOk =
         $launch.ExitCode -eq 0 -and
@@ -923,6 +976,7 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
         $markerCounts.questionnaireReplayStart -ge 1 -and
         $markerCounts.questionnaireExportComplete -ge 1 -and
         $markerCounts.questionnairePendingIntentReturn -ge 1 -and
+        $videoLiveAfterPanelReturn -and
         $markerCounts.unityVideoPrepare -ge 1 -and
         $markerCounts.unityVideoPlay -ge 1 -and
         $markerCounts.unityVideoLoopPoint -ge 1 -and
@@ -937,6 +991,7 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
         $tSvgCount -ge 1
 
     $blockedReasons = New-Object 'System.Collections.Generic.List[string]'
+    $failureReasons = New-Object 'System.Collections.Generic.List[string]'
     if ($markerCounts.controllerRequiredDialogs -gt 0 -and $markerCounts.questionnaireReplayStart -lt 1) {
         $blockedReasons.Add('horizon-controller-required-launch-check-before-unity') | Out-Null
     }
@@ -948,6 +1003,14 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
         $markerCounts.temporalTracerRunStart -ge 1
     if (($headsetAsleep -or $displayOffFinal) -and $productPathStarted -and -not $handoffOk -and $markerCounts.fatalLogs -eq 0) {
         $blockedReasons.Add('headset-asleep-or-display-off-during-product-path') | Out-Null
+    }
+    if ($markerCounts.questionnairePendingIntentReturn -ge 1 -or $markerCounts.unityPanelCompletion -ge 1) {
+        if (-not $videoPlaybackAfterPanelReturn) {
+            $failureReasons.Add('unity-video-playback-not-started-after-panel-return') | Out-Null
+        }
+        if (-not $videoFrameAfterPanelReturn) {
+            $failureReasons.Add('unity-video-frame-not-observed-after-panel-return') | Out-Null
+        }
     }
 
     $trialStatus = 'fail'
@@ -980,6 +1043,13 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
         readiness = $readiness
         markerCounts = $markerCounts
         blockedReasons = @($blockedReasons)
+        failureReasons = @($failureReasons)
+        mediaLiveness = [ordered]@{
+            panelCompletionObserved = $markerCounts.unityPanelCompletion -ge 1
+            playbackStartedAfterPanelReturn = $videoPlaybackAfterPanelReturn
+            videoFrameAfterPanelReturn = $videoFrameAfterPanelReturn
+            videoLiveAfterPanelReturn = $videoLiveAfterPanelReturn
+        }
         power = [ordered]@{
             headsetAsleep = $headsetAsleep
             displayOff = $displayOffFinal

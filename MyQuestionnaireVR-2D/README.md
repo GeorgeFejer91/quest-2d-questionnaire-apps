@@ -248,7 +248,19 @@ trigger launched Temporal Tracer, the tracer exported SVG/CSV/JSON evidence,
 and Unity received the final completion callback. This proves one product-path
 trial only; the decision gate still requires 10 clean trials plus a manual
 headset pass before direct PendingIntent is approved as the default production
-strategy.
+strategy. Direct handoff trial summaries now include `mediaLiveness` and
+`failureReasons` so a returned-but-frozen Unity video is reported explicitly as
+missing playback/frame evidence after panel completion, not just as a generic
+handoff failure.
+
+For source Unity stimulus APKs, prefer a foreground `Start experiment` gate
+before trigger 1. The demo Unity app waits for participant/operator input in
+Unity, launches the first questionnaire only after that input, and starts the
+video only after the matching questionnaire result returns. The direct handoff
+validator passes `mq.validationAutoStart=true` so unattended validation runs
+can bypass this human gate with an auditable `AWE_START_GATE_AUTO_START`
+marker; manual headset passes should launch the app normally and click the
+start target.
 
 Use `Run headset sequence` in the builder runner for the ordered GUI path:
 save config, validate config, generate the APK with unit tests and a local

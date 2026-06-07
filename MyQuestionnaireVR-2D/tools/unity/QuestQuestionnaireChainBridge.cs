@@ -210,6 +210,7 @@ public static class QuestQuestionnaireChainBridge
         using (var intent = currentActivity.Call<AndroidJavaObject>("getIntent"))
         {
             CopyStringExtra(intent, result, "mq.validationAutoTrace");
+            CopyStringExtra(intent, result, "mq.validationAutoStart");
             CopyStringExtra(intent, result, "mq.validationFastVideo");
             CopyStringExtra(intent, result, "mq.validationVideoEndAfterSeconds");
         }

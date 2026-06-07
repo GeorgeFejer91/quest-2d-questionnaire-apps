@@ -221,3 +221,12 @@ Use absolute dates.
   intents via `ClearQuestionnaireResult()`, and return PendingIntent request
   keys include trigger, chain-step, and block identity to avoid stale callback
   reuse across panel launches.
+- Strengthened direct handoff Quest summaries with ordered Unity media
+  liveness evidence after panel return. Trials now record `mediaLiveness`,
+  `unity-video-*` failure reasons, and a decision-gate liveness failure count
+  when the panel returns but the Unity video does not emit playback plus
+  frame/non-black markers afterward.
+- Added the Unity start-experiment gate pattern for source stimulus APKs:
+  product runs can wait for a foreground Unity `Start experiment` input before
+  trigger 1, while automated direct-handoff validation bypasses that human gate
+  only through explicit `mq.validationAutoStart=true` evidence markers.

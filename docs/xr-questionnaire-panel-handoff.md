@@ -89,6 +89,15 @@ The XR app should pause video or experiment progression when it loses focus or
 is paused. It may resume only after it receives `mq.resultStatus=complete` for
 the expected trigger.
 
+For stimulus scenes that should not begin until the participant/operator is
+ready, put a source-app start gate before the first questionnaire trigger. The
+Unity scene should show a simple `Start experiment` target, wait for real
+controller/hand/mouse input, then launch trigger 1. This keeps initial video
+decode and timing out of the uncertain app-launch/focus window. Automated
+validation may bypass that human gate only through an explicit launch extra,
+for example `mq.validationAutoStart=true`, and should record the bypass in
+log/evidence markers.
+
 Do not rely on Quest foreground switching alone to freeze and resume media.
 Android/OpenXR focus and pause callbacks can arrive differently across headset
 states, and Unity can keep a stale return intent on the Activity after the
@@ -174,6 +183,12 @@ headset or display fell asleep before required app markers arrived, the direct
 handoff validator classifies the trial as `blocked` with
 `headset-asleep-or-display-off-during-product-path` instead of counting it as a
 Candidate A failure.
+When the questionnaire return is observed but Unity playback does not show
+ordered `VIDEO_PLAY`/`VIDEO_RESUME_AFTER_PANEL` and
+`VIDEO_FIRST_FRAME`/`VIDEO_NONBLACK_FRAME` evidence after
+`PANEL_COMPLETION_RECEIVED`, the trial records `mediaLiveness=false` and
+`unity-video-*` failure reasons. That separates a software resume/liveness bug
+from headset sleep and system launch-gate blockers.
 Use `-WakeBeforeReadiness` only as an explicit developer aid for unattended
 product-path attempts. It sends a bounded `KEYCODE_WAKEUP` before the
 readiness poll, records `wakeBeforeReadiness` in the trial and summary

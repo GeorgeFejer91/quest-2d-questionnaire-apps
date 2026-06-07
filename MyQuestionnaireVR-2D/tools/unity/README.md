@@ -230,6 +230,13 @@ QuestQuestionnaireChainBridge.LaunchQuestionnaire(new Dictionary<string, string>
 });
 ```
 
+For source scenes that should not start stimulus timing immediately, keep the
+start gate inside Unity. Show a visible `Start experiment` target, wait for
+foreground Unity input, then call `LaunchQuestionnaire(...)` for trigger 1.
+Validation-only launch extras can be read through `ReadValidationExtras()`; use
+an explicit `mq.validationAutoStart=true` bypass for unattended scripts rather
+than silently starting product runs without a participant click.
+
 Use direct `mq.finishBehavior=openNext` with `mq.nextPackage` and `mq.nextActivity` only for simple two-app chains. Use the broker for multi-step experiment chains.
 
 When Unity is resumed directly by the questionnaire or launched by the broker

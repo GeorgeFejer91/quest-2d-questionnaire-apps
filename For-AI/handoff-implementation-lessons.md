@@ -680,11 +680,34 @@ distinct return `PendingIntent` per trigger or chain step. The reusable Unity
 bridge template now exposes `ClearQuestionnaireResult()` and builds the
 PendingIntent request key from caller package/activity plus trigger, chain
 step, and block identity; the static workflow gate checks those exact
-guardrails.
+guardrails. The direct handoff validator also checks ordered media liveness:
+after `PANEL_COMPLETION_RECEIVED`, it requires a playback marker and a
+frame/non-black marker before treating the Unity video path as live.
 
 Generalizable rule: Android/Quest can move focus between APKs, but experiment
 continuity belongs to the source app. Treat panel launch as a source-app state
-transition, not as an OS-level media pause guarantee.
+transition, not as an OS-level media pause guarantee, and validate the resumed
+stimulus with ordered liveness evidence rather than unordered log counts.
+
+## Start Gates Simplify The First Handoff
+
+Problem: launching Unity and immediately opening trigger 1 puts scene start,
+Horizon focus settling, questionnaire launch, and eventual video start into one
+compressed window. That makes operator setup harder and can hide whether a
+frozen video came from app focus, stale return extras, or media startup.
+
+Solution: source Unity scenes can add a start-experiment gate before the first
+questionnaire trigger. The scene should show a visible `Start experiment`
+target, wait for real participant/operator input inside the foreground Unity
+app, then launch trigger 1. The video still starts only after the expected
+panel result returns. Automated direct-handoff validators may bypass this gate
+only by passing an explicit validation extra such as
+`mq.validationAutoStart=true` and recording `AWE_START_GATE_AUTO_START` in the
+log evidence.
+
+Generalizable rule: put human readiness gates in the foreground scenario app,
+not in the 2D panel or the host script. Keep product runs input-gated and make
+validation bypasses explicit and auditable.
 
 ## Mid-Run Headset Sleep Is A Blocker, Not A Strategy Failure
 

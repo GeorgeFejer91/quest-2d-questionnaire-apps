@@ -286,6 +286,13 @@ can bypass this human gate with an auditable `AWE_START_GATE_AUTO_START`
 marker; manual headset passes should launch the app normally and click the
 start target.
 
+For demo/stimulus Unity APKs, keep input modality broad by default: enable
+Quest controller interaction profiles and hand interaction profiles together,
+and declare optional Quest hand tracking in the manifest. A Horizon
+controller-required launch dialog should be treated as a preflight issue for
+these generic workflow APKs unless the experiment deliberately requires
+controller-only input.
+
 Use `Run headset sequence` in the builder runner for the ordered GUI path:
 save config, validate config, generate the APK with unit tests and a local
 render preview, detect Quest readiness, install the generated APK, run
@@ -692,7 +699,10 @@ Builds\PeripersonalSpaceRight-device-base.apk
 ```
 
 No-human validation can show a Horizon OS controller-required launch check for
-some controller-only immersive APKs. The validator records this as a warning in
+some controller-only immersive APKs. For generic demo/stimulus APKs, fix the
+Unity input modality first so the APK supports hands and controllers. Only
+controller-only experiment APKs should keep this dialog as an expected human
+hardware gate. The validator records this as a warning in
 `quest-wrapper-chain-validation-summary.json`,
 `quest-orchestrator-wrapper-chain-validation-summary.json`, or
 `quest-installed-scenario-batch-validation-summary.json`: it proves the wrapper

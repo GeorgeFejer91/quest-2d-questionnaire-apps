@@ -772,6 +772,24 @@ Generalizable rule: put human readiness gates in the foreground scenario app,
 not in the 2D panel or the host script. Keep product runs input-gated and make
 validation bypasses explicit and auditable.
 
+## Demo APKs Should Be Hand-And-Controller Capable
+
+Problem: Horizon can block an immersive Unity APK with a controller-required
+launch dialog before the questionnaire chain ever reaches the app-owned
+handoff path. That makes the workflow look flaky even when the package/activity
+contract and PendingIntent return path are correct.
+
+Solution: generic demo and stimulus APKs should opt into both Quest controller
+profiles and hand interaction profiles. The Android manifest should advertise
+`oculus.software.handtracking` with `android:required=false` and include the
+Quest hand-tracking permission/metadata. Keep controller-only launch behavior
+only for experiments where physical controller input is part of the protocol.
+Validators should treat `LaunchCheckControllerRequiredDialogActivity` as a
+build/input-modality preflight issue for generic demo APKs.
+
+Generalizable rule: broad input modality is the default for workflow demos;
+controller-only is an explicit study constraint, not a casual Unity default.
+
 ## Mid-Run Headset Sleep Is A Blocker, Not A Strategy Failure
 
 Problem: a direct handoff trial can launch Unity, return from the first

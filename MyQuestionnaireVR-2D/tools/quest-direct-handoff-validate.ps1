@@ -226,6 +226,11 @@ function Get-ApkInfo {
     $package = if ($packageLine -match "name='([^']+)'") { $Matches[1] } else { "" }
     $activity = if ($activityLine -match "name='([^']+)'") { $Matches[1] } else { "" }
     $label = if ($labelLine -match "application-label:'([^']*)'") { $Matches[1] } else { "" }
+    $manifestText = [string]$manifest.Text
+    $handTrackingFeature = $manifestText -match 'oculus\.software\.handtracking'
+    $handTrackingRequiredFalse = $manifestText -match 'oculus\.software\.handtracking[\s\S]{0,600}android:required[^\r\n]*(false|\(type 0x12\)0x0)'
+    $handTrackingPermission = $manifestText -match 'com\.oculus\.permission\.HAND_TRACKING|oculus\.permission\.handtracking'
+    $handTrackingVersion = if ($manifestText -match 'com\.oculus\.handtracking\.version[\s\S]{0,200}A:\s+android:value[^\r\n]*="([^"]+)"') { $Matches[1] } else { "" }
 
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $entries = @()
@@ -273,6 +278,12 @@ function Get-ApkInfo {
         label = $label
         badging = $badgingPath
         manifest = $manifestPath
+        inputModality = [ordered]@{
+            handTrackingFeature = $handTrackingFeature
+            handTrackingRequiredFalse = $handTrackingRequiredFalse
+            handTrackingPermission = $handTrackingPermission
+            handTrackingVersion = $handTrackingVersion
+        }
         triggerCatalogEntries = $catalogEntryNames
         embeddedTriggerCatalogs = @($embeddedCatalogs.ToArray())
         debugPayloadCount = $debugPayloadCount
@@ -667,6 +678,9 @@ if ($apkInfo.temporalTracer.package -ne $temporalTracerPackage) { $preflightIssu
 if ($apkInfo.temporalTracer.activity -ne $temporalTracerActivity) { $preflightIssues.Add("Temporal tracer activity mismatch: $($apkInfo.temporalTracer.activity)") | Out-Null }
 if ($apkInfo.unity.package -ne $UnityPackage) { $preflightIssues.Add("Unity package mismatch: $($apkInfo.unity.package)") | Out-Null }
 if ($apkInfo.unity.activity -ne $UnityActivity) { $preflightIssues.Add("Unity activity mismatch: $($apkInfo.unity.activity), expected $UnityActivity") | Out-Null }
+if (-not [bool]$apkInfo.unity.inputModality.handTrackingFeature) { $preflightIssues.Add("Unity APK does not advertise optional hand tracking; this can trigger Horizon controller-required launch checks.") | Out-Null }
+if (-not [bool]$apkInfo.unity.inputModality.handTrackingRequiredFalse) { $preflightIssues.Add("Unity APK hand tracking feature is missing android:required=false; demo/stimulus APKs should support hands and controllers unless controller-only input is intentional.") | Out-Null }
+if (-not [bool]$apkInfo.unity.inputModality.handTrackingPermission) { $preflightIssues.Add("Unity APK does not declare the Quest hand tracking permission.") | Out-Null }
 if (@($apkInfo.unity.triggerCatalogEntries).Count -lt 1) { $preflightIssues.Add("Unity APK does not contain a questionnaire trigger catalog.") | Out-Null }
 if ($unityEmbeddedCatalogs.Count -gt 1) { $preflightIssues.Add("Unity APK contains multiple questionnaire trigger catalogs; expected exactly one discoverable manifest.") | Out-Null }
 foreach ($embeddedCatalog in $unityEmbeddedCatalogs) {

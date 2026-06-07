@@ -237,6 +237,13 @@ Validation-only launch extras can be read through `ReadValidationExtras()`; use
 an explicit `mq.validationAutoStart=true` bypass for unattended scripts rather
 than silently starting product runs without a participant click.
 
+For generic demo/stimulus APKs, do not ship controller-only input metadata.
+Enable Quest controller interaction profiles and hand interaction profiles
+together, and declare optional hand tracking in `AndroidManifest.xml`. Reserve
+controller-only builds for experiments where the controller itself is part of
+the measured task; otherwise Horizon may block the launch behind a
+controller-required dialog before the questionnaire handoff can start.
+
 Use direct `mq.finishBehavior=openNext` with `mq.nextPackage` and `mq.nextActivity` only for simple two-app chains. Use the broker for multi-step experiment chains.
 
 When Unity is resumed directly by the questionnaire or launched by the broker

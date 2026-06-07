@@ -38,6 +38,10 @@ Use absolute dates.
   receipts and distinguish offline proof from the remaining physical Quest
   gates. The audit now promotes the demo Unity APK and public example trigger
   catalog as their own evidence row.
+- Recorded the Quest Unity input-modality rule: generic demo/stimulus APKs
+  should support both hands and controllers, advertise optional hand tracking,
+  and treat Horizon controller-required launch dialogs as build/preflight
+  issues unless controller-only input is an explicit study constraint.
 
 ## 2026-06-07
 

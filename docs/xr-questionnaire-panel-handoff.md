@@ -98,6 +98,15 @@ validation may bypass that human gate only through an explicit launch extra,
 for example `mq.validationAutoStart=true`, and should record the bypass in
 log/evidence markers.
 
+Demo and stimulus Unity APKs should advertise both hands and controllers unless
+the experiment explicitly requires controller-only input. In Unity/OpenXR that
+means enabling the Quest controller interaction profiles and the hand
+interaction profiles together, and making the Android manifest's
+`oculus.software.handtracking` feature optional rather than required. Treat
+`LaunchCheckControllerRequiredDialogActivity` as a build/input-modality
+preflight failure for generic demo apps, not as an acceptable live-test
+surprise.
+
 Do not rely on Quest foreground switching alone to freeze and resume media.
 Android/OpenXR focus and pause callbacks can arrive differently across headset
 states, and Unity can keep a stale return intent on the Activity after the

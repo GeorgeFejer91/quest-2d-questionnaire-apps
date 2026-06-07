@@ -924,6 +924,24 @@ Generalizable rule: when receipt fields become part of the operator contract,
 advertise them as a named capability. A browser dashboard should warn about
 missing evidence semantics, not only missing endpoints.
 
+## Physical Packets Must Be Portable Bundles
+
+Problem: a physical gate packet can be "ready" on disk while the hosted GUI
+only shows local paths. That is fragile for an operator moving between the
+browser, file explorer, and headset because the runbook, signoff template, and
+audit summary may be scattered across nested artifact folders.
+
+Solution: treat the physical packet summary as a first-class evidence-bundle
+root. The companion validator now downloads `/api/evidence-bundle` for the
+physical packet and requires the zip to contain the packet summary,
+`physical-gate-runbook.txt`, `operator-signoff-template.json`, and the manual
+signoff summary. The builder smoke test verifies that the Evidence Bundle
+button can target a visible physical packet receipt.
+
+Generalizable rule: operator packets are not complete until they are portable.
+When a dashboard prepares a physical-session packet, validate the downloadable
+bundle contents, not just local paths in the receipt.
+
 ## Operator Packets Should Follow Visible Evidence
 
 Problem: a dashboard can show the operator a specific readiness audit and then

@@ -142,7 +142,7 @@ function loadEditor() {
   };
   context.window = context;
   vm.createContext(context);
-  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, applyQuestionnaireFirstDefaults, refresh, buildExperimentBlockRegistry, buildChainPlan, directHandoffWorkflowOptions, workflowValidationPayload, runHeadsetSequenceWithApp, physicalGatePacketPayloadFromEvidence, manualSignoffReceiptText, physicalGatePacketReceiptText };`, context, {
+  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, applyTriggerCatalog, applyQuestionnaireFirstDefaults, refresh, buildExperimentBlockRegistry, buildChainPlan, directHandoffWorkflowOptions, workflowValidationPayload, runHeadsetSequenceWithApp, physicalGatePacketPayloadFromEvidence, evidenceBundleSummaryPath, manualSignoffReceiptText, physicalGatePacketReceiptText };`, context, {
     filename: htmlPath
   });
   return { context, document, html };
@@ -227,6 +227,10 @@ const companionPacketPayload = context.__api.physicalGatePacketPayloadFromEviden
   endToEndReceipt: { artifacts: { summaryPath: "C:\\artifacts\\companion-summary.json" } }
 });
 assert(companionPacketPayload.companionSummaryPath === "C:\\artifacts\\companion-summary.json", "Physical packet payload should fall back to the visible companion workflow summary.");
+const physicalPacketBundleSummaryPath = context.__api.evidenceBundleSummaryPath({
+  physicalGatePacketReceipt: { artifacts: { summaryPath: "C:\\artifacts\\physical-packet-summary.json" } }
+});
+assert(physicalPacketBundleSummaryPath === "C:\\artifacts\\physical-packet-summary.json", "Evidence bundle download should target the visible physical packet summary.");
 const manualGuardrailText = context.__api.manualSignoffReceiptText({
   manualSignoffReceipt: {
     status: "pending-operator-signoff",

@@ -124,6 +124,11 @@ Use absolute dates.
 - Added `operator-guardrail-receipts` to the local companion capability
   contract and hosted builder validator so the online GUI can detect older
   companions that do not expose checked operator guardrail receipt fields.
+- Hardened physical packet portability: the companion stress validator now
+  downloads the physical gate packet as an evidence bundle and requires the
+  packet summary, operator runbook, manual signoff template, and manual signoff
+  summary to be present in the zip. The builder smoke test verifies that the
+  GUI download target can use a visible physical packet summary.
 
 ## 2026-06-07
 

@@ -75,6 +75,10 @@ Evidence bundles are fetched from the companion through
 `GET /api/evidence-bundle?summaryPath=...`. That route must stay
 token-protected, constrained to generated artifact roots, and limited to
 reviewable evidence file types such as JSON, TXT, LOG, CSV, and PNG.
+When the visible receipt is a physical gate packet, the Evidence Bundle button
+should download a portable zip rooted at that packet summary and include the
+operator runbook, manual signoff template, manual signoff summary, and linked
+audit evidence.
 The direct handoff runner should keep `Preflight only` available for the hosted
 and offline GUI. That mode calls `/api/direct-handoff` with `dryRun=true` and
 `skipInstall=true` so users can prove package/activity/catalog preflight

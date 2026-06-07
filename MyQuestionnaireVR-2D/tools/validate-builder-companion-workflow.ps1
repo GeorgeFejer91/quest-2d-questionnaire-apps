@@ -132,6 +132,8 @@ function Get-ZipEvidence {
             $evidence.hasManifest = @($entries | Where-Object { $_.FullName -eq 'evidence-bundle-manifest.json' }).Count -eq 1
             $evidence.jsonEntryCount = @($entries | Where-Object { $_.FullName -match '\.json$' }).Count
             $evidence.pngEntryCount = @($entries | Where-Object { $_.FullName -match '\.png$' }).Count
+            $evidence.txtEntryCount = @($entries | Where-Object { $_.FullName -match '\.txt$' }).Count
+            $evidence.entryNames = @($entries | ForEach-Object { $_.FullName })
             $evidence.sampleEntries = @($entries | Select-Object -First 10 | ForEach-Object { $_.FullName })
         }
         finally {
@@ -1667,9 +1669,29 @@ try {
     if (-not $physicalGatePacketGuardrailsPass) {
         throw "Companion physical-gate-packet did not include the required operator stop-condition guardrails."
     }
+    $physicalGatePacketBundlePath = Join-Path $artifactDir 'physical-gate-packet-evidence-bundle.zip'
+    $physicalGatePacketBundle = Invoke-EvidenceBundle -BaseUrl $baseUrl -Headers $headers -SummaryPath ([string]$physicalGatePacket.summaryPath) -OutFile $physicalGatePacketBundlePath
+    $physicalGatePacketBundleEntries = @($physicalGatePacketBundle.entryNames | ForEach-Object { [string]$_ })
+    $physicalGatePacketBundlePass = (
+        [bool]$physicalGatePacketBundle.exists -and
+        [bool]$physicalGatePacketBundle.validZip -and
+        [bool]$physicalGatePacketBundle.hasManifest -and
+        [int]$physicalGatePacketBundle.entryCount -ge 4 -and
+        [int]$physicalGatePacketBundle.txtEntryCount -ge 1 -and
+        @($physicalGatePacketBundleEntries | Where-Object { $_ -match 'universal-handoff-physical-gate-packet-summary\.json$' }).Count -gt 0 -and
+        @($physicalGatePacketBundleEntries | Where-Object { $_ -match 'physical-gate-runbook\.txt$' }).Count -gt 0 -and
+        @($physicalGatePacketBundleEntries | Where-Object { $_ -match 'operator-signoff-template\.json$' }).Count -gt 0 -and
+        @($physicalGatePacketBundleEntries | Where-Object { $_ -match 'direct-handoff-manual-signoff-summary\.json$' }).Count -gt 0
+    )
+    Add-Progress "physical-gate-packet-bundle entries=$($physicalGatePacketBundle.entryCount) text=$($physicalGatePacketBundle.txtEntryCount) validZip=$($physicalGatePacketBundle.validZip)"
+    if (-not $physicalGatePacketBundlePass) {
+        throw "Companion evidence-bundle endpoint did not return a portable physical gate packet bundle with runbook and manual signoff template."
+    }
     $summary['endToEndReceipt']['checks']['physicalGatePacketPass'] = $true
     $summary['endToEndReceipt']['checks']['physicalGatePacketGuardrailsPass'] = $physicalGatePacketGuardrailsPass
+    $summary['endToEndReceipt']['checks']['physicalGatePacketBundlePass'] = $physicalGatePacketBundlePass
     $summary['endToEndReceipt']['artifacts']['physicalGatePacketSummaryPath'] = [string]$physicalGatePacket.summaryPath
+    $summary['endToEndReceipt']['artifacts']['physicalGatePacketEvidenceBundlePath'] = $physicalGatePacketBundlePath
     $summary['physicalGatePacket'] = [ordered]@{
         status = $physicalGatePacket.packetStatus
         runId = $physicalGatePacket.runId
@@ -1677,6 +1699,8 @@ try {
         physicalGatePacketReceipt = $physicalGatePacketReceipt
         operatorGuardrailIds = $physicalGatePacketGuardrailIds
         operatorGuardrailsPass = $physicalGatePacketGuardrailsPass
+        evidenceBundle = $physicalGatePacketBundle
+        evidenceBundlePass = $physicalGatePacketBundlePass
     }
     $summary['completedAt'] = (Get-Date).ToString('o')
     $summary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $summaryPath -Encoding UTF8

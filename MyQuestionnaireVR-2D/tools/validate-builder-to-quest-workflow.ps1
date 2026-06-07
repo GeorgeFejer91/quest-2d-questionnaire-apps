@@ -318,6 +318,90 @@ function Test-UnityDirectHandoffBridge {
     }
 }
 
+function Test-PanelReturnContracts {
+    param([string]$OutputDir)
+
+    New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
+    $checks = New-Object 'System.Collections.Generic.List[object]'
+
+    function Add-Check {
+        param([string]$Name, [bool]$Pass, [string]$Detail)
+        $checks.Add([ordered]@{
+            name = $Name
+            pass = $Pass
+            detail = $Detail
+        }) | Out-Null
+    }
+
+    function Get-Text {
+        param([string]$Path)
+        if (Test-Path -LiteralPath $Path) {
+            return Get-Content -LiteralPath $Path -Raw
+        }
+        return ''
+    }
+
+    function Test-Text {
+        param([string]$Text, [string]$Pattern)
+        return [bool]([regex]::IsMatch($Text, $Pattern, [System.Text.RegularExpressions.RegexOptions]::Singleline))
+    }
+
+    function Test-Order {
+        param([string]$Text, [string]$FirstPattern, [string]$SecondPattern)
+        $first = [regex]::Match($Text, $FirstPattern, [System.Text.RegularExpressions.RegexOptions]::Singleline)
+        $second = [regex]::Match($Text, $SecondPattern, [System.Text.RegularExpressions.RegexOptions]::Singleline)
+        return $first.Success -and $second.Success -and $first.Index -lt $second.Index
+    }
+
+    $questionnaireManifestPath = Join-Path $ProjectPath 'app\src\main\AndroidManifest.xml'
+    $questionnaireContextPath = Join-Path $ProjectPath 'app\src\main\java\org\viscereality\questionnaires2d\QuestionnaireLaunchContext.java'
+    $questionnaireMainPath = Join-Path $ProjectPath 'app\src\main\java\org\viscereality\questionnaires2d\MainActivity.java'
+    $tracerManifestPath = Join-Path $TemporalTracerPath 'app\src\main\AndroidManifest.xml'
+    $tracerContextPath = Join-Path $TemporalTracerPath 'app\src\main\java\org\viscereality\temporaltracer2d\TemporalTracerLaunchContext.java'
+    $tracerMainPath = Join-Path $TemporalTracerPath 'app\src\main\java\org\viscereality\temporaltracer2d\MainActivity.java'
+
+    $questionnaireManifest = Get-Text -Path $questionnaireManifestPath
+    $questionnaireContext = Get-Text -Path $questionnaireContextPath
+    $questionnaireMain = Get-Text -Path $questionnaireMainPath
+    $tracerManifest = Get-Text -Path $tracerManifestPath
+    $tracerContext = Get-Text -Path $tracerContextPath
+    $tracerMain = Get-Text -Path $tracerMainPath
+
+    Add-Check -Name 'questionnaire manifest panel activity' -Pass (Test-Text $questionnaireManifest 'android:name="\.MainActivity".*?android:exported="true".*?android:launchMode="singleTop".*?android:resizeableActivity="true".*?org\.viscereality\.questionnaires2d\.RUN') -Detail $questionnaireManifestPath
+    Add-Check -Name 'questionnaire return extra and pending intent extraction' -Pass (Test-Text $questionnaireContext 'EXTRA_RETURN_PENDING_INTENT\s*=\s*"mq\.returnPendingIntent".*?pendingIntentExtra\(intent,\s*EXTRA_RETURN_PENDING_INTENT\)') -Detail $questionnaireContextPath
+    Add-Check -Name 'questionnaire completion result extras' -Pass (Test-Text $questionnaireContext 'EXTRA_RESULT_STATUS.*?EXTRA_EXPORT_JSON_PATH.*?EXTRA_EXPORT_CSV_PATH.*?EXTRA_QUESTIONNAIRE_CONFIG_ID') -Detail 'Questionnaire completion extras include status, exports, and config id.'
+    Add-Check -Name 'questionnaire sends return token' -Pass (Test-Text $questionnaireContext 'void\s+sendReturnPendingIntent.*?addCompletionExtras\(fillIn,\s*export,\s*record\).*?returnPendingIntent\.send\(context,\s*0,\s*fillIn\)') -Detail 'Questionnaire fills result extras before sending PendingIntent.'
+    Add-Check -Name 'questionnaire exports before post-export return' -Pass (Test-Text $questionnaireMain 'QuestionnaireData\.SessionRecord\s+record\s*=\s*buildSessionRecord\(\).*?QuestionnaireExporter\.writeSession\(this,\s*record\).*?showSavedConfirmation\(export\).*?handlePostExport\(export,\s*record\)') -Detail $questionnaireMainPath
+    Add-Check -Name 'questionnaire tries PendingIntent before fallback' -Pass (Test-Order $questionnaireMain 'launchContext\.sendReturnPendingIntent\(this,\s*export,\s*record\)' 'launchContext\.completionIntent\(this,\s*export,\s*record\)') -Detail 'Questionnaire return token is attempted before explicit caller fallback.'
+    Add-Check -Name 'questionnaire pending intent log marker' -Pass (Test-Text $questionnaireMain 'MYQUESTIONNAIRE_CHAIN_RETURN_PENDING_INTENT') -Detail 'Direct validator can observe questionnaire PendingIntent return.'
+
+    Add-Check -Name 'temporal tracer manifest panel activity' -Pass (Test-Text $tracerManifest 'android:name="\.MainActivity".*?android:exported="true".*?android:launchMode="singleTop".*?android:resizeableActivity="true".*?org\.viscereality\.temporaltracer2d\.RUN') -Detail $tracerManifestPath
+    Add-Check -Name 'temporal tracer return extra and pending intent extraction' -Pass (Test-Text $tracerContext 'EXTRA_RETURN_PENDING_INTENT\s*=\s*"mq\.returnPendingIntent".*?pendingIntentExtra\(intent,\s*EXTRA_RETURN_PENDING_INTENT\)') -Detail $tracerContextPath
+    Add-Check -Name 'temporal tracer completion result extras' -Pass (Test-Text $tracerContext 'EXTRA_RESULT_STATUS.*?EXTRA_EXPORT_JSON_PATH.*?EXTRA_EXPORT_CSV_PATH.*?EXTRA_EXPORT_SVG_PATH.*?EXTRA_TRACER_CONFIG_ID') -Detail 'Tracer completion extras include status, JSON/CSV/SVG exports, and config id.'
+    Add-Check -Name 'temporal tracer sends return token' -Pass (Test-Text $tracerContext 'void\s+sendReturnPendingIntent.*?addCompletionExtras\(fillIn,\s*lastExport,\s*config\).*?returnPendingIntent\.send\(context,\s*0,\s*fillIn\)') -Detail 'Tracer fills result extras before sending PendingIntent.'
+    Add-Check -Name 'temporal tracer exports before saved return screen' -Pass (Test-Text $tracerMain 'lastExport\s*=\s*exporter\.exportTrace\(.*?exporter\.writeDraft\(launch,\s*config,\s*language,\s*participantId,\s*participantName,\s*traceIndex,\s*completedTraceCount\).*?exporter\.markDraftComplete\(launch\).*?showSaved\("SVG:') -Detail $tracerMainPath
+    Add-Check -Name 'temporal tracer tries PendingIntent before fallback' -Pass (Test-Order $tracerMain 'launch\.sendReturnPendingIntent\(this,\s*lastExport,\s*config\)' 'launch\.completionIntent\(this,\s*lastExport,\s*config\)') -Detail 'Tracer return token is attempted before explicit caller fallback.'
+    Add-Check -Name 'temporal tracer pending intent log marker' -Pass (Test-Text $tracerMain 'TEMPORAL_TRACER_RETURN_PENDING_INTENT') -Detail 'Direct validator can observe tracer PendingIntent return.'
+
+    $checkArray = @($checks.ToArray())
+    $failed = @($checkArray | Where-Object { -not $_.pass })
+    $summary = [ordered]@{
+        schemaVersion = 'mq.panel_return_contracts_static.v1'
+        status = if ($failed.Count -eq 0) { 'pass' } else { 'fail' }
+        checkCount = $checkArray.Count
+        failedCount = $failed.Count
+        checks = $checkArray
+        completedAt = (Get-Date).ToUniversalTime().ToString('o')
+    }
+    $summaryPath = Join-Path $OutputDir 'panel-return-contracts-static-summary.json'
+    Write-Json -Value $summary -Path $summaryPath -Depth 10
+    return [pscustomobject]@{
+        Status = $summary.status
+        SummaryPath = $summaryPath
+        Summary = $summary
+    }
+}
+
 $config = Get-Content -LiteralPath $ConfigPath -Encoding UTF8 -Raw | ConvertFrom-Json
 $questionnaireId = ConvertTo-SafeName -Value $config.questionnaireId -Fallback 'questionnaire'
 $questionnaireVersion = ConvertTo-SafeName -Value $config.questionnaireVersion -Fallback '0.0.0'
@@ -506,6 +590,23 @@ Add-Requirement `
     -Requirement 'The Unity bridge must create mq.returnPendingIntent and read completion/export extras.' `
     -Status ($(if ($SkipUnityStatic) { 'skipped' } else { [string]$unityStatic.Status })) `
     -Evidence ($(if ($unityStatic) { $unityStatic.SummaryPath } else { '' }))
+
+$panelReturnContracts = Test-PanelReturnContracts -OutputDir $staticDir
+$steps.Add([ordered]@{
+    name = 'panel-return-contracts-static'
+    status = [string]$panelReturnContracts.Status
+    exitCode = if ($panelReturnContracts.Status -eq 'pass') { 0 } else { 1 }
+    started = $null
+    completed = (Get-Date).ToUniversalTime().ToString('o')
+    log = $null
+    summaryPath = $panelReturnContracts.SummaryPath
+    summary = $panelReturnContracts.Summary
+}) | Out-Null
+Add-Requirement `
+    -Id 'panel-return-pendingintent-contract' `
+    -Requirement 'The questionnaire and temporal tracer panels must save exports before returning, send mq.returnPendingIntent first, and keep caller package/activity fallback support.' `
+    -Status ([string]$panelReturnContracts.Status) `
+    -Evidence $panelReturnContracts.SummaryPath
 
 $dryRunSummaryPath = Join-Path $artifactRoot 'quest-direct-handoff-dry-run\quest-direct-handoff-validation-summary.json'
 $dryRunStatus = 'skipped'
@@ -696,6 +797,7 @@ $summary = [ordered]@{
         unityApk = Get-FileEvidence -Path $UnityApk
         questionnaireRender = $questionnaireRenderFacts
         temporalTracerRender = $temporalRenderFacts
+        panelReturnContracts = $panelReturnContracts.Summary
         directHandoffPreflight = $dryRunFacts
         questAdb = $questAdbFacts
         directQuestHandoff = $directQuestFacts

@@ -246,6 +246,26 @@ Generalizable rule: if a validation step decides the long-term architecture,
 give it a first-class GUI button, job endpoint, and dry-run contract test
 instead of hiding it inside an aggregate validator.
 
+## Panel Return Contracts Need A Static Gate
+
+Problem: the direct handoff bridge can look ready while the reusable 2D panels
+silently drift. If the questionnaire or temporal tracer stops exporting before
+return, drops `mq.returnPendingIntent`, or removes caller-package fallback,
+Quest trials will fail late and the bug can be mistaken for Unity or Horizon
+activity behavior.
+
+Solution: `validate-builder-to-quest-workflow.ps1` now writes
+`panel-return-contracts-static-summary.json` and adds the
+`panel-return-pendingintent-contract` requirement. The gate checks both panel
+manifests, verifies `mq.returnPendingIntent` extraction and result extras, and
+confirms that completion paths save/export before attempting the return token
+and legacy caller fallback.
+
+Generalizable rule: contract-first handoff validation must cover every owner
+in the handoff, not just the foreground XR bridge. Static gates should prove
+the panel export-and-return contract before physical Quest trials are treated
+as architecture evidence.
+
 ## Physical Gates Need Operator-Controlled Wait Windows
 
 Problem: direct handoff and replay/export trials can be validly blocked by

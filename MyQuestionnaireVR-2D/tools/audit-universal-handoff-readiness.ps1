@@ -113,6 +113,22 @@ function Get-FileEvidence {
     return $evidence
 }
 
+function Test-BundleEntrySuffix {
+    param(
+        [array]$Entries,
+        [string]$Suffix
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Suffix)) {
+        return $false
+    }
+    $normalizedSuffix = $Suffix.Replace('\', '/')
+    return @($Entries | Where-Object {
+        $entryName = ([string]$_).Replace('\', '/')
+        $entryName -eq $normalizedSuffix -or $entryName.EndsWith("/$normalizedSuffix", [System.StringComparison]::OrdinalIgnoreCase)
+    }).Count -gt 0
+}
+
 $projectFull = [System.IO.Path]::GetFullPath($ProjectPath)
 if ([string]::IsNullOrWhiteSpace($DirectHandoffRoot)) {
     $DirectHandoffRoot = Join-Path $projectFull 'artifacts\quest-direct-handoff'
@@ -158,6 +174,37 @@ if (-not $companion) {
 $receipt = $companion.endToEndReceipt
 $checks = $receipt.checks
 $artifacts = $receipt.artifacts
+$physicalGatePacketResult = Get-FirstPropertyValue -Object $companion -Names @('physicalGatePacket') -Default $null
+$physicalGatePacketSummaryPath = [string](Get-FirstPropertyValue -Object $artifacts -Names @('physicalGatePacketSummaryPath') -Default '')
+$physicalGatePacketEvidenceBundlePath = [string](Get-FirstPropertyValue -Object $artifacts -Names @('physicalGatePacketEvidenceBundlePath') -Default '')
+$physicalGatePacketEvidenceBundle = Get-FirstPropertyValue -Object $physicalGatePacketResult -Names @('evidenceBundle') -Default $null
+$physicalGatePacketBundleEntryNames = @(Get-FirstPropertyValue -Object $physicalGatePacketEvidenceBundle -Names @('entryNames') -Default @() | ForEach-Object { [string]$_ })
+$physicalGatePacketRequiredBundleEntries = @(
+    'universal-handoff-physical-gate-packet-summary.json',
+    'universal-handoff-readiness-audit-summary.json',
+    'physical-gate-runbook.txt',
+    'operator-signoff-template.json',
+    'direct-handoff-manual-signoff-summary.json'
+)
+$physicalGatePacketMissingBundleEntries = @($physicalGatePacketRequiredBundleEntries | Where-Object {
+    -not (Test-BundleEntrySuffix -Entries $physicalGatePacketBundleEntryNames -Suffix $_)
+})
+$physicalGatePacketBundleEvidenceAvailable = (
+    [bool](Get-FirstPropertyValue -Object $checks -Names @('physicalGatePacketPass') -Default $false) -or
+    -not [string]::IsNullOrWhiteSpace($physicalGatePacketSummaryPath) -or
+    $physicalGatePacketBundleEntryNames.Count -gt 0
+)
+$physicalGatePacketBundlePass = (
+    [bool](Get-FirstPropertyValue -Object $checks -Names @('physicalGatePacketBundlePass') -Default $false) -and
+    [bool](Get-FirstPropertyValue -Object $physicalGatePacketEvidenceBundle -Names @('exists') -Default $false) -and
+    [bool](Get-FirstPropertyValue -Object $physicalGatePacketEvidenceBundle -Names @('validZip') -Default $false) -and
+    [bool](Get-FirstPropertyValue -Object $physicalGatePacketEvidenceBundle -Names @('hasManifest') -Default $false) -and
+    $physicalGatePacketMissingBundleEntries.Count -eq 0
+)
+$evidenceBundleRequirementPass = (
+    [bool]$checks.evidenceBundleEndpointPass -and
+    (-not $physicalGatePacketBundleEvidenceAvailable -or $physicalGatePacketBundlePass)
+)
 $directHandoffDryRunSummaryPath = [string](Get-FirstPropertyValue -Object $companion.directHandoffDryRun -Names @('summaryPath') -Default '')
 $directHandoffDryRunSummary = Read-JsonIfExists -Path $directHandoffDryRunSummaryPath
 $demoUnityApkPath = [string](Get-FirstPropertyValue -Object $companion.directHandoffDryRun -Names @('unityApk') -Default '')
@@ -409,10 +456,11 @@ $requirements += New-Requirement `
     -Evidence "renderPreviewArtifactGatePass=$($checks.renderPreviewArtifactGatePass); workflowArtifactPreviewEndpointPass=$($checks.workflowArtifactPreviewEndpointPass)"
 $requirements += New-Requirement `
     -Id 'evidence-bundle' `
-    -Requirement 'The local companion can package JSON/log/CSV/PNG evidence into a typed zip bundle.' `
-    -Status $(if ([bool]$checks.evidenceBundleEndpointPass) { 'proven' } else { 'missing' }) `
+    -Requirement 'The local companion can package workflow evidence into typed zip bundles; once a physical-gate packet has been prepared, its bundle must include the packet summary, runbook, manual signoff artifacts, and linked audit summary.' `
+    -Status $(if ($evidenceBundleRequirementPass) { 'proven' } else { 'missing' }) `
     -EvidencePath ([string]$CompanionSummaryPath) `
-    -Evidence "evidenceBundleEndpointPass=$($checks.evidenceBundleEndpointPass); entries=$($artifacts.evidenceBundle.entryCount); bytes=$($artifacts.evidenceBundle.bytes)"
+    -Evidence "evidenceBundleEndpointPass=$($checks.evidenceBundleEndpointPass); workflowEntries=$($artifacts.evidenceBundle.entryCount); workflowBytes=$($artifacts.evidenceBundle.bytes); physicalGatePacketBundleEvidenceAvailable=$physicalGatePacketBundleEvidenceAvailable; physicalGatePacketBundlePass=$physicalGatePacketBundlePass; physicalPacketEntries=$((Get-FirstPropertyValue -Object $physicalGatePacketEvidenceBundle -Names @('entryCount') -Default 0)); physicalPacketTextEntries=$((Get-FirstPropertyValue -Object $physicalGatePacketEvidenceBundle -Names @('txtEntryCount') -Default 0)); physicalPacketBundle=$physicalGatePacketEvidenceBundlePath; missingPhysicalPacketEntries=$($physicalGatePacketMissingBundleEntries -join ',')" `
+    -Missing $(if ($evidenceBundleRequirementPass) { @() } elseif (-not [bool]$checks.evidenceBundleEndpointPass) { @('workflow-evidence-bundle-endpoint') } elseif ($physicalGatePacketBundleEvidenceAvailable) { @('portable-physical-gate-packet-evidence-bundle') + $physicalGatePacketMissingBundleEntries } else { @('evidence-bundle-requirement') })
 $requirements += New-Requirement `
     -Id 'direct-pendingintent-contract-preflight' `
     -Requirement 'Direct XR -> 2D panel -> same XR app PendingIntent contract preflights with the real questionnaire, tracer, and Unity APK package/catalog contract.' `
@@ -526,6 +574,13 @@ $summary = [ordered]@{
         realDirectHandoffSummaryCount = $realDirectSummaries.Count
         directHandoffManualSignoffSummaryPath = $manualSignoffPath
         directHandoffManualSignoffStatus = $manualSignoffStatus
+        physicalGatePacketSummaryPath = $physicalGatePacketSummaryPath
+        physicalGatePacketEvidenceBundlePath = $physicalGatePacketEvidenceBundlePath
+        physicalGatePacketEvidenceBundleAvailable = $physicalGatePacketBundleEvidenceAvailable
+        physicalGatePacketEvidenceBundlePass = $physicalGatePacketBundlePass
+        physicalGatePacketEvidenceBundleEntryCount = [int](Get-FirstPropertyValue -Object $physicalGatePacketEvidenceBundle -Names @('entryCount') -Default 0)
+        physicalGatePacketEvidenceBundleTextEntryCount = [int](Get-FirstPropertyValue -Object $physicalGatePacketEvidenceBundle -Names @('txtEntryCount') -Default 0)
+        physicalGatePacketMissingBundleEntries = $physicalGatePacketMissingBundleEntries
         directDecisionManualHeadsetPassStatus = $decisionManualStatus
         directDecisionDefaultDirectPendingIntentApproved = $decisionDefaultApproved
         latestPhysicalBlock = $latestPhysicalBlock

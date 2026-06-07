@@ -1130,6 +1130,26 @@ Generalizable rule: when the front door changes, add a front-door-specific
 product-path gate. Do not use a later return-path validator as proof that the
 participant's first launch path works.
 
+## Portable Packet Proof Belongs In The Readiness Audit
+
+Problem: the companion validator can prove that a physical-gate packet evidence
+bundle contains the operator runbook, packet summary, manual signoff template,
+manual signoff summary, and linked readiness audit. If the main readiness audit
+only checks that a generic evidence-bundle endpoint exists, future runs can look
+operator-ready while the portable physical-session bundle is incomplete.
+
+Solution: make `audit-universal-handoff-readiness.ps1` consume the
+`physicalGatePacketBundlePass` receipt and inspect the packet bundle entry list
+once a physical packet has been prepared. The companion validator now reruns the
+readiness audit after the packet bundle is created, so a missing packet summary,
+readiness audit, runbook, signoff template, or manual signoff summary fails the
+post-packet audit instead of creating a first-run dependency cycle.
+
+Generalizable rule: completion audits should consume the strongest evidence
+contract available from their validators. For physical Quest sessions, "a bundle
+endpoint responded" is weaker than "the operator can carry the exact packet,
+runbook, signoff artifacts, and audit proof into the headset session."
+
 ## Mid-Run Headset Sleep Is A Blocker, Not A Strategy Failure
 
 Problem: a direct handoff trial can launch Unity, return from the first

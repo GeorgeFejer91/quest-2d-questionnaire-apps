@@ -1705,6 +1705,34 @@ try {
     }
     $summary['completedAt'] = (Get-Date).ToString('o')
     $summary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
+
+    Write-Host "== Universal handoff readiness audit after physical packet bundle =="
+    $postPacketHandoffReadinessAudit = Invoke-Json -Method POST -Uri "$baseUrl/api/handoff-readiness-audit" -Headers $headers -Body @{
+        companionSummaryPath = $summaryPath
+    } -TimeoutSec 180
+    Add-Progress "post-packet-handoff-readiness-audit-complete status=$($postPacketHandoffReadinessAudit.auditStatus) summary=$($postPacketHandoffReadinessAudit.summaryPath)"
+    if ($postPacketHandoffReadinessAudit.status -ne 'ok' -or [string]::IsNullOrWhiteSpace([string]$postPacketHandoffReadinessAudit.summaryPath) -or -not (Test-Path -LiteralPath $postPacketHandoffReadinessAudit.summaryPath)) {
+        throw "Post-packet handoff-readiness-audit did not produce a usable audit summary."
+    }
+    $postPacketHandoffReadinessAuditSummary = if ($postPacketHandoffReadinessAudit.PSObject.Properties.Name -contains 'summary') { $postPacketHandoffReadinessAudit.summary } else { $null }
+    $postPacketHandoffReadinessAuditMissing = if ($postPacketHandoffReadinessAuditSummary -and $postPacketHandoffReadinessAuditSummary.counts) { [int]$postPacketHandoffReadinessAuditSummary.counts.failedOrMissing } else { 999 }
+    $postPacketEvidence = if ($postPacketHandoffReadinessAuditSummary -and $postPacketHandoffReadinessAuditSummary.evidence) { $postPacketHandoffReadinessAuditSummary.evidence } else { $null }
+    $postPacketBundleAuditPass = [bool](Get-JsonProperty -Object $postPacketEvidence -Name 'physicalGatePacketEvidenceBundlePass' -Default $false)
+    if ($postPacketHandoffReadinessAuditMissing -ne 0 -or -not (@('complete', 'pass-with-physical-pending') -contains [string]$postPacketHandoffReadinessAudit.auditStatus) -or -not $postPacketBundleAuditPass) {
+        throw "Post-packet handoff-readiness-audit did not prove the portable physical gate packet bundle. auditStatus=$($postPacketHandoffReadinessAudit.auditStatus), failedOrMissing=$postPacketHandoffReadinessAuditMissing, packetBundlePass=$postPacketBundleAuditPass"
+    }
+    $summary['endToEndReceipt']['checks']['handoffReadinessAuditPacketBundlePass'] = $postPacketBundleAuditPass
+    $summary['endToEndReceipt']['artifacts']['postPacketHandoffReadinessAuditSummaryPath'] = [string]$postPacketHandoffReadinessAudit.summaryPath
+    $summary['postPacketHandoffReadinessAudit'] = [ordered]@{
+        status = $postPacketHandoffReadinessAudit.auditStatus
+        runId = $postPacketHandoffReadinessAudit.runId
+        summaryPath = $postPacketHandoffReadinessAudit.summaryPath
+        auditReceipt = $postPacketHandoffReadinessAudit.auditReceipt
+        counts = if ($postPacketHandoffReadinessAuditSummary -and $postPacketHandoffReadinessAuditSummary.counts) { $postPacketHandoffReadinessAuditSummary.counts } else { $null }
+        physicalGatePacketEvidenceBundlePass = $postPacketBundleAuditPass
+    }
+    $summary['completedAt'] = (Get-Date).ToString('o')
+    $summary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
     Write-Host "Builder companion workflow summary: $summaryPath"
 }
 catch {

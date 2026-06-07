@@ -338,3 +338,9 @@ Use absolute dates.
 - Hardened source-asset snapshot/restore helpers for Windows long paths after
   the companion stress ladder exposed a `Copy-Item` failure at 260 characters
   for nested pictographic assets under descriptive artifact run ids.
+- Tightened the Universal Handoff readiness audit so the evidence-bundle
+  requirement consumes portable physical-gate packet bundle proof after a packet
+  has been prepared. The companion workflow validator now reruns the readiness
+  audit post-packet and requires the packet summary, linked readiness audit,
+  runbook, operator signoff template, and manual signoff summary to appear in
+  that audit evidence.

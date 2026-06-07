@@ -1,5 +1,6 @@
 package org.viscereality.questionnaires2d;
 
+import android.content.Intent;
 import android.os.Looper;
 
 import org.junit.Test;
@@ -33,7 +34,12 @@ public final class CommandReplayActivityTest {
         Files.write(marker.toPath(), "{}".getBytes(StandardCharsets.UTF_8));
         ShadowLog.clear();
 
-        Robolectric.buildActivity(MainActivity.class).setup();
+        Intent intent = new Intent(QuestionnaireLaunchContext.ACTION_RUN);
+        intent.setClassName("org.viscereality.questionnaires2d", "org.viscereality.questionnaires2d.MainActivity");
+        intent.putExtra(QuestionnaireLaunchContext.EXTRA_QUESTIONNAIRE_MODE, QuestionnaireLaunchContext.MODE_FULL);
+        intent.putExtra(QuestionnaireLaunchContext.EXTRA_FINISH_BEHAVIOR, QuestionnaireLaunchContext.FINISH_STAY_SAVED);
+
+        Robolectric.buildActivity(MainActivity.class, intent).setup();
         Shadows.shadowOf(Looper.getMainLooper()).idleFor(3, TimeUnit.SECONDS);
 
         String logs = joinedQuestionnaireLogs();

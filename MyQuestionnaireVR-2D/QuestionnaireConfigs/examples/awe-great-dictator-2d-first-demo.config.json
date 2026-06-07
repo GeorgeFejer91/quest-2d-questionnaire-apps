@@ -1,0 +1,219 @@
+{
+  "schemaVersion": "my-questionnaire-vr.config.v1",
+  "questionnaireId": "demo-slider",
+  "questionnaireVersion": "1.0.0",
+  "appVersion": "1.0.0",
+  "uiTextSource": "Assets/StreamingAssets/UIText.txt",
+  "languages": [
+    "English",
+    "Deutsch"
+  ],
+  "participantFields": [
+    {
+      "id": "name",
+      "type": "text",
+      "required": true
+    },
+    {
+      "id": "age",
+      "type": "integer",
+      "required": true
+    },
+    {
+      "id": "gender",
+      "type": "singleChoice",
+      "required": true
+    },
+    {
+      "id": "consent",
+      "type": "checkbox",
+      "required": true
+    }
+  ],
+  "blocks": [
+    {
+      "id": "demographics",
+      "type": "demographics"
+    },
+    {
+      "id": "viscereality",
+      "type": "slider",
+      "expectedItemCount": 2,
+      "min": 0,
+      "max": 100,
+      "wholeNumbers": true,
+      "anchors": {
+        "left": "NO, not more than usual",
+        "right": "YES, much more than usual"
+      },
+      "languages": {
+        "English": {
+          "items": [
+            "I felt aware of my breathing.",
+            "I felt aware of my body boundaries."
+          ],
+          "target": "Assets/StreamingAssets/Questions_English.txt"
+        },
+        "Deutsch": {
+          "items": [
+            "Ich war mir meiner Atmung bewusst.",
+            "Ich war mir meiner Koerpergrenzen bewusst."
+          ],
+          "target": "Assets/StreamingAssets/Questions_Deutsch.txt"
+        }
+      }
+    },
+    {
+      "id": "end",
+      "type": "blackScreen"
+    }
+  ],
+  "exports": {
+    "destination": "Application.persistentDataPath/QuestionnaireExports",
+    "formats": [
+      "json",
+      "csv"
+    ]
+  },
+  "chainDefaults": {
+    "finishBehavior": "openNext",
+    "startMode": "questionnaireFirst",
+    "callerPackage": "org.questionnairebuilder.stimulusdemo",
+    "callerActivity": "org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity",
+    "nextPackage": "org.questionnairebuilder.stimulusdemo",
+    "nextActivity": "org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity",
+    "questionnaireMode": "demographics",
+    "triggerId": "trigger_1_launch_questionnaire",
+    "blockNumber": "001",
+    "blockId": "001_trigger_trigger_1_launch_questionnaire",
+    "saveNamespace": "trigger_trigger_1_launch_questionnaire",
+    "autoCloseDelayMs": 2000
+  },
+  "experimentBlockRegistry": {
+    "schemaVersion": "viscereality.chainlink.block-registry.v1",
+    "experimentId": "awe-of-the-great-dictator",
+    "planId": "peripersonal-space-right-maia2-pictographic",
+    "questionnaireId": "demo-slider",
+    "questionnaireVersion": "1.0.0",
+    "controllerTriggerButton": "auto-unused-non-breath-tracking",
+    "sourceTriggerCatalog": {
+      "schemaVersion": "mq.quest_questionnaire_trigger_catalog.v1",
+      "catalogVersion": "1.0.0",
+      "sourceApkName": "awe-great-dictator.apk",
+      "triggerCount": 2
+    },
+    "scenario": {
+      "label": "Questionnaire Stimulus Builder Demo",
+      "package": "org.questionnairebuilder.stimulusdemo",
+      "activity": "org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity"
+    },
+    "targetApp": {
+      "label": "Questionnaire Stimulus Builder Demo",
+      "package": "org.questionnairebuilder.stimulusdemo",
+      "activity": "org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity"
+    },
+    "dataPolicy": {
+      "uniqueRunPerBlock": true,
+      "perResponseTimestampUtc": true,
+      "appendOnlyExports": true,
+      "noOverwrite": true
+    },
+    "blocks": [
+      {
+        "number": "001",
+        "id": "001_trigger_trigger_1_launch_questionnaire",
+        "type": "questionnaire",
+        "label": "Trigger 1: before video",
+        "trigger": {
+          "type": "apkManifestTrigger",
+          "triggerId": "trigger_1_launch_questionnaire",
+          "foregroundPackage": "org.questionnairebuilder.stimulusdemo"
+        },
+        "package": "org.viscereality.questionnaires2d",
+        "activity": "org.viscereality.questionnaires2d.MainActivity",
+        "action": "org.viscereality.questionnaires2d.RUN",
+        "questionnaireMode": "demographics",
+        "scenarioMode": "",
+        "targetMode": "",
+        "saveNamespace": "trigger_trigger_1_launch_questionnaire",
+        "expectedOutputs": {
+          "demographics": true
+        },
+        "extras": {
+          "mq.questionnaireMode": "demographics",
+          "mq.flowMode": "demographics",
+          "mq.handoffSchema": "mq.handoff.v1",
+          "mq.triggerId": "trigger_1_launch_questionnaire",
+          "mq.finishBehavior": "resumeCaller",
+          "mq.callerPackage": "org.questionnairebuilder.stimulusdemo",
+          "mq.callerActivity": "org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity",
+          "mq.autoCloseDelayMs": 2000
+        }
+      },
+      {
+        "number": "002",
+        "id": "002_trigger_trigger_2_video_complete",
+        "type": "temporalTracer",
+        "label": "Trigger 2: after video",
+        "trigger": {
+          "type": "apkManifestTrigger",
+          "triggerId": "trigger_2_video_complete",
+          "foregroundPackage": "org.questionnairebuilder.stimulusdemo"
+        },
+        "package": "org.viscereality.temporaltracer2d",
+        "activity": "org.viscereality.temporaltracer2d.MainActivity",
+        "action": "org.viscereality.temporaltracer2d.RUN",
+        "questionnaireMode": "temporalTracer",
+        "scenarioMode": "",
+        "targetMode": "",
+        "saveNamespace": "trigger_trigger_2_video_complete",
+        "expectedOutputs": {
+          "temporalTraceSvg": true,
+          "temporalTraceCsv": true,
+          "temporalTraceJson": true
+        },
+        "extras": {
+          "mq.handoffSchema": "mq.handoff.v1",
+          "mq.triggerId": "trigger_2_video_complete",
+          "mq.finishBehavior": "resumeCaller",
+          "mq.callerPackage": "org.questionnairebuilder.stimulusdemo",
+          "mq.callerActivity": "org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity",
+          "mq.autoCloseDelayMs": 2000
+        }
+      }
+    ]
+  },
+  "triggerQuestionnaireMapping": {
+    "schemaVersion": "mq.quest_questionnaire_trigger_mapping.v1",
+    "sourceCatalogSchemaVersion": "mq.quest_questionnaire_trigger_catalog.v1",
+    "catalogVersion": "1.0.0",
+    "sourceApkName": "awe-great-dictator.apk",
+    "scenarioId": "awe-of-the-great-dictator",
+    "scenarioPackage": "org.questionnairebuilder.stimulusdemo",
+    "scenarioActivity": "org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity",
+    "triggers": [
+      {
+        "triggerId": "trigger_1_launch_questionnaire",
+        "label": "Trigger 1: before video",
+        "enabled": true,
+        "questionnaireMode": "demographics",
+        "blockNumber": "001",
+        "blockId": "001_trigger_trigger_1_launch_questionnaire",
+        "saveNamespace": "trigger_trigger_1_launch_questionnaire",
+        "language": "",
+        "autoCloseDelayMs": 2000
+      },
+      {
+        "triggerId": "trigger_2_video_complete",
+        "label": "Trigger 2: after video",
+        "enabled": true,
+        "questionnaireMode": "temporalTracer",
+        "blockNumber": "002",
+        "blockId": "002_trigger_trigger_2_video_complete",
+        "saveNamespace": "trigger_trigger_2_video_complete",
+        "language": "",
+        "autoCloseDelayMs": 2000
+      }
+    ]
+  }
+}

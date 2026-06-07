@@ -122,7 +122,8 @@ public final class ChainLaunchContractTest {
         assertEquals(new ComponentName("org.example.next", "org.example.next.MainActivity"), next.getComponent());
         assertEquals("complete", next.getStringExtra(QuestionnaireLaunchContext.EXTRA_RESULT_STATUS));
         assertEquals("session-chain-test", next.getStringExtra(QuestionnaireLaunchContext.EXTRA_SESSION_ID));
-        assertEquals("viscereality-maia2", next.getStringExtra(QuestionnaireLaunchContext.EXTRA_QUESTIONNAIRE_CONFIG_ID));
+        QuestionnaireData.RuntimeConfig activeConfig = QuestionnaireLoader.loadRuntimeConfig(RuntimeEnvironment.getApplication());
+        assertEquals(activeConfig.questionnaireId, next.getStringExtra(QuestionnaireLaunchContext.EXTRA_QUESTIONNAIRE_CONFIG_ID));
         assertTrue(next.getStringExtra(QuestionnaireLaunchContext.EXTRA_EXPORT_JSON_PATH).endsWith(".json"));
         assertTrue(next.getStringExtra(QuestionnaireLaunchContext.EXTRA_EXPORT_CSV_PATH).endsWith(".csv"));
         assertTrue(activity.isFinishing());

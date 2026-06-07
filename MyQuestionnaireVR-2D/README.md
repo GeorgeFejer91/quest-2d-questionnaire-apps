@@ -111,6 +111,18 @@ still return to Unity with `resumeCaller`; this does not replace the Unity
 input-modality requirement that generic stimulus APKs support both hands and
 controllers.
 
+The repository includes a small 2D-first demo config that can run the full
+offline APK/render/preflight spine without relying on generated smoke-test
+artifacts:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-builder-to-quest-workflow.ps1 `
+  -ConfigPath .\QuestionnaireConfigs\examples\awe-great-dictator-2d-first-demo.config.json `
+  -RunQuestDirectHandoff `
+  -DryRunQuestDirectHandoff `
+  -SkipInstall
+```
+
 Generate a named APK from any config:
 
 ```powershell

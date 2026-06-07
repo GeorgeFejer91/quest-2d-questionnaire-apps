@@ -103,7 +103,9 @@ public final class QuestionnaireContractTest {
             assertTrue(csv.contains("maia2_q001_label"));
         }
         assertTrue(csv.contains(String.format("viscereality_q%03d_score_0_100", slider.size())));
-        assertTrue(combinedCsv.contains("_choice_numeric"));
+        if (!prompts.isEmpty()) {
+            assertTrue(combinedCsv.contains("_choice_numeric"));
+        }
         assertTrue(combinedCsv.contains("blockNumber"));
     }
 

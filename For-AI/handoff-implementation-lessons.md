@@ -831,6 +831,26 @@ Generalizable rule: choose the participant-facing front door by config. Starting
 with the 2D panel can simplify demographics collection, but it does not move
 raw XR input ownership out of Unity.
 
+## Generated Configs Must Own Test Expectations
+
+Problem: full APK generation applies the GUI-generated questionnaire config
+before running Android unit tests. Tests that hard-code the default bundled
+config id, MAIA/pictographic counts, or no-extra launch mode can pass in the
+source tree but fail when the builder produces a smaller custom APK such as a
+2D-first demographics launcher.
+
+Solution: runtime tests should derive expected questionnaire ids and optional
+sections from the active packaged config, or pass explicit launch extras when
+the test is proving full replay behavior. The 2D-first demo workflow now runs
+the same APK/render/preflight spine after applying
+`QuestionnaireConfigs/examples/awe-great-dictator-2d-first-demo.config.json`,
+so custom-config generation exercises the unit-test gate instead of skipping
+it.
+
+Generalizable rule: build validation must test the APK as packaged, not the
+developer's favorite default assets. Make tests fixture-aware when config
+builders can change the asset set.
+
 ## Mid-Run Headset Sleep Is A Blocker, Not A Strategy Failure
 
 Problem: a direct handoff trial can launch Unity, return from the first

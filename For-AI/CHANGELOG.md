@@ -51,6 +51,9 @@ Use absolute dates.
   questionnaire APK can default to demographics from Meta Home and then open
   the Unity APK with `finishBehavior=openNext`, while later Unity-triggered
   blocks still use `resumeCaller`.
+- Added `QuestionnaireConfigs/examples/awe-great-dictator-2d-first-demo.config.json`
+  and hardened Android tests so generated custom configs can run the full
+  unit-test/APK/render/direct-handoff-preflight spine after assets are applied.
 
 ## 2026-06-07
 

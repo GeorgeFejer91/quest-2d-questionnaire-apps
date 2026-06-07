@@ -59,9 +59,9 @@ profile, or repository path.
 `apiVersion`, `receiptSchemaVersion`, and capabilities such as
 `generate-apk-receipt`, `artifact-preview`, `workflow-render-previews`,
 `evidence-bundle`, `workflow-receipt`, `direct-handoff-preflight`,
-`2d-first-launcher-preflight`, `handoff-readiness-audit`, and
-`runner-job-receipts` so the hosted GUI can warn when a user connects an older
-local companion package.
+`2d-first-launcher-preflight`, `handoff-readiness-audit`,
+`direct-handoff-manual-signoff`, and `runner-job-receipts` so the hosted GUI
+can warn when a user connects an older local companion package.
 
 Render preview thumbnails are fetched from the companion through
 `GET /api/artifact-preview?path=...`. That route must stay token-protected,
@@ -94,6 +94,12 @@ it become a separate hidden backend workflow.
 Universal Handoff requirement matrix from local evidence. It is the GUI's
 completion readout: offline evidence can pass while live Quest trials and
 manual signoff remain explicitly pending.
+`Prepare manual signoff` should call `/api/direct-handoff-manual-signoff`.
+Without an operator JSON it prepares the instructions/template under
+`artifacts\direct-handoff-manual-signoff\`; with an operator JSON path it
+validates the filled signoff against a real direct-handoff summary. This keeps
+the physical signoff gate visible in the hosted/offline builder without
+pretending the browser can observe the headset.
 `Wake before readiness` should remain opt-in, ignored for `Preflight only`, and
 passed through to `/api/direct-handoff` or `/api/validate-workflow` only for
 live direct-handoff attempts so wake-assisted evidence stays explicit.

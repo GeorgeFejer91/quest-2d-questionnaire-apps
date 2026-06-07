@@ -784,6 +784,27 @@ the completion audit. Operators should see proven requirements, missing
 offline evidence, and pending physical gates in the same place where they
 generate APKs and run headset jobs.
 
+## Manual Signoff Prep Belongs In The GUI
+
+Problem: after structured manual signoff artifacts existed, operators still
+had to remember a CLI-only helper to prepare the template and validate the
+filled JSON. That left the final physical gate outside the website workflow
+even though the GUI already exposed generation, install, replay, direct
+handoff, 2D-first launch, and readiness audit receipts.
+
+Solution: expose `new-direct-handoff-manual-signoff.ps1` through the local
+companion as `/api/direct-handoff-manual-signoff`, add a `Prepare manual
+signoff` GUI control, and return a `manualSignoffReceipt`. Without an operator
+JSON path the endpoint writes instructions/template plus a pending summary;
+with an operator JSON path it validates the filled signoff against the real
+direct-handoff summary. The companion stress validator covers both auth and
+template generation without claiming a physical pass.
+
+Generalizable rule: if a dashboard owns the evidence workflow, it should also
+prepare and validate human signoff artifacts. Keep the actual physical gate
+human-owned, but make the artifact creation, receipt, and audit path
+operator-visible.
+
 ## Unity Must Own Panel-Focus Media Pause
 
 Problem: launching a 2D questionnaire or tracer over a Unity Quest app does not

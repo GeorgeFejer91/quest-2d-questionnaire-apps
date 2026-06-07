@@ -376,6 +376,14 @@ Use `Audit readiness` after a sequence or stress run to ask the companion for
 the Universal Handoff requirement matrix. It reports proven offline gates,
 remaining physical headset gates, and an auditable summary path that can be
 included in an evidence bundle.
+Use `Prepare manual signoff` to keep the final headset observation gate inside
+the same GUI workflow. With no operator JSON path it asks the local companion
+to write headset instructions and `operator-signoff-template.json` under
+`artifacts\direct-handoff-manual-signoff\`. After a supervised product-path
+run, fill that template as `operator-signoff.json`, enter that path in the
+runner, and click the same button to validate it. A prepared template is still
+pending evidence; only a filled signoff tied to a real non-dry-run direct
+handoff summary can close the manual gate.
 
 Run the full local ladder from builder smoke test through generated APK and
 Android render preview:

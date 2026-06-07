@@ -79,6 +79,11 @@ Use absolute dates.
   generated questionnaire APK may be pinned to one Unity package/activity via
   builder config, but reusable Android source should not hard-code a single
   Unity target.
+- Exposed the structured manual headset signoff helper through the local
+  companion and GUI as `/api/direct-handoff-manual-signoff` and `Prepare
+  manual signoff`, returning a `manualSignoffReceipt`. The companion stress
+  validator now checks auth and template generation while keeping the actual
+  physical signoff pending until a filled operator JSON is validated.
 
 ## 2026-06-07
 

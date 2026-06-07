@@ -35,6 +35,7 @@ $RequiredCompanionCapabilities = @(
     'direct-handoff-preflight',
     '2d-first-launcher-preflight',
     'handoff-readiness-audit',
+    'direct-handoff-manual-signoff',
     'runner-job-receipts'
 )
 
@@ -582,6 +583,7 @@ try {
     $unauthorizedDirectHandoffStatus = $null
     $unauthorizedTwoDFirstLauncherStatus = $null
     $unauthorizedHandoffReadinessAuditStatus = $null
+    $unauthorizedManualSignoffStatus = $null
     $unauthorizedArtifactPreviewStatus = $null
     try {
         Invoke-Json -Method GET -Uri "$baseUrl/api/dependency-status" | Out-Null
@@ -651,6 +653,16 @@ try {
         $unauthorizedHandoffReadinessAuditStatus = Get-HttpErrorStatusCode -Exception $_.Exception
         if ($unauthorizedHandoffReadinessAuditStatus -ne 401) {
             throw "Unauthorized handoff-readiness-audit expected 401, got $unauthorizedHandoffReadinessAuditStatus"
+        }
+    }
+    try {
+        Invoke-Json -Method POST -Uri "$baseUrl/api/direct-handoff-manual-signoff" -Body @{} | Out-Null
+        throw "Unauthorized direct-handoff-manual-signoff call unexpectedly succeeded."
+    }
+    catch {
+        $unauthorizedManualSignoffStatus = Get-HttpErrorStatusCode -Exception $_.Exception
+        if ($unauthorizedManualSignoffStatus -ne 401) {
+            throw "Unauthorized direct-handoff-manual-signoff expected 401, got $unauthorizedManualSignoffStatus"
         }
     }
     try {
@@ -916,6 +928,17 @@ try {
     }
     else {
         Add-Progress '2d-first-launcher-skipped=apk-build-skipped'
+    }
+
+    Write-Host "== Direct handoff manual signoff template through companion =="
+    $manualSignoff = Invoke-Json -Method POST -Uri "$baseUrl/api/direct-handoff-manual-signoff" -Headers $headers -Body @{} -TimeoutSec 120
+    Add-Progress "manual-signoff-template-complete status=$($manualSignoff.manualSignoffStatus) summary=$($manualSignoff.summaryPath)"
+    if ($manualSignoff.status -ne 'ok' -or [string]::IsNullOrWhiteSpace([string]$manualSignoff.summaryPath) -or -not (Test-Path -LiteralPath $manualSignoff.summaryPath)) {
+        throw "Companion direct-handoff-manual-signoff did not produce a usable summary."
+    }
+    $manualSignoffReceipt = if ($manualSignoff.PSObject.Properties.Name -contains 'manualSignoffReceipt') { $manualSignoff.manualSignoffReceipt } else { $null }
+    if ($null -eq $manualSignoffReceipt -or [string]$manualSignoffReceipt.kind -ne 'direct-handoff-manual-signoff' -or -not [bool]$manualSignoffReceipt.checks.instructionsWritten -or -not [bool]$manualSignoffReceipt.checks.operatorTemplateWritten -or -not [bool]$manualSignoffReceipt.physicalQuestProductPathPending) {
+        throw "Companion direct-handoff-manual-signoff did not return a valid pending manual signoff receipt."
     }
 
     Write-Host "== Save config through companion =="
@@ -1213,6 +1236,13 @@ try {
         [bool]$directHandoffClampReceipt.checks.dryRunContractPass -and
         ([bool]$SkipApkBuild -or ($twoDFirstLauncherReceipt -and [bool]$twoDFirstLauncherReceipt.checks.dryRunContractPass))
     )
+    $manualSignoffTemplatePass = (
+        $manualSignoffReceipt -and
+        [string]$manualSignoffReceipt.kind -eq 'direct-handoff-manual-signoff' -and
+        [bool]$manualSignoffReceipt.checks.instructionsWritten -and
+        [bool]$manualSignoffReceipt.checks.operatorTemplateWritten -and
+        [bool]$manualSignoffReceipt.physicalQuestProductPathPending
+    )
     $offlineWorkflowReady = (
         $authorizationPass -and
         $hostedBuilderValidationPass -and
@@ -1233,6 +1263,7 @@ try {
         $directHandoffDryRunGatePass -and
         $directHandoffClampGatePass -and
         $twoDFirstLauncherDryRunGatePass -and
+        $manualSignoffTemplatePass -and
         $workflowClampGatePass
     )
     $skippedEvidence = [ordered]@{
@@ -1257,6 +1288,7 @@ try {
         $directHandoffDryRunGatePass -and
         $directHandoffClampGatePass -and
         $twoDFirstLauncherDryRunGatePass -and
+        $manualSignoffTemplatePass -and
         $workflowClampGatePass
     )
     $receiptStatus = 'fail'
@@ -1283,6 +1315,7 @@ try {
             directHandoffDryRunContractPass = $directHandoffDryRunGatePass
             directHandoffClampContractPass = $directHandoffClampGatePass
             twoDFirstLauncherDryRunContractPass = $twoDFirstLauncherDryRunGatePass
+            manualSignoffTemplatePass = $manualSignoffTemplatePass
             saveAndValidateConfigPass = $saveValidatePass
             generateApkHashPass = $generatedApkHashPass
             generationReceiptInspectable = ($generateReceipt -and ([string]$generateReceipt.status -eq 'pass' -or [string]$generateReceipt.status -eq 'partial-skipped-evidence'))
@@ -1316,6 +1349,8 @@ try {
             evidenceBundle = $evidenceBundle
             directHandoffSummaryPath = $directHandoff.summaryPath
             twoDFirstLauncherSummaryPath = $twoDFirstLauncher.summaryPath
+            manualSignoffSummaryPath = $manualSignoff.summaryPath
+            manualSignoffReceipt = $manualSignoffReceipt
             workflowClampSummaryPath = $workflowClamp.summaryPath
             workflowClampReceipt = $workflowClampReceipt
             runnerJobReceipts = [ordered]@{
@@ -1357,6 +1392,7 @@ try {
             unauthorizedDirectHandoffStatus = $unauthorizedDirectHandoffStatus
             unauthorizedTwoDFirstLauncherStatus = $unauthorizedTwoDFirstLauncherStatus
             unauthorizedHandoffReadinessAuditStatus = $unauthorizedHandoffReadinessAuditStatus
+            unauthorizedManualSignoffStatus = $unauthorizedManualSignoffStatus
             unauthorizedArtifactPreviewStatus = $unauthorizedArtifactPreviewStatus
             unauthorizedEvidenceBundleStatus = $unauthorizedEvidenceBundleStatus
         }
@@ -1428,6 +1464,12 @@ try {
             generationReceipt = $twoDFirstGenerateReceipt
             decisionGate = $twoDFirstLauncher.decisionGate
             jobReceipt = $twoDFirstLauncherReceipt
+        }
+        manualSignoffTemplate = [ordered]@{
+            status = $manualSignoff.manualSignoffStatus
+            runId = $manualSignoff.runId
+            summaryPath = $manualSignoff.summaryPath
+            manualSignoffReceipt = $manualSignoffReceipt
         }
         directHandoffClampDryRun = [ordered]@{
             jobStatus = $directHandoffClamp.jobStatus

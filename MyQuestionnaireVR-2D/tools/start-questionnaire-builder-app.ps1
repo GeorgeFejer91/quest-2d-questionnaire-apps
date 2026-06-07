@@ -1171,6 +1171,58 @@ function New-TwoDFirstLauncherJobReceipt {
     }
 }
 
+function New-DirectHandoffManualSignoffReceipt {
+    param(
+        [object]$Summary,
+        [string]$SummaryPath,
+        [int]$ExitCode
+    )
+
+    $evidence = Get-JsonProperty -Object $Summary -Name 'evidence'
+    $operator = Get-JsonProperty -Object $Summary -Name 'operator'
+    $directHandoff = Get-JsonProperty -Object $Summary -Name 'directHandoff'
+    $missing = @(Get-JsonProperty -Object $Summary -Name 'missing' -Default @())
+    $issues = @(Get-JsonProperty -Object $Summary -Name 'issues' -Default @())
+    $status = if ($Summary) { [string](Get-JsonProperty -Object $Summary -Name 'status' -Default 'unknown') } else { 'missing-summary' }
+    $instructionsPath = [string](Get-JsonProperty -Object $evidence -Name 'instructionsPath' -Default '')
+    $templatePath = [string](Get-JsonProperty -Object $evidence -Name 'operatorSignoffTemplatePath' -Default '')
+    $operatorSignoffPath = [string](Get-JsonProperty -Object $evidence -Name 'operatorSignoffPath' -Default '')
+    $directHandoffSummaryPath = [string](Get-JsonProperty -Object $evidence -Name 'directHandoffSummaryPath' -Default '')
+
+    return [ordered]@{
+        schemaVersion = 'mq.builder_manual_signoff.receipt.v1'
+        kind = 'direct-handoff-manual-signoff'
+        status = $status
+        exitCode = $ExitCode
+        physicalQuestProductPathPending = ($status -ne 'pass')
+        checks = [ordered]@{
+            summaryWritten = ($null -ne $Summary -and (Test-Path -LiteralPath $SummaryPath))
+            instructionsWritten = (-not [string]::IsNullOrWhiteSpace($instructionsPath) -and (Test-Path -LiteralPath $instructionsPath))
+            operatorTemplateWritten = (-not [string]::IsNullOrWhiteSpace($templatePath) -and (Test-Path -LiteralPath $templatePath))
+            operatorSignoffProvided = (-not [string]::IsNullOrWhiteSpace($operatorSignoffPath) -and (Test-Path -LiteralPath $operatorSignoffPath))
+            operatorNamePresent = -not [string]::IsNullOrWhiteSpace([string](Get-JsonProperty -Object $operator -Name 'operatorName' -Default ''))
+            signedAtUtcPresent = -not [string]::IsNullOrWhiteSpace([string](Get-JsonProperty -Object $operator -Name 'signedAtUtc' -Default ''))
+            directHandoffProductPathPass = [bool](Get-JsonProperty -Object $directHandoff -Name 'passesProductPathEvidence' -Default $false)
+            requiredObservationsComplete = ($missing.Count -eq 0)
+            noValidationIssues = ($issues.Count -eq 0)
+        }
+        counts = [ordered]@{
+            missing = $missing.Count
+            issues = $issues.Count
+        }
+        artifacts = [ordered]@{
+            summaryPath = $SummaryPath
+            instructionsPath = $instructionsPath
+            operatorSignoffTemplatePath = $templatePath
+            operatorSignoffPath = $operatorSignoffPath
+            directHandoffSummaryPath = $directHandoffSummaryPath
+        }
+        missing = $missing
+        issues = $issues
+        proofBoundary = 'This prepares or validates the structured manual headset signoff. A pending template is not a physical pass; production approval still requires a filled operator signoff tied to a real non-dry-run product-path summary.'
+    }
+}
+
 function New-WorkflowValidationArguments {
     param(
         [object]$Payload,
@@ -2323,6 +2375,55 @@ function Invoke-HandoffReadinessAudit {
     }
 }
 
+function Invoke-DirectHandoffManualSignoff {
+    param([object]$Payload)
+
+    $runId = 'builder-direct-handoff-manual-signoff-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    $script = Join-Path $ProjectPath 'tools\new-direct-handoff-manual-signoff.ps1'
+    $summaryPath = Join-Path $ProjectPath ("artifacts\direct-handoff-manual-signoff\$runId\direct-handoff-manual-signoff-summary.json")
+    $arguments = @(
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        $script,
+        '-ProjectPath',
+        $ProjectPath,
+        '-RunId',
+        $runId
+    )
+    if ($Payload.PSObject.Properties.Name -contains 'directHandoffSummaryPath' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.directHandoffSummaryPath)) {
+        $directHandoffSummaryPath = Resolve-EvidenceBundleSummaryPath -Path ([string]$Payload.directHandoffSummaryPath)
+        $arguments += @('-DirectHandoffSummaryPath', $directHandoffSummaryPath)
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'operatorSignoffPath' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.operatorSignoffPath)) {
+        $operatorSignoffPath = Resolve-EvidenceBundleSummaryPath -Path ([string]$Payload.operatorSignoffPath)
+        $arguments += @('-OperatorSignoffPath', $operatorSignoffPath)
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'questSerial' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.questSerial)) {
+        $arguments += @('-QuestSerial', [string]$Payload.questSerial)
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'requirePass' -and [bool]$Payload.requirePass) {
+        $arguments += '-RequirePass'
+    }
+
+    $result = Invoke-ProjectPowerShell -Arguments $arguments
+    $summary = Read-JsonFileIfExists -Path $summaryPath
+    $manualStatus = if ($summary) { [string]$summary.status } elseif ($result.exitCode -eq 0) { 'missing-summary' } else { 'error' }
+    $receipt = New-DirectHandoffManualSignoffReceipt -Summary $summary -SummaryPath $summaryPath -ExitCode $result.exitCode
+
+    return [ordered]@{
+        status = if ($summary) { 'ok' } else { 'error' }
+        manualSignoffStatus = $manualStatus
+        runId = $runId
+        exitCode = $result.exitCode
+        summaryPath = $summaryPath
+        manualSignoffReceipt = $receipt
+        summary = $summary
+        output = $result.output
+    }
+}
+
 function New-StatusPayload {
     param([bool]$Authorized)
 
@@ -2362,6 +2463,7 @@ function New-StatusPayload {
             '2d-first-launcher-preflight',
             '2d-first-launcher-job-status',
             'handoff-readiness-audit',
+            'direct-handoff-manual-signoff',
             'runner-job-receipts',
             'dependency-status',
             'install-dependencies'
@@ -2379,6 +2481,7 @@ function New-StatusPayload {
             directHandoff = Join-Path $ProjectPath 'tools\quest-direct-handoff-validate.ps1'
             twoDFirstLauncher = Join-Path $ProjectPath 'tools\quest-2d-first-launcher-validate.ps1'
             handoffReadinessAudit = Join-Path $ProjectPath 'tools\audit-universal-handoff-readiness.ps1'
+            directHandoffManualSignoff = Join-Path $ProjectPath 'tools\new-direct-handoff-manual-signoff.ps1'
         }
     }
     return $payload
@@ -2580,6 +2683,14 @@ function Handle-Request {
         Assert-OriginAndToken -Request $request
         $payload = Receive-JsonPayload -Request $request
         $result = Invoke-HandoffReadinessAudit -Payload $payload
+        Write-JsonResponse -Context $Context -StatusCode ($(if ($result.status -eq 'ok') { 200 } else { 500 })) -Value $result
+        return
+    }
+
+    if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/direct-handoff-manual-signoff') {
+        Assert-OriginAndToken -Request $request
+        $payload = Receive-JsonPayload -Request $request
+        $result = Invoke-DirectHandoffManualSignoff -Payload $payload
         Write-JsonResponse -Context $Context -StatusCode ($(if ($result.status -eq 'ok') { 200 } else { 500 })) -Value $result
         return
     }

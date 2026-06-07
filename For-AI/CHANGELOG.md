@@ -59,6 +59,11 @@ Use absolute dates.
   agreement, launches Unity once, records focus/logcat/power/export evidence,
   and classifies asleep-headset or Horizon controller-required launch checks as
   `blocked`.
+- Updated the direct Quest handoff validator with a pre-launch readiness gate:
+  use `-WaitForReadySeconds 30` for supervised runs. If the headset is asleep
+  or Horizon is already focused on the controller-required launch dialog, the
+  trial is `blocked` with `initialUnityLaunchAttempted=false` and Unity is not
+  launched.
 - Rebuilt the local `AweGreatDictatorUnity` demo APK after fixing the custom
   Android manifest path; the earlier APK launched Unity's stock Activity even
   though the trigger catalog named the custom return Activity.

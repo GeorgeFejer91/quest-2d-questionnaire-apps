@@ -14,12 +14,15 @@ param(
     [int]$TrialCount = 1,
     [int]$WaitSeconds = 0,
     [int]$FocusPollMilliseconds = 750,
+    [int]$WaitForReadySeconds = 0,
+    [int]$ReadinessPollSeconds = 2,
     [switch]$SkipInstall,
     [switch]$NoAutoReplay,
     [switch]$AutoTraceForValidation,
     [switch]$FastVideoForValidation,
     [int]$ValidationVideoEndAfterSeconds = 3,
     [switch]$AllowActivityMismatch,
+    [switch]$AllowLaunchWhenNotReady,
     [switch]$DryRun
 )
 
@@ -207,6 +210,117 @@ function Get-FocusLines {
     })
 }
 
+function New-EmptyMarkerCounts {
+    return [ordered]@{
+        fatalLogs = 0
+        controllerRequiredDialogs = 0
+        unityValidationAutoTrace = 0
+        unityValidationFastVideo = 0
+        unityVideoPause = 0
+        unityVideoPrepare = 0
+        unityVideoPlay = 0
+        unityVideoResume = 0
+        unityVideoLoopPoint = 0
+        unityComplete = 0
+        questionnaireReplayStart = 0
+        questionnaireExportComplete = 0
+        questionnairePendingIntentReturn = 0
+        temporalTracerRunStart = 0
+        temporalTracerExportComplete = 0
+        temporalTracerPendingIntentReturn = 0
+    }
+}
+
+function Get-QuestReadinessBlockedReasons {
+    param([object]$Readiness)
+    $reasons = New-Object 'System.Collections.Generic.List[string]'
+    if (-not $Readiness.ready) {
+        $reasons.Add('headset-not-ready-before-product-path') | Out-Null
+    }
+    if ($Readiness.powerExitCode -ne 0 -or $Readiness.windowExitCode -ne 0) {
+        $reasons.Add('adb-readiness-probe-failed') | Out-Null
+    }
+    if ($Readiness.headsetAsleep -or $Readiness.displayOff) {
+        $reasons.Add('headset-asleep-or-display-off-before-product-path') | Out-Null
+    }
+    if ($Readiness.launchCheckDialogFocused) {
+        $reasons.Add('horizon-launch-check-dialog-focused-before-product-path') | Out-Null
+    }
+    return @($reasons)
+}
+
+function Get-QuestReadiness {
+    param([string]$TrialDir, [string]$Prefix)
+    $powerPath = Join-Path $TrialDir "$Prefix-power.txt"
+    $windowPath = Join-Path $TrialDir "$Prefix-window.txt"
+    $power = Invoke-AdbText -Arguments @('shell', 'dumpsys', 'power') -OutputPath $powerPath
+    $window = Invoke-AdbText -Arguments @('shell', 'dumpsys', 'window') -OutputPath $windowPath
+    $powerText = $power.Text
+    $windowText = $window.Text
+    $wakefulness = if ($powerText -match 'mWakefulness=([^\r\n]+)') { $Matches[1].Trim() } else { "" }
+    $interactive = if ($powerText -match 'mInteractive=([^\r\n]+)') { $Matches[1].Trim() } else { "" }
+    $displayState = if ($powerText -match 'Display Power: state=([^\r\n]+)') { $Matches[1].Trim() } else { "" }
+    $focusLines = Get-FocusLines -Text $windowText
+    $focusText = $focusLines -join "`n"
+    $windowSleeping = $windowText -match 'isSleeping=true'
+    $displayOff = $displayState -match '^OFF\b' -or $interactive -eq 'false'
+    $headsetAsleep = $wakefulness -match 'Asleep|Dozing|Dreaming' -or $windowSleeping
+    $launchCheckDialogFocused = $focusText -match 'LaunchCheckControllerRequiredDialogActivity' -or $windowText -match 'LaunchCheckControllerRequiredDialogActivity'
+    $ready = $power.ExitCode -eq 0 -and
+        $window.ExitCode -eq 0 -and
+        -not $headsetAsleep -and
+        -not $displayOff -and
+        -not $launchCheckDialogFocused
+
+    return [ordered]@{
+        ready = $ready
+        timestampUtc = (Get-Date).ToUniversalTime().ToString('o')
+        powerExitCode = $power.ExitCode
+        windowExitCode = $window.ExitCode
+        wakefulness = $wakefulness
+        interactive = $interactive
+        displayState = $displayState
+        headsetAsleep = $headsetAsleep
+        displayOff = $displayOff
+        windowSleeping = $windowSleeping
+        launchCheckDialogFocused = $launchCheckDialogFocused
+        focusedPackage = Get-FocusPackage -Text $windowText
+        focusLines = $focusLines
+        power = $powerPath
+        window = $windowPath
+    }
+}
+
+function Wait-QuestReadiness {
+    param([string]$TrialDir)
+    $samplesJsonl = Join-Path $TrialDir 'readiness-samples.jsonl'
+    "" | Set-Content -LiteralPath $samplesJsonl -Encoding UTF8
+    $sampleCount = 0
+    $deadline = (Get-Date).AddSeconds([Math]::Max(0, $WaitForReadySeconds))
+    $last = $null
+    while ($true) {
+        $sampleCount++
+        $last = Get-QuestReadiness -TrialDir $TrialDir -Prefix ("readiness-{0:0000}" -f $sampleCount)
+        ($last | ConvertTo-Json -Compress -Depth 8) | Add-Content -LiteralPath $samplesJsonl -Encoding UTF8
+        if ($last.ready) {
+            break
+        }
+        if ($WaitForReadySeconds -le 0 -or (Get-Date) -ge $deadline) {
+            break
+        }
+        Start-Sleep -Seconds ([Math]::Max(1, $ReadinessPollSeconds))
+    }
+
+    return [ordered]@{
+        ready = [bool]$last.ready
+        sampleCount = $sampleCount
+        waitForReadySeconds = $WaitForReadySeconds
+        pollSeconds = [Math]::Max(1, $ReadinessPollSeconds)
+        samplesJsonl = $samplesJsonl
+        last = $last
+    }
+}
+
 function Pull-DeviceTree {
     param(
         [string]$DevicePath,
@@ -343,6 +457,9 @@ if ($DryRun) {
             fastVideoForValidation = [bool]$FastVideoForValidation
             autoTraceForValidation = [bool]$AutoTraceForValidation
             noAutoReplay = [bool]$NoAutoReplay
+            waitForReadySeconds = $WaitForReadySeconds
+            readinessPollSeconds = [Math]::Max(1, $ReadinessPollSeconds)
+            allowLaunchWhenNotReady = [bool]$AllowLaunchWhenNotReady
         }
         completedAt = (Get-Date).ToUniversalTime().ToString('o')
     }
@@ -374,6 +491,66 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
     $trialDir = Join-Path $OutputRoot $trialId
     New-Item -ItemType Directory -Force -Path $trialDir | Out-Null
     $participantName = "QuestHandoffP{0:00}" -f $trial
+    $readiness = Wait-QuestReadiness -TrialDir $trialDir
+    $readinessBlockedReasons = Get-QuestReadinessBlockedReasons -Readiness $readiness.last
+    if (-not $readiness.ready -and -not $AllowLaunchWhenNotReady) {
+        $trialSummary = [ordered]@{
+            trial = $trial
+            status = 'blocked'
+            trialDir = $trialDir
+            participantName = $participantName
+            launchExitCode = $null
+            productPath = [ordered]@{
+                blockedBeforeProductPath = $true
+                initialUnityLaunchAttempted = $false
+                initialUnityLaunchOnly = $false
+                shellDrivenForegroundSwitchAfterInitialLaunch = $false
+                noAdbForceStopAfterInitialLaunch = $true
+                noAdbAmStartAfterInitialLaunch = $true
+                autoReplayMarkerUsed = $false
+                autoTraceForValidation = [bool]$AutoTraceForValidation
+                fastVideoForValidation = [bool]$FastVideoForValidation
+            }
+            readiness = $readiness
+            markerCounts = (New-EmptyMarkerCounts)
+            blockedReasons = @($readinessBlockedReasons)
+            power = [ordered]@{
+                headsetAsleep = [bool]$readiness.last.headsetAsleep
+                before = $readiness.last.power
+                final = $readiness.last.power
+                beforeWakefulness = $readiness.last.wakefulness
+                finalWakefulness = $readiness.last.wakefulness
+            }
+            focus = [ordered]@{
+                observedPackages = @()
+                focusSequenceOk = $false
+                finalUnityFocused = $false
+                sampleCount = 0
+                focusSamplesJsonl = $null
+            }
+            exports = [ordered]@{
+                questionnaire = [ordered]@{
+                    jsonCount = 0
+                    csvCount = 0
+                    pull = $null
+                }
+                temporalTracer = [ordered]@{
+                    jsonCount = 0
+                    csvCount = 0
+                    svgCount = 0
+                    pull = $null
+                }
+            }
+            evidence = [ordered]@{
+                readinessSamples = $readiness.samplesJsonl
+                preProductPathPower = $readiness.last.power
+                preProductPathWindow = $readiness.last.window
+            }
+        }
+        Write-Json -Value $trialSummary -Path (Join-Path $trialDir 'trial-summary.json') -Depth 16
+        $trialSummaries.Add($trialSummary) | Out-Null
+        continue
+    }
 
     Invoke-AdbText -Arguments @('shell', 'am', 'force-stop', $questionnairePackage) -OutputPath (Join-Path $trialDir 'setup-force-stop-questionnaire.txt') | Out-Null
     Invoke-AdbText -Arguments @('shell', 'am', 'force-stop', $temporalTracerPackage) -OutputPath (Join-Path $trialDir 'setup-force-stop-temporal-tracer.txt') | Out-Null
@@ -524,6 +701,8 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
         participantName = $participantName
         launchExitCode = $launch.ExitCode
         productPath = [ordered]@{
+            blockedBeforeProductPath = $false
+            initialUnityLaunchAttempted = $true
             initialUnityLaunchOnly = $true
             shellDrivenForegroundSwitchAfterInitialLaunch = $false
             noAdbForceStopAfterInitialLaunch = $true
@@ -532,6 +711,7 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
             autoTraceForValidation = [bool]$AutoTraceForValidation
             fastVideoForValidation = [bool]$FastVideoForValidation
         }
+        readiness = $readiness
         markerCounts = $markerCounts
         blockedReasons = @($blockedReasons)
         power = [ordered]@{
@@ -597,6 +777,9 @@ $summary = [ordered]@{
     failCount = $failCount
     waitSeconds = $WaitSeconds
     focusPollMilliseconds = $FocusPollMilliseconds
+    waitForReadySeconds = $WaitForReadySeconds
+    readinessPollSeconds = [Math]::Max(1, $ReadinessPollSeconds)
+    allowLaunchWhenNotReady = [bool]$AllowLaunchWhenNotReady
     preflight = $preflightSummary
     trials = $trialArray
     decisionGate = [ordered]@{

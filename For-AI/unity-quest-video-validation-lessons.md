@@ -93,3 +93,8 @@ On the 2026-06-07 Quest 3 run, `dumpsys power` reported
 dialog as the resumed Activity. Treat this as an unattended headset blocker:
 the next valid trial must begin with the headset awake/worn, then launch Unity
 once and avoid any ADB foreground switch after that launch.
+
+`quest-direct-handoff-validate.ps1` now has a pre-launch readiness gate. Use
+`-WaitForReadySeconds 30` for supervised runs; if the headset remains asleep or
+the Horizon launch-check dialog is already focused, the script records
+`blocked` with `initialUnityLaunchAttempted=false` instead of starting Unity.

@@ -110,9 +110,11 @@ ADB-launched immersive app with
 `LaunchCheckControllerRequiredDialogActivity` before Unity starts. No Unity,
 questionnaire, or tracer logs will appear because the product path never begins.
 
-Solution: classify that run as `blocked`, not failed. Record `dumpsys power`,
-`dumpsys window`, logcat, and the blocked reasons. Resume the test only with an
-awake/worn headset or an operator who can clear the system launch gate.
+Solution: check `dumpsys power` and `dumpsys window` before the product-path
+launch. If the headset is not ready, classify the trial as `blocked`, record
+`initialUnityLaunchAttempted=false`, and do not force-stop or launch the apps
+for that trial. Resume the test only with an awake/worn headset or an operator
+who can clear the system launch gate.
 
 Generalizable rule: for XR-to-panel handoff trials, prove the APK contract and
 headset readiness before interpreting missing panel exports as a handoff bug.

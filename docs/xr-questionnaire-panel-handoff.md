@@ -257,12 +257,33 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools
 
 The audit reads the companion receipt and direct handoff trial summaries,
 emits one requirement-by-requirement JSON matrix, and exits successfully when
-all offline requirements are proven while the only remaining items are the
-physical 10 clean Quest product-path trials and manual headset pass. It also
-promotes the demo Unity APK and public example trigger catalog as their own
-evidence row, so the "starting with a demo Unity" part of the workflow is not
-left implicit. Add `-RequireComplete` when those physical artifacts should
+all offline requirements are proven while the only remaining items are physical
+Quest gates. It promotes the demo Unity APK, public example trigger catalog,
+2D-first builder-to-Quest receipt, and 2D-first launcher preflight so the
+"starting with a demo Unity" and "starting from the questionnaire APK" paths
+are not left implicit. Add `-RequireComplete` when the live 2D-first launcher
+trial, 10 clean Quest direct-handoff trials, and manual headset signoff should
 already exist.
+
+For the participant-facing 2D-first front door, first run a no-headset
+preflight:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\quest-2d-first-launcher-validate.ps1 -DryRun
+```
+
+With an awake/worn headset, run the live gate:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\quest-2d-first-launcher-validate.ps1 -Serial <quest-serial> -WaitForReadySeconds 30
+```
+
+This launches the questionnaire APK as the first product-path app, uses command
+replay to complete demographics, verifies exports and `finishBehavior=openNext`,
+then observes Unity focus without ADB foreground switching after the initial
+questionnaire launch. It is separate from
+`quest-direct-handoff-validate.ps1`, which proves the later Unity-triggered
+questionnaire/tracer returns.
 
 The manual headset pass must be a structured signoff artifact, not just a
 conversation note. Generate the instructions and template with:

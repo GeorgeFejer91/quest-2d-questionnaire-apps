@@ -870,6 +870,30 @@ Generalizable rule: when a workflow gains a supported variant, teach the main
 readiness audit to surface the variant's evidence. Otherwise the variant
 becomes real in code but invisible in operations.
 
+## 2D-First Front Doors Need Their Own Physical Gate
+
+Problem: the direct handoff validator proves the Unity-first path: Unity emits
+trigger 1, the questionnaire returns, Unity resumes video, trigger 2 opens the
+tracer, and Unity receives completion. After adopting the questionnaire APK as
+the participant-facing front door, that evidence no longer proves the first
+thing the participant actually does: launch the 2D APK, finish demographics,
+and enter Unity through `openNext`.
+
+Solution: add `quest-2d-first-launcher-validate.ps1`. Its dry-run preflight
+inspects the generated questionnaire APK and Unity APK, including packaged
+`chainDefaults.startMode=questionnaireFirst`, `questionnaireMode=demographics`,
+`finishBehavior=openNext`, Unity package/activity, trigger catalog, and
+hand-tracking metadata. Its live mode launches the questionnaire APK first,
+uses command replay to complete demographics, verifies exports and
+`MYQUESTIONNAIRE_CHAIN_RETURN finishBehavior=openNext`, and observes Unity
+focus without shell foreground switching after the initial questionnaire
+launch. The universal readiness audit now records this as a separate physical
+pending gate.
+
+Generalizable rule: when the front door changes, add a front-door-specific
+product-path gate. Do not use a later return-path validator as proof that the
+participant's first launch path works.
+
 ## Mid-Run Headset Sleep Is A Blocker, Not A Strategy Failure
 
 Problem: a direct handoff trial can launch Unity, return from the first

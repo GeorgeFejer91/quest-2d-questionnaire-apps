@@ -232,6 +232,7 @@ final class QuestionnaireData {
 
     static final class RuntimeChainDefaults {
         String finishBehavior = "staySaved";
+        String startMode = "unityFirst";
         String callerPackage = "";
         String callerActivity = "";
         String nextPackage = "";
@@ -246,6 +247,7 @@ final class QuestionnaireData {
         static RuntimeChainDefaults fromJson(JSONObject json) {
             RuntimeChainDefaults defaults = new RuntimeChainDefaults();
             defaults.finishBehavior = json.optString("finishBehavior", defaults.finishBehavior);
+            defaults.startMode = json.optString("startMode", defaults.startMode);
             defaults.callerPackage = json.optString("callerPackage", defaults.callerPackage);
             defaults.callerActivity = json.optString("callerActivity", defaults.callerActivity);
             defaults.nextPackage = json.optString("nextPackage", defaults.nextPackage);

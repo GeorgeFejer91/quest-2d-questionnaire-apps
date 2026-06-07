@@ -58,6 +58,13 @@ Use absolute dates.
   questionnaire-first builder-to-Quest receipt as a first-class 2D-first
   launcher evidence row, leaving only the real headset trial/signoff gates
   pending when offline APK, render, and dry-run preflight proof is present.
+- Added `quest-2d-first-launcher-validate.ps1` and taught the readiness audit
+  to track the participant-facing 2D-first front door as its own physical gate:
+  dry-run APK/config preflight can pass offline, but a real Quest trial must
+  still prove questionnaire-first launch, demographics export, and Unity focus.
+- Preserved `chainDefaults.startMode` in the packaged runtime config so
+  generated questionnaire APKs remain self-describing evidence for
+  `questionnaireFirst` launcher mode.
 
 ## 2026-06-07
 

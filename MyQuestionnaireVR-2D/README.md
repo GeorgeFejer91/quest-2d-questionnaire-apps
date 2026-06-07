@@ -123,6 +123,27 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-builder-to-
   -SkipInstall
 ```
 
+After that APK exists, preflight the participant-facing 2D-first front door
+without touching the headset:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-2d-first-launcher-validate.ps1 `
+  -DryRun
+```
+
+When an awake/worn headset is available, run the live front-door gate:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-2d-first-launcher-validate.ps1 `
+  -Serial <quest-serial> `
+  -WaitForReadySeconds 30
+```
+
+The live validator launches the questionnaire APK first, command-replays the
+demographics block, verifies the questionnaire export and `openNext` handoff,
+and observes Unity focus. After the initial questionnaire launch, it does not
+use ADB to foreground Unity.
+
 Generate a named APK from any config:
 
 ```powershell
@@ -243,8 +264,9 @@ It includes the hosted GUI, local companion contract, demo Unity APK/catalog,
 generated questionnaire APK, 2D-first launcher APK/render/preflight evidence,
 evidence bundle, direct PendingIntent preflight, and real Quest handoff
 evidence.
-Use `-RequireComplete` only when the 10 clean real Quest trials and manual
-headset pass are expected to be present; otherwise a
+Use `-RequireComplete` only when the live 2D-first launcher trial, 10 clean
+real Quest direct-handoff trials, and manual headset pass are expected to be
+present; otherwise a
 `pass-with-physical-pending` status is the correct overnight state.
 
 Create the structured manual headset signoff artifact after a supervised

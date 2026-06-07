@@ -67,6 +67,7 @@ public final class ChainLaunchContractTest {
         QuestionnaireData.RuntimeConfig config = QuestionnaireData.RuntimeConfig.fromJson(
             "{\"schemaVersion\":\"my-questionnaire-vr.config.v1\",\"chainDefaults\":{"
                 + "\"finishBehavior\":\"openNext\","
+                + "\"startMode\":\"questionnaireFirst\","
                 + "\"nextPackage\":\"org.example.unity\","
                 + "\"nextActivity\":\"org.example.unity.UnityPlayerActivity\","
                 + "\"questionnaireMode\":\"demographics\","
@@ -80,6 +81,7 @@ public final class ChainLaunchContractTest {
         Intent launcher = new Intent(Intent.ACTION_MAIN);
         QuestionnaireLaunchContext context = QuestionnaireLaunchContext.fromIntent(launcher, config);
 
+        assertEquals("questionnaireFirst", config.chainDefaults.startMode);
         assertFalse(context.chained);
         assertTrue(context.isDemographicsOnly());
         assertTrue(context.shouldOpenNext());

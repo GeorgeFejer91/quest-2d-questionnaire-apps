@@ -195,6 +195,7 @@ $runtimeConfig = [ordered]@{
     chainDefaults = if ($config.PSObject.Properties.Name -contains 'chainDefaults' -and $null -ne $config.chainDefaults) {
         [ordered]@{
             finishBehavior = if ($config.chainDefaults.finishBehavior) { $config.chainDefaults.finishBehavior } else { 'staySaved' }
+            startMode = if ($config.chainDefaults.startMode) { $config.chainDefaults.startMode } else { 'unityFirst' }
             callerPackage = if ($config.chainDefaults.callerPackage) { $config.chainDefaults.callerPackage } else { '' }
             callerActivity = if ($config.chainDefaults.callerActivity) { $config.chainDefaults.callerActivity } else { '' }
             nextPackage = if ($config.chainDefaults.nextPackage) { $config.chainDefaults.nextPackage } else { '' }
@@ -209,6 +210,7 @@ $runtimeConfig = [ordered]@{
     } else {
         [ordered]@{
             finishBehavior = 'staySaved'
+            startMode = 'unityFirst'
             callerPackage = ''
             callerActivity = ''
             nextPackage = ''

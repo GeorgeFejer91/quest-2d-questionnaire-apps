@@ -4,6 +4,7 @@ param(
     [string]$DirectHandoffRoot = "",
     [string]$ManualSignoffRoot = "",
     [string]$BuilderToQuestRoot = "",
+    [string]$TwoDFirstLauncherRoot = "",
     [string]$OutputDir = "",
     [string]$RunId = "",
     [int]$RequiredCleanQuestTrials = 10,
@@ -121,6 +122,9 @@ if ([string]::IsNullOrWhiteSpace($ManualSignoffRoot)) {
 }
 if ([string]::IsNullOrWhiteSpace($BuilderToQuestRoot)) {
     $BuilderToQuestRoot = Join-Path $projectFull 'artifacts\builder-to-quest-workflow'
+}
+if ([string]::IsNullOrWhiteSpace($TwoDFirstLauncherRoot)) {
+    $TwoDFirstLauncherRoot = Join-Path $projectFull 'artifacts\quest-2d-first-launcher'
 }
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = Join-Path $projectFull ("artifacts\universal-handoff-readiness\" + $RunId)
@@ -262,6 +266,52 @@ $twoDFirstWorkflowPass = (
 )
 $twoDFirstPass = $twoDFirstConfigPass -and $twoDFirstWorkflowPass
 
+$twoDFirstLauncherSummaries = @()
+if (Test-Path -LiteralPath $TwoDFirstLauncherRoot) {
+    $twoDFirstLauncherSummaries = @(
+        Get-ChildItem -LiteralPath $TwoDFirstLauncherRoot -Recurse -Filter 'quest-2d-first-launcher-validation-summary.json' -File -ErrorAction SilentlyContinue |
+            ForEach-Object {
+                $json = Read-JsonIfExists -Path $_.FullName
+                if ($json -and [string]$json.schemaVersion -eq 'mq.quest_2d_first_launcher_validation.v1') {
+                    [PSCustomObject]@{
+                        path = $_.FullName
+                        lastWriteTime = $_.LastWriteTime
+                        json = $json
+                        dryRun = [bool](Get-FirstPropertyValue -Object $json -Names @('dryRun') -Default $false)
+                        status = [string](Get-FirstPropertyValue -Object $json -Names @('status') -Default '')
+                        preflightStatus = [string](Get-FirstPropertyValue -Object $json.decisionGate -Names @('preflightStatus') -Default '')
+                        passCount = [int](Get-FirstPropertyValue -Object $json -Names @('passCount') -Default 0)
+                        blockedCount = [int](Get-FirstPropertyValue -Object $json -Names @('blockedCount') -Default 0)
+                        failCount = [int](Get-FirstPropertyValue -Object $json -Names @('failCount') -Default 0)
+                        attemptedTrialCount = [int](Get-FirstPropertyValue -Object $json -Names @('attemptedTrialCount') -Default 0)
+                        launcherGatePassed = [bool](Get-FirstPropertyValue -Object $json.decisionGate -Names @('twoDFirstLauncherGatePassed') -Default $false)
+                    }
+                }
+            }
+    )
+}
+$latestTwoDFirstLauncherPreflight = @(
+    $twoDFirstLauncherSummaries |
+        Where-Object { [bool]$_.dryRun -and [string]$_.preflightStatus -eq 'pass' -and [string]$_.status -eq 'pass' } |
+        Sort-Object lastWriteTime -Descending |
+        Select-Object -First 1
+)
+$realTwoDFirstLauncherSummaries = @($twoDFirstLauncherSummaries | Where-Object { -not [bool]$_.dryRun })
+$bestRealTwoDFirstLauncher = @(
+    $realTwoDFirstLauncherSummaries |
+        Sort-Object @{ Expression = { $_.passCount }; Descending = $true }, @{ Expression = { $_.lastWriteTime }; Descending = $true } |
+        Select-Object -First 1
+)
+$twoDFirstLauncherPreflightPass = [bool]$latestTwoDFirstLauncherPreflight
+$twoDFirstLauncherPhysicalPass = (
+    $bestRealTwoDFirstLauncher -and
+    ([bool]$bestRealTwoDFirstLauncher.launcherGatePassed -or (
+        [int]$bestRealTwoDFirstLauncher.passCount -ge 1 -and
+        [int]$bestRealTwoDFirstLauncher.blockedCount -eq 0 -and
+        [int]$bestRealTwoDFirstLauncher.failCount -eq 0
+    ))
+)
+
 $directSummaries = @()
 if (Test-Path -LiteralPath $DirectHandoffRoot) {
     $directSummaries = @(
@@ -377,6 +427,13 @@ $requirements += New-Requirement `
     -Evidence $(if ($twoDFirstWorkflow) { "config=$($twoDFirstWorkflow.configPath); status=$($twoDFirstWorkflow.status); configPass=$twoDFirstConfigPass; statusPass=$twoDFirstStatusPass; countsPass=$twoDFirstCountsPass; noRemainingWorkflowIssue=$twoDFirstNoRemainingWorkflowIssue; onlyPhysicalWarning=$twoDFirstOnlyPhysicalWarning; apkPass=$twoDFirstApkPass; renderPass=$twoDFirstRenderPass; preflightPass=$twoDFirstPreflightPass; apk=$($twoDFirstApkEvidence.path); bytes=$($twoDFirstApkEvidence.bytes); sha256=$($twoDFirstApkEvidence.sha256); renderGate=$($twoDFirstRender.passesArtifactGate); preflightStatus=$($twoDFirstDirectPreflight.preflightStatus)" } else { 'no questionnaireFirst builder-to-Quest workflow summary found' }) `
     -Missing $(if ($twoDFirstPass) { @() } else { @('2d-first-builder-to-quest-offline-spine-pass') })
 $requirements += New-Requirement `
+    -Id '2d-first-launcher-real-product-path-trial' `
+    -Requirement 'The participant-facing 2D-first front door has at least one real Quest product-path trial: questionnaire APK launched first, demographics exported, and Unity opened through openNext without ADB foreground switching after the initial questionnaire launch.' `
+    -Status $(if ($twoDFirstLauncherPhysicalPass) { 'proven' } elseif ($twoDFirstLauncherPreflightPass) { 'physical-pending' } else { 'missing' }) `
+    -EvidencePath $(if ($bestRealTwoDFirstLauncher) { [string]$bestRealTwoDFirstLauncher.path } elseif ($latestTwoDFirstLauncherPreflight) { [string]$latestTwoDFirstLauncherPreflight.path } else { '' }) `
+    -Evidence $(if ($bestRealTwoDFirstLauncher) { "status=$($bestRealTwoDFirstLauncher.status); passCount=$($bestRealTwoDFirstLauncher.passCount); blockedCount=$($bestRealTwoDFirstLauncher.blockedCount); failCount=$($bestRealTwoDFirstLauncher.failCount); launcherGatePassed=$($bestRealTwoDFirstLauncher.launcherGatePassed); preflightStatus=$($bestRealTwoDFirstLauncher.preflightStatus)" } elseif ($latestTwoDFirstLauncherPreflight) { "dryRunStatus=$($latestTwoDFirstLauncherPreflight.status); preflightStatus=$($latestTwoDFirstLauncherPreflight.preflightStatus); physicalTrialPending=True" } else { 'no 2D-first launcher validation summary found' }) `
+    -Missing $(if ($twoDFirstLauncherPhysicalPass) { @() } elseif ($twoDFirstLauncherPreflightPass) { @('one-2d-first-launcher-real-product-path-pass') } else { @('2d-first-launcher-preflight-pass', 'one-2d-first-launcher-real-product-path-pass') })
+$requirements += New-Requirement `
     -Id 'one-real-product-path-trial' `
     -Requirement 'At least one real Quest product-path trial has shown Unity -> questionnaire -> Unity video liveness -> tracer -> Unity completion without shell foreground switching after initial launch.' `
     -Status $(if ($bestRealDirect -and $bestRealDirect.passCount -ge 1 -and $bestRealDirect.failCount -eq 0) { 'proven' } else { 'missing' }) `
@@ -457,6 +514,11 @@ $summary = [ordered]@{
         twoDFirstQuestionnaireApk = $twoDFirstApkEvidence
         twoDFirstRenderGatePass = if ($twoDFirstRender) { [bool]$twoDFirstRender.passesArtifactGate } else { $false }
         twoDFirstDirectHandoffPreflightStatus = if ($twoDFirstDirectPreflight) { [string]$twoDFirstDirectPreflight.preflightStatus } else { '' }
+        twoDFirstLauncherPreflightSummaryPath = if ($latestTwoDFirstLauncherPreflight) { $latestTwoDFirstLauncherPreflight.path } else { '' }
+        twoDFirstLauncherPreflightStatus = if ($latestTwoDFirstLauncherPreflight) { $latestTwoDFirstLauncherPreflight.preflightStatus } else { '' }
+        bestRealTwoDFirstLauncherSummaryPath = if ($bestRealTwoDFirstLauncher) { $bestRealTwoDFirstLauncher.path } else { '' }
+        bestRealTwoDFirstLauncherPassCount = if ($bestRealTwoDFirstLauncher) { $bestRealTwoDFirstLauncher.passCount } else { 0 }
+        twoDFirstLauncherPhysicalPass = $twoDFirstLauncherPhysicalPass
         bestRealDirectHandoffSummaryPath = if ($bestRealDirect) { $bestRealDirect.path } else { '' }
         bestRealDirectHandoffPassCount = if ($bestRealDirect) { $bestRealDirect.passCount } else { 0 }
         latestRealDirectHandoffSummaryPath = if ($latestRealDirect) { $latestRealDirect.path } else { '' }
@@ -472,6 +534,9 @@ $summary = [ordered]@{
     nextPhysicalGates = [ordered]@{
         requiredCleanQuestTrials = $RequiredCleanQuestTrials
         currentBestCleanQuestTrialPassCount = if ($bestRealDirect) { $bestRealDirect.passCount } else { 0 }
+        twoDFirstLauncherPhysicalPass = $twoDFirstLauncherPhysicalPass
+        twoDFirstLauncherBestPassCount = if ($bestRealTwoDFirstLauncher) { $bestRealTwoDFirstLauncher.passCount } else { 0 }
+        twoDFirstLauncherPreflightStatus = if ($latestTwoDFirstLauncherPreflight) { $latestTwoDFirstLauncherPreflight.preflightStatus } else { 'missing' }
         manualHeadsetPassStatus = $manualSignoffStatus
         manualHeadsetPassSignoffSummaryPath = $manualSignoffPath
         directDecisionManualHeadsetPassStatus = $decisionManualStatus

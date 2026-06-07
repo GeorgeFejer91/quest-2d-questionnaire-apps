@@ -110,6 +110,19 @@ the host to send a bounded wake key before readiness polling. The summary
 records that assistance, and the usual product-path and manual headset gates
 still apply.
 
+For participant-facing 2D-first runs, use a separate front-door validator:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\quest-2d-first-launcher-validate.ps1 -DryRun
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\quest-2d-first-launcher-validate.ps1 -Serial <quest-serial> -WaitForReadySeconds 30
+```
+
+The dry run proves the packaged questionnaire APK is really configured as
+`questionnaireFirst -> demographics -> openNext -> Unity`, and the live run
+launches the questionnaire first, completes the demographics block through
+command replay, then observes Unity focus without shell foreground switching
+after that initial questionnaire launch.
+
 For a single evidence matrix from GUI config through local software, APKs,
 local renderers, Unity bridge static checks, APK handoff preflight, and Quest
 readiness, use:

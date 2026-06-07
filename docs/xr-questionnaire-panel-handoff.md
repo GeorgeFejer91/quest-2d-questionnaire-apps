@@ -314,6 +314,10 @@ The hosted/offline GUI exposes the same gate through the companion
 `/api/validate-workflow` endpoint. It also exposes the direct handoff gate as a
 dedicated `Run direct handoff` action backed by `/api/direct-handoff` and
 `/api/direct-handoff-job`, placed after replay/export in the sequential runner.
+It also exposes the participant-facing questionnaire-first gate as `Run
+2D-first launch`, backed by `/api/2d-first-launcher` and
+`/api/2d-first-launcher-job`, so operators can prove the packaged front-door
+contract before trying a live headset launch.
 That button defaults to `Preflight only`, which uses the same direct handoff
 job endpoint with `dryRun=true` and `skipInstall=true` to prove the real APK
 package/activity/catalog contract without launching the headset. Clear that
@@ -330,13 +334,14 @@ APK-generation step can immediately show the generated APK byte/hash evidence
 and local render-preview artifact gate.
 The builder's `Run headset sequence` control strings the trusted local actions
 together for the operator-facing path: save, validate, generate with tests and
-local render preview, detect Quest, install the APK, run replay/export, and
-then run direct handoff preflight or live trials according to the same
-`Preflight only` toggle. It reuses the existing companion endpoints so the
-one-button path and individual-button path share the same evidence semantics.
+local render preview, detect Quest, install the APK, run replay/export, run
+the 2D-first launcher gate, and then run direct handoff preflight or live
+trials according to the same `Preflight only` toggle. It reuses the existing
+companion endpoints so the one-button path and individual-button path share
+the same evidence semantics.
 The workflow polling endpoint returns a compact `workflowReceipt`, while the
-install, replay/export, and direct handoff polling endpoints return compact
-`jobReceipt` objects. The GUI displays these beside the job status so the
+install, replay/export, 2D-first launcher, and direct handoff polling endpoints
+return compact `jobReceipt` objects. The GUI displays these beside the job status so the
 reviewer can see whether offline gates are inspectable, how many
 failures/blocks/pending physical gates remain, which APK/render artifacts were
 produced, whether product-path readiness blocked a live rung, and whether
@@ -344,9 +349,9 @@ direct PendingIntent is still awaiting product-path evidence.
 The companion `/api/status` health payload advertises `apiVersion`,
 `receiptSchemaVersion`, and receipt capabilities such as
 `generate-apk-receipt`, `artifact-preview`, `workflow-render-previews`,
-`evidence-bundle`, `workflow-receipt`, `direct-handoff-preflight`, and
-`runner-job-receipts`; the hosted GUI should warn if a user connects an older
-local companion that lacks those capabilities. The
+`evidence-bundle`, `workflow-receipt`, `direct-handoff-preflight`,
+`2d-first-launcher-preflight`, and `runner-job-receipts`; the hosted GUI should
+warn if a user connects an older local companion that lacks those capabilities. The
 `artifact-preview` capability means the companion can serve generation-receipt
 and workflow-receipt sample PNGs through the token-protected
 `/api/artifact-preview` route. That route is only for generated local PNG

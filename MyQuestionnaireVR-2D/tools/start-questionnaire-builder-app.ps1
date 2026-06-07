@@ -77,6 +77,8 @@ $script:QuestReplayJobs = @{}
 $script:QuestReplayJobOrder = New-Object 'System.Collections.Generic.List[string]'
 $script:DirectHandoffJobs = @{}
 $script:DirectHandoffJobOrder = New-Object 'System.Collections.Generic.List[string]'
+$script:TwoDFirstLauncherJobs = @{}
+$script:TwoDFirstLauncherJobOrder = New-Object 'System.Collections.Generic.List[string]'
 
 function New-Utf8NoBomEncoding {
     return [System.Text.UTF8Encoding]::new($false)
@@ -1115,6 +1117,60 @@ function New-DirectHandoffJobReceipt {
     }
 }
 
+function New-TwoDFirstLauncherJobReceipt {
+    param(
+        [object]$Summary,
+        [string]$SummaryPath,
+        [string]$JobStatus = '',
+        [string]$LauncherStatus = '',
+        [bool]$DryRun = $false
+    )
+
+    $preflight = Get-JsonProperty -Object $Summary -Name 'preflight'
+    $decisionGate = Get-JsonProperty -Object $Summary -Name 'decisionGate'
+    $summaryDryRun = if ($null -ne $Summary) { [bool](Get-JsonProperty -Object $Summary -Name 'dryRun' -Default $DryRun) } else { $DryRun }
+    $wakeBeforeReadiness = [bool](Get-JsonProperty -Object $Summary -Name 'wakeBeforeReadiness' -Default $false)
+    $gatePassed = if ($null -ne $decisionGate) { [bool](Get-JsonProperty -Object $decisionGate -Name 'twoDFirstLauncherGatePassed' -Default $false) } else { $false }
+    $participantFrontDoor = Get-JsonProperty -Object $decisionGate -Name 'participantFrontDoor' -Default 'questionnaire-apk'
+    $preflightStatus = Get-JsonProperty -Object $decisionGate -Name 'preflightStatus' -Default (Get-JsonProperty -Object $preflight -Name 'status')
+    $receiptStatus = if ([string]$LauncherStatus -eq 'pass' -and -not $gatePassed) { 'pass-with-physical-pending' } elseif ([string]::IsNullOrWhiteSpace($LauncherStatus)) { $JobStatus } else { $LauncherStatus }
+    return [ordered]@{
+        schemaVersion = 'mq.builder_runner.job_receipt.v1'
+        kind = '2d-first-launcher'
+        status = $receiptStatus
+        jobStatus = $JobStatus
+        actionStatus = $LauncherStatus
+        dryRun = $summaryDryRun
+        wakeBeforeReadiness = $wakeBeforeReadiness
+        participantFrontDoor = $participantFrontDoor
+        twoDFirstLauncherGatePassed = $gatePassed
+        physicalQuestProductPathPending = (-not $gatePassed)
+        checks = [ordered]@{
+            summaryWritten = ($null -ne $Summary)
+            preflightPass = ([string]$preflightStatus -eq 'pass')
+            attemptedTrials = [int](Get-JsonProperty -Object $Summary -Name 'attemptedTrialCount' -Default 0)
+            passCount = [int](Get-JsonProperty -Object $Summary -Name 'passCount' -Default 0)
+            blockedCount = [int](Get-JsonProperty -Object $Summary -Name 'blockedCount' -Default 0)
+            failCount = [int](Get-JsonProperty -Object $Summary -Name 'failCount' -Default 0)
+            dryRunContractPass = ($summaryDryRun -and [string]$LauncherStatus -eq 'pass' -and [string]$preflightStatus -eq 'pass' -and -not $gatePassed)
+        }
+        artifacts = [ordered]@{
+            summaryPath = $SummaryPath
+            preflightStatus = $preflightStatus
+            requestedTrialCount = Get-JsonProperty -Object $decisionGate -Name 'requestedTrialCount' -Default (Get-JsonProperty -Object $Summary -Name 'trialCount' -Default 0)
+            attemptedTrialCount = Get-JsonProperty -Object $Summary -Name 'attemptedTrialCount' -Default 0
+            passCount = Get-JsonProperty -Object $Summary -Name 'passCount' -Default 0
+            warnCount = Get-JsonProperty -Object $Summary -Name 'warnCount' -Default 0
+            blockedCount = Get-JsonProperty -Object $Summary -Name 'blockedCount' -Default 0
+            failCount = Get-JsonProperty -Object $Summary -Name 'failCount' -Default 0
+            wakeBeforeReadiness = $wakeBeforeReadiness
+            preflight = $preflight
+            decisionGate = $decisionGate
+        }
+        proofBoundary = 'A dry-run proves the packaged 2D-first front-door contract only. Production approval still needs one real Quest launch from the questionnaire APK into Unity plus manual headset observation.'
+    }
+}
+
 function New-WorkflowValidationArguments {
     param(
         [object]$Payload,
@@ -1892,6 +1948,195 @@ function Start-DirectHandoffJob {
     return Get-DirectHandoffJobStatus -RunId $runId
 }
 
+function Get-TwoDFirstLauncherJobStatus {
+    param([string]$RunId)
+
+    if ([string]::IsNullOrWhiteSpace($RunId) -or -not $script:TwoDFirstLauncherJobs.ContainsKey($RunId)) {
+        return $null
+    }
+
+    $job = $script:TwoDFirstLauncherJobs[$RunId]
+    $process = $job['process']
+    $hasExited = $false
+    $exitCode = $null
+    $processError = ''
+    if ($null -ne $process) {
+        try {
+            $process.Refresh()
+            $hasExited = [bool]$process.HasExited
+            if ($hasExited) {
+                $exitCode = [int]$process.ExitCode
+                if ([string]::IsNullOrWhiteSpace([string]$job['completedAt'])) {
+                    $job['completedAt'] = (Get-Date).ToString('o')
+                }
+            }
+        }
+        catch {
+            $hasExited = $true
+            $processError = $_.Exception.Message
+            if ([string]::IsNullOrWhiteSpace([string]$job['completedAt'])) {
+                $job['completedAt'] = (Get-Date).ToString('o')
+            }
+        }
+    }
+
+    $summary = Read-JsonFileIfExists -Path ([string]$job['summaryPath'])
+    $jobStatus = 'running'
+    $launcherStatus = 'running'
+    if ($hasExited) {
+        $jobStatus = if ($null -ne $exitCode -and $exitCode -eq 0) { 'completed' } else { 'failed' }
+        if ($summary) {
+            $launcherStatus = [string]$summary.status
+        }
+        elseif ($jobStatus -eq 'completed') {
+            $launcherStatus = 'missing-summary'
+        }
+        else {
+            $launcherStatus = 'error'
+        }
+    }
+    elseif ($summary -and $summary.PSObject.Properties.Name -contains 'status') {
+        $launcherStatus = [string]$summary.status
+    }
+    $jobReceipt = New-TwoDFirstLauncherJobReceipt -Summary $summary -SummaryPath ([string]$job['summaryPath']) -JobStatus $jobStatus -LauncherStatus $launcherStatus -DryRun ([bool]$job['dryRun'])
+
+    return [ordered]@{
+        status = 'ok'
+        jobId = $RunId
+        runId = $RunId
+        jobStatus = $jobStatus
+        launcherStatus = $launcherStatus
+        passCount = if ($summary -and $summary.PSObject.Properties.Name -contains 'passCount') { $summary.passCount } else { $null }
+        warnCount = if ($summary -and $summary.PSObject.Properties.Name -contains 'warnCount') { $summary.warnCount } else { $null }
+        blockedCount = if ($summary -and $summary.PSObject.Properties.Name -contains 'blockedCount') { $summary.blockedCount } else { $null }
+        failCount = if ($summary -and $summary.PSObject.Properties.Name -contains 'failCount') { $summary.failCount } else { $null }
+        decisionGate = if ($summary -and $summary.PSObject.Properties.Name -contains 'decisionGate') { $summary.decisionGate } else { $null }
+        exitCode = $exitCode
+        processError = $processError
+        questionnaireApk = $job['questionnaireApk']
+        unityApk = $job['unityApk']
+        questSerial = $job['questSerial']
+        dryRun = [bool]$job['dryRun']
+        skipInstall = [bool]$job['skipInstall']
+        trialCount = [int]$job['trialCount']
+        waitForReadySeconds = [int]$job['waitForReadySeconds']
+        wakeBeforeReadiness = [bool]$job['wakeBeforeReadiness']
+        waitSeconds = [int]$job['waitSeconds']
+        artifactDir = $job['artifactDir']
+        summaryPath = $job['summaryPath']
+        stdoutPath = $job['stdoutPath']
+        stderrPath = $job['stderrPath']
+        stdout = Get-TailText -Path ([string]$job['stdoutPath'])
+        stderr = Get-TailText -Path ([string]$job['stderrPath'])
+        jobReceipt = $jobReceipt
+        summary = $summary
+        startedAt = $job['startedAt']
+        completedAt = $job['completedAt']
+    }
+}
+
+function Start-TwoDFirstLauncherJob {
+    param([object]$Payload)
+
+    $runId = 'builder-2d-first-launcher-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    $jobDir = Join-Path $ProjectPath ("artifacts\builder-app-2d-first-launcher\$runId")
+    New-Item -ItemType Directory -Force -Path $jobDir | Out-Null
+
+    $questionnaireApk = if ($Payload.PSObject.Properties.Name -contains 'questionnaireApk') { [string]$Payload.questionnaireApk } elseif ($Payload.PSObject.Properties.Name -contains 'apk') { [string]$Payload.apk } else { '' }
+    $unityApk = if ($Payload.PSObject.Properties.Name -contains 'unityApk') { [string]$Payload.unityApk } else { '' }
+    $serial = if ($Payload.PSObject.Properties.Name -contains 'questSerial') { [string]$Payload.questSerial } else { '' }
+    $dryRun = ($Payload.PSObject.Properties.Name -contains 'dryRun' -and [bool]$Payload.dryRun)
+    $skipInstall = ($Payload.PSObject.Properties.Name -contains 'skipInstall' -and [bool]$Payload.skipInstall)
+    $trialCount = if ($Payload.PSObject.Properties.Name -contains 'trialCount') { [Math]::Min(10, [Math]::Max(1, [int]$Payload.trialCount)) } else { 1 }
+    $waitForReadySeconds = if ($Payload.PSObject.Properties.Name -contains 'waitForReadySeconds') { [Math]::Min(28800, [Math]::Max(0, [int]$Payload.waitForReadySeconds)) } else { 30 }
+    $waitSeconds = if ($Payload.PSObject.Properties.Name -contains 'waitSeconds') { [Math]::Max(1, [int]$Payload.waitSeconds) } else { 45 }
+    $wakeBeforeReadiness = (-not $dryRun -and $Payload.PSObject.Properties.Name -contains 'wakeBeforeReadiness' -and [bool]$Payload.wakeBeforeReadiness)
+
+    $stdoutPath = Join-Path $jobDir '2d-first-launcher-stdout.txt'
+    $stderrPath = Join-Path $jobDir '2d-first-launcher-stderr.txt'
+    $summaryPath = Join-Path $jobDir 'quest-2d-first-launcher-validation-summary.json'
+    $script = Join-Path $ProjectPath 'tools\quest-2d-first-launcher-validate.ps1'
+    $arguments = @(
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        $script,
+        '-ProjectPath',
+        $ProjectPath,
+        '-OutputRoot',
+        $jobDir,
+        '-TrialCount',
+        [string]$trialCount,
+        '-WaitForReadySeconds',
+        [string]$waitForReadySeconds,
+        '-WaitSeconds',
+        [string]$waitSeconds
+    )
+    if (-not [string]::IsNullOrWhiteSpace($questionnaireApk)) {
+        $arguments += @('-QuestionnaireApk', $questionnaireApk)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($unityApk)) {
+        $arguments += @('-UnityApk', $unityApk)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($serial)) {
+        $arguments += @('-Serial', $serial)
+    }
+    if ($dryRun) {
+        $arguments += '-DryRun'
+    }
+    if ($skipInstall) {
+        $arguments += '-SkipInstall'
+    }
+    if ($wakeBeforeReadiness) {
+        $arguments += '-WakeBeforeReadiness'
+    }
+
+    $process = Start-Process `
+        -FilePath 'powershell' `
+        -ArgumentList $arguments `
+        -WorkingDirectory $ProjectPath `
+        -PassThru `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput $stdoutPath `
+        -RedirectStandardError $stderrPath
+
+    $script:TwoDFirstLauncherJobs[$runId] = [ordered]@{
+        process = $process
+        runId = $runId
+        questionnaireApk = $questionnaireApk
+        unityApk = $unityApk
+        questSerial = $serial
+        dryRun = [bool]$dryRun
+        skipInstall = [bool]$skipInstall
+        trialCount = [int]$trialCount
+        waitForReadySeconds = [int]$waitForReadySeconds
+        wakeBeforeReadiness = [bool]$wakeBeforeReadiness
+        waitSeconds = [int]$waitSeconds
+        artifactDir = $jobDir
+        stdoutPath = $stdoutPath
+        stderrPath = $stderrPath
+        summaryPath = $summaryPath
+        startedAt = (Get-Date).ToString('o')
+        completedAt = ''
+    }
+    $script:TwoDFirstLauncherJobOrder.Add($runId) | Out-Null
+
+    while ($script:TwoDFirstLauncherJobOrder.Count -gt 20) {
+        $oldest = $script:TwoDFirstLauncherJobOrder[0]
+        $script:TwoDFirstLauncherJobOrder.RemoveAt(0)
+        if ($script:TwoDFirstLauncherJobs.ContainsKey($oldest)) {
+            $oldJob = $script:TwoDFirstLauncherJobs[$oldest]
+            $oldProcess = $oldJob['process']
+            if ($oldProcess -and $oldProcess.HasExited) {
+                $script:TwoDFirstLauncherJobs.Remove($oldest)
+            }
+        }
+    }
+
+    return Get-TwoDFirstLauncherJobStatus -RunId $runId
+}
+
 function Receive-JsonPayload {
     param([System.Net.HttpListenerRequest]$Request)
 
@@ -2056,6 +2301,9 @@ function New-StatusPayload {
             'direct-handoff',
             'direct-handoff-preflight',
             'direct-handoff-job-status',
+            '2d-first-launcher',
+            '2d-first-launcher-preflight',
+            '2d-first-launcher-job-status',
             'runner-job-receipts',
             'dependency-status',
             'install-dependencies'
@@ -2071,6 +2319,7 @@ function New-StatusPayload {
             generateApk = Join-Path $ProjectPath 'tools\generate-questionnaire-apk.ps1'
             validateWorkflow = Join-Path $ProjectPath 'tools\validate-builder-to-quest-workflow.ps1'
             directHandoff = Join-Path $ProjectPath 'tools\quest-direct-handoff-validate.ps1'
+            twoDFirstLauncher = Join-Path $ProjectPath 'tools\quest-2d-first-launcher-validate.ps1'
         }
     }
     return $payload
@@ -2203,6 +2452,24 @@ function Handle-Request {
         return
     }
 
+    if ($request.HttpMethod -eq 'GET' -and $path -eq '/api/2d-first-launcher-job') {
+        Assert-OriginAndToken -Request $request
+        $runId = [string]$request.QueryString['runId']
+        if ([string]::IsNullOrWhiteSpace($runId)) {
+            $runId = [string]$request.QueryString['jobId']
+        }
+        $status = Get-TwoDFirstLauncherJobStatus -RunId $runId
+        if ($null -eq $status) {
+            Write-JsonResponse -Context $Context -StatusCode 404 -Value ([ordered]@{
+                status = 'error'
+                message = "Unknown 2D-first launcher job: $runId"
+            })
+            return
+        }
+        Write-JsonResponse -Context $Context -StatusCode 200 -Value $status
+        return
+    }
+
     if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/install-dependencies') {
         Assert-OriginAndToken -Request $request
         $result = Handle-DependencyInstall
@@ -2238,6 +2505,14 @@ function Handle-Request {
         Assert-OriginAndToken -Request $request
         $payload = Receive-JsonPayload -Request $request
         $job = Start-DirectHandoffJob -Payload $payload
+        Write-JsonResponse -Context $Context -StatusCode 202 -Value $job
+        return
+    }
+
+    if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/2d-first-launcher') {
+        Assert-OriginAndToken -Request $request
+        $payload = Receive-JsonPayload -Request $request
+        $job = Start-TwoDFirstLauncherJob -Payload $payload
         Write-JsonResponse -Context $Context -StatusCode 202 -Value $job
         return
     }

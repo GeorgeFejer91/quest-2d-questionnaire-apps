@@ -65,6 +65,11 @@ Use absolute dates.
 - Preserved `chainDefaults.startMode` in the packaged runtime config so
   generated questionnaire APKs remain self-describing evidence for
   `questionnaireFirst` launcher mode.
+- Exposed the 2D-first launcher gate in the questionnaire builder companion and
+  GUI as `/api/2d-first-launcher`, `/api/2d-first-launcher-job`, and `Run
+  2D-first launch`. The one-button headset sequence now runs this front-door
+  gate before direct handoff so the GUI checks the participant-facing
+  questionnaire-first path as well as the Unity-triggered return path.
 
 ## 2026-06-07
 

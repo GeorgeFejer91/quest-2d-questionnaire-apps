@@ -58,9 +58,9 @@ profile, or repository path.
 `GET /api/status` is also the compatibility check. It advertises the companion
 `apiVersion`, `receiptSchemaVersion`, and capabilities such as
 `generate-apk-receipt`, `artifact-preview`, `workflow-render-previews`,
-`evidence-bundle`, `workflow-receipt`, `direct-handoff-preflight`, and
-`runner-job-receipts` so the hosted GUI can warn when a user connects an older
-local companion package.
+`evidence-bundle`, `workflow-receipt`, `direct-handoff-preflight`,
+`2d-first-launcher-preflight`, and `runner-job-receipts` so the hosted GUI can
+warn when a user connects an older local companion package.
 
 Render preview thumbnails are fetched from the companion through
 `GET /api/artifact-preview?path=...`. That route must stay token-protected,
@@ -77,13 +77,18 @@ The direct handoff runner should keep `Preflight only` available for the hosted
 and offline GUI. That mode calls `/api/direct-handoff` with `dryRun=true` and
 `skipInstall=true` so users can prove package/activity/catalog preflight
 without installing or launching on Quest.
+The 2D-first launcher runner should keep the same `Preflight only` behavior
+through `/api/2d-first-launcher`: it proves that the packaged questionnaire APK
+starts with `questionnaireFirst` demographics and opens the Unity APK next, but
+it must still leave the live participant-front-door Quest trial pending.
 `Validate workflow` should use the same `Preflight only` toggle to include
 direct handoff preflight in the aggregate workflow matrix by sending
 `dryRunQuestDirectHandoff=true` and `skipInstall=true` to `/api/validate-workflow`.
 `Run headset sequence` should keep reusing the same companion endpoints as the
 individual controls, in order: save, validate, generate with tests and local
-render preview, readiness, install, replay/export, and direct handoff preflight
-or live trials. Do not let it become a separate hidden backend workflow.
+render preview, readiness, install, replay/export, 2D-first launcher
+preflight/live trial, and direct handoff preflight or live trials. Do not let
+it become a separate hidden backend workflow.
 `Wake before readiness` should remain opt-in, ignored for `Preflight only`, and
 passed through to `/api/direct-handoff` or `/api/validate-workflow` only for
 live direct-handoff attempts so wake-assisted evidence stays explicit.

@@ -33,6 +33,7 @@ $RequiredCompanionCapabilities = @(
     'workflow-render-previews',
     'workflow-receipt',
     'direct-handoff-preflight',
+    '2d-first-launcher-preflight',
     'runner-job-receipts'
 )
 
@@ -436,6 +437,26 @@ function Wait-DirectHandoffJob {
     throw "Direct handoff job did not finish before timeout: $RunId"
 }
 
+function Wait-TwoDFirstLauncherJob {
+    param(
+        [string]$BaseUrl,
+        [hashtable]$Headers,
+        [string]$RunId,
+        [int]$TimeoutSec = 900
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    $encodedRunId = [System.Uri]::EscapeDataString($RunId)
+    while ((Get-Date) -lt $deadline) {
+        $job = Invoke-Json -Method GET -Uri "$BaseUrl/api/2d-first-launcher-job?runId=$encodedRunId" -Headers $Headers -TimeoutSec 30
+        if ($job.jobStatus -ne 'running') {
+            return $job
+        }
+        Start-Sleep -Seconds 2
+    }
+    throw "2D-first launcher job did not finish before timeout: $RunId"
+}
+
 if ($Port -le 0) {
     $Port = Get-FreeLoopbackPort
 }
@@ -490,6 +511,12 @@ if (-not (Test-Path -LiteralPath $handoffConfigPath)) {
 }
 $handoffConfig = Get-Content -LiteralPath $handoffConfigPath -Encoding UTF8 -Raw | ConvertFrom-Json
 
+$twoDFirstConfigPath = Join-Path $builderOut 'awe-great-dictator-2d-first.config.json'
+if (-not (Test-Path -LiteralPath $twoDFirstConfigPath)) {
+    throw "Expected 2D-first config not found: $twoDFirstConfigPath"
+}
+$twoDFirstConfig = Get-Content -LiteralPath $twoDFirstConfigPath -Encoding UTF8 -Raw | ConvertFrom-Json
+
 $companionScript = Join-Path $ProjectPath 'tools\start-questionnaire-builder-app.ps1'
 $processArgs = @(
     '-NoProfile',
@@ -512,11 +539,13 @@ $processArgs = @(
 
 $questionnaireAssetRoot = Join-Path $ProjectPath 'app\src\main\assets\questionnaire'
 $questionnaireAssetSnapshotSummaryPath = Join-Path $artifactDir 'questionnaire-source-assets-snapshot.json'
+$twoDFirstQuestionnaireAssetRestoreSummaryPath = Join-Path $artifactDir 'questionnaire-source-assets-restore-2d-first.json'
 $questionnaireAssetRestoreSummaryPath = Join-Path $artifactDir 'questionnaire-source-assets-restore.json'
 $questionnaireAssetSnapshot = New-SourceAssetDirectorySnapshot `
     -SourceRoot $questionnaireAssetRoot `
     -SnapshotRoot (Join-Path $artifactDir 'questionnaire-source-assets-snapshot') `
     -SummaryPath $questionnaireAssetSnapshotSummaryPath
+$twoDFirstQuestionnaireAssetRestore = $null
 $questionnaireAssetRestore = $null
 
 $process = $null
@@ -550,6 +579,7 @@ try {
     $unauthorizedInstallApkStatus = $null
     $unauthorizedQuestReplayStatus = $null
     $unauthorizedDirectHandoffStatus = $null
+    $unauthorizedTwoDFirstLauncherStatus = $null
     $unauthorizedArtifactPreviewStatus = $null
     try {
         Invoke-Json -Method GET -Uri "$baseUrl/api/dependency-status" | Out-Null
@@ -599,6 +629,16 @@ try {
         $unauthorizedDirectHandoffStatus = Get-HttpErrorStatusCode -Exception $_.Exception
         if ($unauthorizedDirectHandoffStatus -ne 401) {
             throw "Unauthorized direct-handoff expected 401, got $unauthorizedDirectHandoffStatus"
+        }
+    }
+    try {
+        Invoke-Json -Method POST -Uri "$baseUrl/api/2d-first-launcher" -Body @{ questionnaireApk = "missing.apk"; dryRun = $true } | Out-Null
+        throw "Unauthorized 2d-first-launcher call unexpectedly succeeded."
+    }
+    catch {
+        $unauthorizedTwoDFirstLauncherStatus = Get-HttpErrorStatusCode -Exception $_.Exception
+        if ($unauthorizedTwoDFirstLauncherStatus -ne 401) {
+            throw "Unauthorized 2d-first-launcher expected 401, got $unauthorizedTwoDFirstLauncherStatus"
         }
     }
     try {
@@ -767,6 +807,103 @@ try {
     }
     if ([int]$directHandoffClamp.trialCount -ne 10 -or [int]$directHandoffClamp.waitForReadySeconds -ne 28800) {
         throw "Companion direct-handoff clamp mismatch. Expected trialCount=10 and waitForReadySeconds=28800, got trialCount=$($directHandoffClamp.trialCount), waitForReadySeconds=$($directHandoffClamp.waitForReadySeconds)."
+    }
+
+    $twoDFirstGenerate = $null
+    $twoDFirstGenerateSummary = $null
+    $twoDFirstGenerateReceipt = $null
+    $twoDFirstQuestionnaireApk = ''
+    $twoDFirstGeneratedApkEvidence = [ordered]@{
+        exists = $false
+        path = ''
+    }
+    $twoDFirstLauncher = [pscustomobject][ordered]@{
+        jobStatus = 'skipped'
+        launcherStatus = 'skipped'
+        runId = ''
+        summaryPath = ''
+        passCount = 0
+        warnCount = 0
+        blockedCount = 0
+        failCount = 0
+        decisionGate = $null
+    }
+    $twoDFirstLauncherReceipt = $null
+    if (-not [bool]$SkipApkBuild) {
+        Write-Host "== Generate 2D-first APK through companion =="
+        $twoDFirstGenerateBody = @{
+            config = $twoDFirstConfig
+            runTests = $false
+            renderPreview = $false
+            skipBuild = $false
+        }
+        try {
+            $twoDFirstGenerate = Invoke-Json -Method POST -Uri "$baseUrl/api/generate-apk" -Headers $headers -Body $twoDFirstGenerateBody -TimeoutSec 1800
+        }
+        finally {
+            $twoDFirstQuestionnaireAssetRestore = Restore-SourceAssetDirectorySnapshot -Snapshot $questionnaireAssetSnapshot -SourceRoot $questionnaireAssetRoot
+            Write-SourceAssetSnapshotJson -Value $twoDFirstQuestionnaireAssetRestore -Path $twoDFirstQuestionnaireAssetRestoreSummaryPath -Depth 8
+            Add-Progress "questionnaire-source-assets-restore-2d-first=$($twoDFirstQuestionnaireAssetRestore.status)"
+        }
+        if ([string]$twoDFirstQuestionnaireAssetRestore.status -ne 'pass') {
+            throw "Companion validator could not restore questionnaire source assets after 2D-first generation. See $twoDFirstQuestionnaireAssetRestoreSummaryPath"
+        }
+        Add-Progress 'generate-2d-first-apk-complete'
+        if ($twoDFirstGenerate.status -ne 'ok') {
+            throw "Companion 2D-first generate-apk failed."
+        }
+        if ([string]::IsNullOrWhiteSpace([string]$twoDFirstGenerate.apk) -or -not (Test-Path -LiteralPath $twoDFirstGenerate.apk)) {
+            throw "Companion 2D-first generate-apk did not produce an APK path."
+        }
+        $twoDFirstGenerateSummary = Read-JsonIfExists -Path ([string]$twoDFirstGenerate.summaryPath)
+        if ($null -eq $twoDFirstGenerateSummary) {
+            throw "Companion 2D-first generator summary could not be read: $($twoDFirstGenerate.summaryPath)"
+        }
+        $twoDFirstQuestionnaireApk = [string]$twoDFirstGenerate.apk
+        $twoDFirstGeneratedApkEvidence = Get-FileEvidence -Path $twoDFirstQuestionnaireApk
+        if (-not [bool]$twoDFirstGeneratedApkEvidence.exists) {
+            throw "Companion 2D-first generate-apk reported a missing APK: $twoDFirstQuestionnaireApk"
+        }
+        if ([string]::IsNullOrWhiteSpace([string]$twoDFirstGenerateSummary.apkSha256) -or [string]$twoDFirstGeneratedApkEvidence.sha256 -ne [string]$twoDFirstGenerateSummary.apkSha256) {
+            throw "Companion 2D-first generated APK hash mismatch. Summary=$($twoDFirstGenerateSummary.apkSha256) actual=$($twoDFirstGeneratedApkEvidence.sha256)"
+        }
+        $twoDFirstGenerateReceipt = if ($twoDFirstGenerate.PSObject.Properties.Name -contains 'generationReceipt') { $twoDFirstGenerate.generationReceipt } else { $null }
+        if ($null -eq $twoDFirstGenerateReceipt -or -not [bool]$twoDFirstGenerateReceipt.checks.apkExists -or -not [bool]$twoDFirstGenerateReceipt.checks.apkHashMatchesSummary) {
+            throw "Companion 2D-first generate-apk did not return an APK-backed generationReceipt."
+        }
+
+        Write-Host "== 2D-first launcher dry run through companion =="
+        $twoDFirstLauncherStart = Invoke-Json -Method POST -Uri "$baseUrl/api/2d-first-launcher" -Headers $headers -Body @{
+            questionnaireApk = $twoDFirstQuestionnaireApk
+            unityApk = $unityApkForDirect
+            questSerial = [string]$questReadiness.targetSerial
+            trialCount = 1
+            waitForReadySeconds = 0
+            waitSeconds = 1
+            dryRun = $true
+            skipInstall = $true
+        } -TimeoutSec 60
+        Add-Progress "2d-first-launcher-started=$($twoDFirstLauncherStart.runId)"
+        if ($twoDFirstLauncherStart.status -ne 'ok' -or [string]::IsNullOrWhiteSpace([string]$twoDFirstLauncherStart.runId)) {
+            throw "Companion 2D-first launcher did not start a launcher job."
+        }
+        $twoDFirstLauncher = if ($twoDFirstLauncherStart.jobStatus -eq 'running') {
+            Wait-TwoDFirstLauncherJob -BaseUrl $baseUrl -Headers $headers -RunId $twoDFirstLauncherStart.runId -TimeoutSec 900
+        }
+        else {
+            $twoDFirstLauncherStart
+        }
+        Add-Progress "2d-first-launcher-complete jobStatus=$($twoDFirstLauncher.jobStatus) launcherStatus=$($twoDFirstLauncher.launcherStatus)"
+        if ($twoDFirstLauncher.launcherStatus -eq 'fail' -or $twoDFirstLauncher.launcherStatus -eq 'error' -or [string]::IsNullOrWhiteSpace([string]$twoDFirstLauncher.summaryPath) -or -not (Test-Path -LiteralPath $twoDFirstLauncher.summaryPath)) {
+            throw "Companion 2D-first launcher dry run did not produce a usable launcher summary."
+        }
+        $twoDFirstLauncherReceipt = if ($twoDFirstLauncher.PSObject.Properties.Name -contains 'jobReceipt') { $twoDFirstLauncher.jobReceipt } else { $null }
+        if ($null -eq $twoDFirstLauncherReceipt -or [string]$twoDFirstLauncherReceipt.kind -ne '2d-first-launcher' -or -not [bool]$twoDFirstLauncherReceipt.dryRun -or -not [bool]$twoDFirstLauncherReceipt.checks.dryRunContractPass -or [bool]$twoDFirstLauncherReceipt.twoDFirstLauncherGatePassed) {
+            throw "Companion 2D-first launcher dry run did not return a valid front-door-bounded job receipt."
+        }
+    }
+    else {
+        Add-Progress '2d-first-launcher-skipped=apk-build-skipped'
     }
 
     Write-Host "== Save config through companion =="
@@ -974,6 +1111,7 @@ try {
         $unauthorizedInstallApkStatus -eq 401 -and
         $unauthorizedQuestReplayStatus -eq 401 -and
         $unauthorizedDirectHandoffStatus -eq 401 -and
+        $unauthorizedTwoDFirstLauncherStatus -eq 401 -and
         $unauthorizedArtifactPreviewStatus -eq 401 -and
         $unauthorizedEvidenceBundleStatus -eq 401
     )
@@ -1033,6 +1171,15 @@ try {
         [string]$directHandoffClamp.decisionGate.candidateAStatus -eq 'dry-run-only' -and
         -not [bool]$directHandoffClamp.decisionGate.defaultDirectPendingIntentApproved
     )
+    $twoDFirstLauncherDryRunGatePass = (
+        [bool]$SkipApkBuild -or
+        (
+            [string]$twoDFirstLauncher.launcherStatus -eq 'pass' -and
+            $twoDFirstLauncher.decisionGate -and
+            [string]$twoDFirstLauncher.decisionGate.preflightStatus -eq 'pass' -and
+            -not [bool]$twoDFirstLauncher.decisionGate.twoDFirstLauncherGatePassed
+        )
+    )
     $workflowClampGatePass = (
         $workflowClampDirectFacts -and
         [bool]$workflowClampDirectFacts.dryRun -and
@@ -1050,7 +1197,8 @@ try {
         [bool]$installApkReceipt.checks.dryRunContractPass -and
         [bool]$questReplayReceipt.checks.dryRunContractPass -and
         [bool]$directHandoffReceipt.checks.dryRunContractPass -and
-        [bool]$directHandoffClampReceipt.checks.dryRunContractPass
+        [bool]$directHandoffClampReceipt.checks.dryRunContractPass -and
+        ([bool]$SkipApkBuild -or ($twoDFirstLauncherReceipt -and [bool]$twoDFirstLauncherReceipt.checks.dryRunContractPass))
     )
     $offlineWorkflowReady = (
         $authorizationPass -and
@@ -1071,6 +1219,7 @@ try {
         $stepJobReceiptsInspectable -and
         $directHandoffDryRunGatePass -and
         $directHandoffClampGatePass -and
+        $twoDFirstLauncherDryRunGatePass -and
         $workflowClampGatePass
     )
     $skippedEvidence = [ordered]@{
@@ -1094,6 +1243,7 @@ try {
         $stepJobReceiptsInspectable -and
         $directHandoffDryRunGatePass -and
         $directHandoffClampGatePass -and
+        $twoDFirstLauncherDryRunGatePass -and
         $workflowClampGatePass
     )
     $receiptStatus = 'fail'
@@ -1119,6 +1269,7 @@ try {
             replayEndpointDryRunContractPass = ([string]$questReplay.replayStatus -ne 'fail')
             directHandoffDryRunContractPass = $directHandoffDryRunGatePass
             directHandoffClampContractPass = $directHandoffClampGatePass
+            twoDFirstLauncherDryRunContractPass = $twoDFirstLauncherDryRunGatePass
             saveAndValidateConfigPass = $saveValidatePass
             generateApkHashPass = $generatedApkHashPass
             generationReceiptInspectable = ($generateReceipt -and ([string]$generateReceipt.status -eq 'pass' -or [string]$generateReceipt.status -eq 'partial-skipped-evidence'))
@@ -1151,16 +1302,19 @@ try {
             workflowArtifactPreviews = $workflowArtifactPreviewEvidence
             evidenceBundle = $evidenceBundle
             directHandoffSummaryPath = $directHandoff.summaryPath
+            twoDFirstLauncherSummaryPath = $twoDFirstLauncher.summaryPath
             workflowClampSummaryPath = $workflowClamp.summaryPath
             workflowClampReceipt = $workflowClampReceipt
             runnerJobReceipts = [ordered]@{
                 installApk = $installApkReceipt
                 questReplay = $questReplayReceipt
+                twoDFirstLauncher = $twoDFirstLauncherReceipt
                 directHandoff = $directHandoffReceipt
                 directHandoffClamp = $directHandoffClampReceipt
             }
         }
         physicalEvidenceStillNeeded = [ordered]@{
+            twoDFirstLauncherTrial = 'one real participant-front-door Quest launch from questionnaire APK into Unity'
             directPendingIntentQuestTrials = '10 clean product-path trials'
             manualHeadsetPass = 'pending'
             currentTransportReadiness = $questReadiness.readiness
@@ -1188,6 +1342,7 @@ try {
             unauthorizedInstallApkStatus = $unauthorizedInstallApkStatus
             unauthorizedQuestReplayStatus = $unauthorizedQuestReplayStatus
             unauthorizedDirectHandoffStatus = $unauthorizedDirectHandoffStatus
+            unauthorizedTwoDFirstLauncherStatus = $unauthorizedTwoDFirstLauncherStatus
             unauthorizedArtifactPreviewStatus = $unauthorizedArtifactPreviewStatus
             unauthorizedEvidenceBundleStatus = $unauthorizedEvidenceBundleStatus
         }
@@ -1242,6 +1397,24 @@ try {
             decisionGate = $directHandoff.decisionGate
             jobReceipt = $directHandoffReceipt
         }
+        twoDFirstLauncherDryRun = [ordered]@{
+            jobStatus = $twoDFirstLauncher.jobStatus
+            launcherStatus = $twoDFirstLauncher.launcherStatus
+            passCount = $twoDFirstLauncher.passCount
+            warnCount = $twoDFirstLauncher.warnCount
+            blockedCount = $twoDFirstLauncher.blockedCount
+            failCount = $twoDFirstLauncher.failCount
+            runId = $twoDFirstLauncher.runId
+            summaryPath = $twoDFirstLauncher.summaryPath
+            questionnaireApk = $twoDFirstQuestionnaireApk
+            questionnaireApkEvidence = $twoDFirstGeneratedApkEvidence
+            unityApk = $unityApkForDirect
+            generationRunId = if ($twoDFirstGenerate) { $twoDFirstGenerate.runId } else { '' }
+            generationSummaryPath = if ($twoDFirstGenerate) { $twoDFirstGenerate.summaryPath } else { '' }
+            generationReceipt = $twoDFirstGenerateReceipt
+            decisionGate = $twoDFirstLauncher.decisionGate
+            jobReceipt = $twoDFirstLauncherReceipt
+        }
         directHandoffClampDryRun = [ordered]@{
             jobStatus = $directHandoffClamp.jobStatus
             handoffStatus = $directHandoffClamp.handoffStatus
@@ -1258,9 +1431,12 @@ try {
         builder = [ordered]@{
             outputDir = $builderOut
             handoffConfig = $handoffConfigPath
+            twoDFirstConfig = $twoDFirstConfigPath
         }
         sourceAssets = [ordered]@{
             snapshot = $questionnaireAssetSnapshotSummaryPath
+            restoreAfterTwoDFirst = $twoDFirstQuestionnaireAssetRestoreSummaryPath
+            restoreAfterTwoDFirstReceipt = $twoDFirstQuestionnaireAssetRestore
             restore = $questionnaireAssetRestoreSummaryPath
             restoreReceipt = $questionnaireAssetRestore
         }

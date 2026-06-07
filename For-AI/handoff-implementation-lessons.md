@@ -745,6 +745,27 @@ Generalizable rule: make the happy path explicit in the GUI, but do not fork
 validation semantics. A sequence button should compose already-tested jobs so
 the one-click path and the step-by-step path produce comparable receipts.
 
+## Front-Door Gates Belong In The GUI
+
+Problem: `quest-2d-first-launcher-validate.ps1` made the participant-facing
+questionnaire-first path testable, but leaving it as a CLI-only gate meant the
+hosted/offline builder could still lead operators through install,
+replay/export, and direct handoff without ever proving that a normal Meta Home
+launch starts demographics before Unity owns focus.
+
+Solution: expose the 2D-first launcher validator through the companion as
+`/api/2d-first-launcher` and `/api/2d-first-launcher-job`, add a `Run 2D-first
+launch` GUI control, and insert that gate into `Run headset sequence` before
+direct handoff. In preflight mode it inspects the packaged questionnaire APK
+for `questionnaireFirst`, `demographics`, and `openNext` into the Unity APK;
+in live mode it remains the separate one-trial participant-front-door Quest
+gate.
+
+Generalizable rule: if a workflow variant changes what the participant launches
+first, put that gate in the operator GUI and in the companion receipt contract.
+CLI validators are useful, but the default study path should surface the same
+proof boundary where the operator actually runs the workflow.
+
 ## Unity Must Own Panel-Focus Media Pause
 
 Problem: launching a 2D questionnaire or tracer over a Unity Quest app does not

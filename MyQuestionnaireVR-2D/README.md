@@ -143,6 +143,9 @@ The live validator launches the questionnaire APK first, command-replays the
 demographics block, verifies the questionnaire export and `openNext` handoff,
 and observes Unity focus. After the initial questionnaire launch, it does not
 use ADB to foreground Unity.
+The builder runner exposes the same gate as `Run 2D-first launch`; with
+`Preflight only` checked it dry-runs the packaged 2D-first contract, and with
+that toggle cleared it performs the live participant-front-door Quest trial.
 
 Generate a named APK from any config:
 
@@ -362,10 +365,11 @@ controller-only input.
 Use `Run headset sequence` in the builder runner for the ordered GUI path:
 save config, validate config, generate the APK with unit tests and a local
 render preview, detect Quest readiness, install the generated APK, run
-replay/export, and then run direct handoff preflight or live trials according
-to the existing `Preflight only` and optional `Wake before readiness` toggles.
-This button reuses the same companion endpoints as the individual controls; it
-is an orchestration convenience, not a different validation path.
+replay/export, run the 2D-first launcher gate, and then run direct handoff
+preflight or live trials according to the existing `Preflight only` and
+optional `Wake before readiness` toggles. This button reuses the same
+companion endpoints as the individual controls; it is an orchestration
+convenience, not a different validation path.
 
 Run the full local ladder from builder smoke test through generated APK and
 Android render preview:

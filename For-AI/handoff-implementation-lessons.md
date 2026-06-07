@@ -850,7 +850,7 @@ build/input-modality preflight issue for generic demo APKs.
 Generalizable rule: broad input modality is the default for workflow demos;
 controller-only is an explicit study constraint, not a casual Unity default.
 
-## 2D-First Launcher Is A Valid Front Door
+## 2D-First Launcher Is The Default Demographics Front Door
 
 Problem: when Unity is the first app in the chain, Horizon controller-required
 launch prompts and Unity focus recovery can block the participant before the
@@ -866,9 +866,11 @@ package. Unity still owns later XR triggers and still needs hand+controller
 metadata so Horizon does not show controller-required launch dialogs for
 generic demo/stimulus APKs.
 
-Generalizable rule: choose the participant-facing front door by config. Starting
-with the 2D panel can simplify demographics collection, but it does not move
-raw XR input ownership out of Unity.
+Generalizable rule: for demographics-before-stimulus studies, choose the 2D
+panel as the participant-facing front door by config. A generated study APK may
+be pinned to one next Unity package/activity, but the reusable 2D app source
+must stay configurable. Starting with the 2D panel simplifies demographics
+collection, but it does not move raw XR input ownership out of Unity.
 
 ## Generated Configs Must Own Test Expectations
 

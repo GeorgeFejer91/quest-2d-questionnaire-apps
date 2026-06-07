@@ -74,6 +74,11 @@ Use absolute dates.
   as `/api/handoff-readiness-audit` and `Audit readiness`, returning an
   `auditReceipt` so the website can show proven offline requirements and the
   exact physical Quest gates still pending.
+- Promoted 2D-first launcher mode from an allowed variant to the recommended
+  default front door for demographics-before-stimulus participant studies. A
+  generated questionnaire APK may be pinned to one Unity package/activity via
+  builder config, but reusable Android source should not hard-code a single
+  Unity target.
 
 ## 2026-06-07
 

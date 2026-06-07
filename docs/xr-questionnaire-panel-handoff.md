@@ -98,17 +98,18 @@ validation may bypass that human gate only through an explicit launch extra,
 for example `mq.validationAutoStart=true`, and should record the bypass in
 log/evidence markers.
 
-A participant-facing chain may also start from the 2D questionnaire APK. In
-that mode the packaged questionnaire config sets
+A demographics-before-stimulus participant chain should normally start from the
+2D questionnaire APK. In that mode the packaged questionnaire config sets
 `chainDefaults.startMode=questionnaireFirst`,
 `chainDefaults.questionnaireMode=demographics`,
 `chainDefaults.finishBehavior=openNext`, and
 `chainDefaults.nextPackage=<Unity package>`. A normal Meta Home launch then
 runs demographics, saves exports, and opens Unity with the same completion
-extras that Unity would receive after trigger 1. Keep this mode config-driven
-through the builder. Do not hard-code a single Unity APK into the Android
-source, and do not use this as a substitute for Unity hand/controller support
-or later Unity-owned trigger handling.
+extras that Unity would receive after trigger 1. Treat the generated APK as
+study-pinned to that Unity package/activity, but keep the behavior
+config-driven through the builder. Do not hard-code a single Unity APK into the
+reusable Android source, and do not use this as a substitute for Unity
+hand/controller support or later Unity-owned trigger handling.
 
 Demo and stimulus Unity APKs should advertise both hands and controllers unless
 the experiment explicitly requires controller-only input. In Unity/OpenXR that

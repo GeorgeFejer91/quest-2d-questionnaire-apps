@@ -127,10 +127,13 @@ Use the simplest reliable hook for each target APK:
 - Source hook for rebuildable Unity APKs: add a small Unity Android bridge that
   detects the unused controller button inside the foreground Unity XR app and
   emits the same ChainLink command that synthetic validation uses.
-- 2D-first launcher mode: for participant-facing studies, the packaged
-  questionnaire APK may run demographics from a normal Meta Home launch and
-  then open Unity with `finishBehavior=openNext`. Keep this builder/config
-  driven, and keep later raw input and triggers inside Unity.
+- 2D-first launcher mode: for demographics-before-stimulus participant
+  studies, make the packaged questionnaire APK the default front door. It runs
+  demographics from a normal Meta Home launch, saves block 1, and then opens
+  the configured Unity package/activity with `finishBehavior=openNext`. Keep
+  this builder/config driven so each generated study APK can be pinned to its
+  Unity target without hard-coding one Unity app into reusable Android source.
+  Keep later raw input and triggers inside Unity.
 - Manual gate: when a closed scenario cannot emit a real completion event, log
   that a human operator witnessed the transition before accepting the chain.
 

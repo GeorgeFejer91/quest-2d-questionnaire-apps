@@ -129,6 +129,10 @@ Solution: keep a single workflow validator that writes a requirement matrix.
 `validate-builder-to-quest-workflow.ps1` records each gate as `pass`, `warn`,
 `pending`, `blocked`, `skipped`, or `fail`, and the companion exposes the same
 path through `/api/validate-workflow` for the GUI's `Validate workflow` button.
+The matrix should also promote compact facts such as APK bytes/hashes, render
+counts, device model, preflight trigger count, and direct-trial pass/block
+counts so a reviewer can audit the workflow without opening every nested JSON
+file first.
 
 Generalizable rule: for multi-tool experiment builders, make the validation
 artifact line up with the user's promised workflow instead of relying on a

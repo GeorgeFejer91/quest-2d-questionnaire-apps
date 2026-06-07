@@ -69,6 +69,10 @@ Use absolute dates.
   config validation, APK generation, local questionnaire/tracer render packs,
   Unity PendingIntent bridge static checks, direct handoff APK preflight, and
   explicit pending/blocked Quest trial gates.
+- Enriched that matrix with compact evidence facts: APK byte counts and
+  SHA-256 hashes, render counts/stages/sizes, direct handoff preflight package
+  and trigger counts, Quest model/ADB readiness, and direct-trial decision gate
+  counts when headset trials are run.
 - Added companion endpoint `/api/validate-workflow` and a builder `Validate
   workflow` button so the hosted/offline GUI can trigger that matrix through
   trusted local PC software.

@@ -90,6 +90,109 @@ function Read-JsonIfExists {
     return Get-Content -LiteralPath $Path -Encoding UTF8 -Raw | ConvertFrom-Json
 }
 
+function Get-FileEvidence {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return [ordered]@{ exists = $false; path = $Path }
+    }
+    $exists = Test-Path -LiteralPath $Path
+    $evidence = [ordered]@{
+        exists = $exists
+        path = $Path
+    }
+    if ($exists -and -not (Get-Item -LiteralPath $Path).PSIsContainer) {
+        $item = Get-Item -LiteralPath $Path
+        $evidence.bytes = $item.Length
+        $evidence.sha256 = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash
+        $evidence.lastWriteTimeUtc = $item.LastWriteTimeUtc.ToString('o')
+    }
+    return $evidence
+}
+
+function Get-RenderEvidence {
+    param([string]$SummaryPath)
+
+    $summary = Read-JsonIfExists -Path $SummaryPath
+    if ($null -eq $summary) {
+        return [ordered]@{
+            exists = $false
+            summaryPath = $SummaryPath
+        }
+    }
+
+    $renders = @($summary.renders)
+    $pngs = @($renders | ForEach-Object { $_.png } | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
+    return [ordered]@{
+        exists = $true
+        summaryPath = $SummaryPath
+        schemaVersion = $summary.schemaVersion
+        status = if ($summary.PSObject.Properties.Name -contains 'status') { $summary.status } else { '' }
+        renderer = if ($summary.PSObject.Properties.Name -contains 'renderer') { $summary.renderer } else { '' }
+        renderCount = $renders.Count
+        passCount = @($renders | Where-Object { $_.status -eq 'pass' }).Count
+        warnCount = @($renders | Where-Object { $_.status -eq 'warn' }).Count
+        failCount = @($renders | Where-Object { $_.status -eq 'fail' }).Count
+        pngCount = $pngs.Count
+        stages = @($renders | ForEach-Object { $_.stageName } | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Select-Object -Unique)
+        sizes = @($renders | ForEach-Object { "$($_.widthDp)x$($_.heightDp)" } | Where-Object { $_ -notmatch '^x$' } | Select-Object -Unique)
+        languages = @($renders | ForEach-Object { $_.language } | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Select-Object -Unique)
+        samplePngs = @($pngs | Select-Object -First 3)
+    }
+}
+
+function Get-DirectPreflightEvidence {
+    param([string]$SummaryPath)
+
+    $summary = Read-JsonIfExists -Path $SummaryPath
+    if ($null -eq $summary) {
+        return [ordered]@{
+            exists = $false
+            summaryPath = $SummaryPath
+        }
+    }
+    $preflight = $summary.preflight
+    return [ordered]@{
+        exists = $true
+        summaryPath = $SummaryPath
+        status = $summary.status
+        preflightStatus = if ($preflight) { $preflight.status } else { '' }
+        issueCount = if ($preflight) { @($preflight.issues).Count } else { 0 }
+        questionnaire = if ($preflight) { $preflight.apkInfo.questionnaire } else { $null }
+        temporalTracer = if ($preflight) { $preflight.apkInfo.temporalTracer } else { $null }
+        unity = if ($preflight) { $preflight.apkInfo.unity } else { $null }
+        triggerCount = if ($preflight -and $preflight.triggerCatalog) { @($preflight.triggerCatalog.triggers).Count } else { 0 }
+    }
+}
+
+function Get-QuestAdbEvidence {
+    param([string]$SummaryPath)
+
+    $summary = Read-JsonIfExists -Path $SummaryPath
+    if ($null -eq $summary) {
+        return [ordered]@{
+            exists = $false
+            summaryPath = $SummaryPath
+        }
+    }
+    return [ordered]@{
+        exists = $true
+        summaryPath = $SummaryPath
+        status = $summary.status
+        readiness = $summary.readiness
+        targetSerial = $summary.targetSerial
+        onlineCount = $summary.onlineCount
+        unauthorizedCount = $summary.unauthorizedCount
+        offlineCount = $summary.offlineCount
+        offlineEmulatorCount = $summary.offlineEmulatorCount
+        model = $summary.deviceProps.model
+        androidRelease = $summary.deviceProps.androidRelease
+        wmSize = $summary.deviceProps.wmSize
+        wmDensity = $summary.deviceProps.wmDensity
+        recommendations = $summary.recommendations
+    }
+}
+
 function Invoke-ToolStep {
     param(
         [string]$Name,
@@ -134,16 +237,21 @@ function Add-Requirement {
         [string]$Requirement,
         [string]$Status,
         [string]$Evidence,
-        [string]$Notes = ""
+        [string]$Notes = "",
+        [object]$Facts = $null
     )
 
-    $script:requirements.Add([ordered]@{
+    $row = [ordered]@{
         id = $Id
         requirement = $Requirement
         status = $Status
         evidence = $Evidence
         notes = $Notes
-    }) | Out-Null
+    }
+    if ($null -ne $Facts) {
+        $row.facts = $Facts
+    }
+    $script:requirements.Add($row) | Out-Null
 }
 
 function Get-StepStatus {
@@ -273,24 +381,34 @@ if ([string]::IsNullOrWhiteSpace($QuestionnaireApk)) {
 
 $apkEvidence = if (-not [string]::IsNullOrWhiteSpace($QuestionnaireApk)) { $QuestionnaireApk } else { $generatorStep.log }
 $apkStatus = if ($SkipApkBuild -and [string]::IsNullOrWhiteSpace($QuestionnaireApk)) { 'skipped' } else { Get-StepStatus $generatorStep }
+$questionnaireApkFacts = Get-FileEvidence -Path $QuestionnaireApk
 Add-Requirement `
     -Id 'pc-software-generates-questionnaire-apk' `
     -Requirement 'Local PC software must generate the questionnaire APK requested by the GUI config.' `
     -Status $apkStatus `
     -Evidence $apkEvidence `
-    -Notes ($(if ($SkipApkBuild) { 'APK build was skipped for this run.' } else { '' }))
+    -Notes ($(if ($SkipApkBuild) { 'APK build was skipped for this run.' } else { '' })) `
+    -Facts ([ordered]@{
+        apk = $questionnaireApkFacts
+        generatorSummary = $generatorSummaryPath
+        generatorStatus = if ($generatorSummary) { $generatorSummary.status } else { '' }
+        skippedBuild = [bool]$SkipApkBuild
+    })
 
 $renderStatus = 'skipped'
 $renderEvidence = ''
+$questionnaireRenderFacts = $null
 if (-not $SkipQuestionnaireRender -and $null -ne $generatorSummary -and $generatorSummary.renderSummary) {
     $renderEvidence = [string]$generatorSummary.renderSummary
-    $renderStatus = if (Test-Path -LiteralPath $renderEvidence) { 'pass' } else { 'fail' }
+    $questionnaireRenderFacts = Get-RenderEvidence -SummaryPath $renderEvidence
+    $renderStatus = if ($questionnaireRenderFacts.exists) { 'pass' } else { 'fail' }
 }
 Add-Requirement `
     -Id 'questionnaire-local-render-pack' `
     -Requirement 'The generated questionnaire must have local Android-fidelity render evidence before headset screenshots.' `
     -Status $renderStatus `
-    -Evidence $renderEvidence
+    -Evidence $renderEvidence `
+    -Facts $questionnaireRenderFacts
 
 $temporalAssetStep = Invoke-ToolStep `
     -Name 'temporal-tracer-assets' `
@@ -311,7 +429,7 @@ $temporalRenderSummaryPath = $null
 $temporalRenderStep = $null
 if (-not $SkipTemporalRender) {
     $temporalRenderRoot = Join-Path $artifactRoot 'temporal-render'
-    $temporalRenderSummaryPath = Join-Path $temporalRenderRoot 'render\render-summary.json'
+    $temporalRenderSummaryPath = Join-Path $temporalRenderRoot 'render-summary.json'
     $temporalRenderStep = Invoke-ToolStep `
         -Name 'temporal-tracer-local-render' `
         -Arguments @(
@@ -329,11 +447,13 @@ if (-not $SkipTemporalRender) {
         ) `
         -SummaryPath $temporalRenderSummaryPath
 }
+$temporalRenderFacts = if ($temporalRenderSummaryPath) { Get-RenderEvidence -SummaryPath $temporalRenderSummaryPath } else { $null }
 Add-Requirement `
     -Id 'temporal-tracer-local-render-pack' `
     -Requirement 'Temporal tracer blocks must have local render evidence for layout, labels, and start/end gates.' `
     -Status ($(if ($SkipTemporalRender) { 'skipped' } else { Get-StepStatus $temporalRenderStep })) `
-    -Evidence ($(if ($temporalRenderSummaryPath) { $temporalRenderSummaryPath } else { '' }))
+    -Evidence ($(if ($temporalRenderSummaryPath) { $temporalRenderSummaryPath } else { '' })) `
+    -Facts $temporalRenderFacts
 
 $temporalBuildStep = $null
 if (-not $SkipTemporalApkBuild -and -not $SkipApkBuild) {
@@ -352,13 +472,15 @@ if (Test-Path -LiteralPath $TemporalTracerApk) {
         -Id 'temporal-tracer-apk-available' `
         -Requirement 'The reusable temporal tracer APK must be available for Quest handoff preflight.' `
         -Status 'pass' `
-        -Evidence $TemporalTracerApk
+        -Evidence $TemporalTracerApk `
+        -Facts (Get-FileEvidence -Path $TemporalTracerApk)
 } else {
     Add-Requirement `
         -Id 'temporal-tracer-apk-available' `
         -Requirement 'The reusable temporal tracer APK must be available for Quest handoff preflight.' `
         -Status ($(if ($SkipApkBuild -or $SkipTemporalApkBuild) { 'skipped' } else { Get-StepStatus $temporalBuildStep })) `
-        -Evidence ($(if ($temporalBuildStep) { $temporalBuildStep.log } else { $TemporalTracerApk }))
+        -Evidence ($(if ($temporalBuildStep) { $temporalBuildStep.log } else { $TemporalTracerApk })) `
+        -Facts (Get-FileEvidence -Path $TemporalTracerApk)
 }
 
 $unityStatic = $null
@@ -384,6 +506,7 @@ Add-Requirement `
 $dryRunSummaryPath = Join-Path $artifactRoot 'quest-direct-handoff-dry-run\quest-direct-handoff-validation-summary.json'
 $dryRunStatus = 'skipped'
 $dryRunEvidence = ''
+$dryRunFacts = $null
 if (-not [string]::IsNullOrWhiteSpace($QuestionnaireApk) -and (Test-Path -LiteralPath $QuestionnaireApk)) {
     $dryRunOutputRoot = Join-Path $artifactRoot 'quest-direct-handoff-dry-run'
     $dryRunStep = Invoke-ToolStep `
@@ -409,6 +532,7 @@ if (-not [string]::IsNullOrWhiteSpace($QuestionnaireApk) -and (Test-Path -Litera
         -SummaryPath $dryRunSummaryPath
     $dryRunStatus = Get-StepStatus $dryRunStep
     $dryRunEvidence = $dryRunSummaryPath
+    $dryRunFacts = Get-DirectPreflightEvidence -SummaryPath $dryRunSummaryPath
 } else {
     $dryRunEvidence = 'Questionnaire APK is missing; dry-run preflight requires a built APK.'
 }
@@ -416,9 +540,11 @@ Add-Requirement `
     -Id 'direct-handoff-apk-preflight' `
     -Requirement 'Questionnaire, tracer, and Unity APK package/activity/catalog identities must agree before headset trials.' `
     -Status $dryRunStatus `
-    -Evidence $dryRunEvidence
+    -Evidence $dryRunEvidence `
+    -Facts $dryRunFacts
 
 $questAdbStep = $null
+$questAdbFacts = $null
 if ($RunQuestReadiness -or $RunQuestDirectHandoff) {
     $questReadinessRoot = Join-Path $artifactRoot 'quest-adb-readiness'
     $questAdbArgs = @(
@@ -442,16 +568,19 @@ if ($RunQuestReadiness -or $RunQuestDirectHandoff) {
         -Arguments $questAdbArgs `
         -SummaryPath (Join-Path $questReadinessRoot 'quest-adb-readiness-summary.json') `
         -NonZeroStatus 'warn'
+    $questAdbFacts = Get-QuestAdbEvidence -SummaryPath $questAdbStep.summaryPath
 }
 Add-Requirement `
     -Id 'quest-adb-transport' `
     -Requirement 'Quest ADB transport must be online before install/launch stress validation.' `
     -Status ($(if ($RunQuestReadiness -or $RunQuestDirectHandoff) { Get-StepStatus $questAdbStep } else { 'pending' })) `
-    -Evidence ($(if ($questAdbStep) { $questAdbStep.summaryPath } else { 'Quest check was not requested.' }))
+    -Evidence ($(if ($questAdbStep) { $questAdbStep.summaryPath } else { 'Quest check was not requested.' })) `
+    -Facts $questAdbFacts
 
 $directQuestStatus = 'pending'
 $directQuestEvidence = 'Direct Quest handoff trials were not requested.'
 $directQuestSummary = $null
+$directQuestFacts = $null
 if ($RunQuestDirectHandoff) {
     if ([string]::IsNullOrWhiteSpace($Serial)) {
         $directQuestStatus = 'blocked'
@@ -496,6 +625,14 @@ if ($RunQuestDirectHandoff) {
         if ($null -ne $directQuestSummary) {
             $directQuestStatus = [string]$directQuestSummary.status
             $directQuestEvidence = $directStep.summaryPath
+            $directQuestFacts = [ordered]@{
+                status = $directQuestSummary.status
+                passCount = $directQuestSummary.passCount
+                warnCount = $directQuestSummary.warnCount
+                blockedCount = $directQuestSummary.blockedCount
+                failCount = $directQuestSummary.failCount
+                decisionGate = $directQuestSummary.decisionGate
+            }
         } else {
             $directQuestStatus = Get-StepStatus $directStep
             $directQuestEvidence = $directStep.log
@@ -507,7 +644,8 @@ Add-Requirement `
     -Requirement "Direct XR -> 2D panel -> same XR PendingIntent handoff must pass $QuestTrials/$QuestTrials Quest trials without shell foreground switching after initial launch." `
     -Status $directQuestStatus `
     -Evidence $directQuestEvidence `
-    -Notes 'This remains the decisive Candidate A gate.'
+    -Notes 'This remains the decisive Candidate A gate.' `
+    -Facts $directQuestFacts
 
 $requirementArray = @($requirements.ToArray())
 $stepArray = @($steps.ToArray())
@@ -539,6 +677,16 @@ $summary = [ordered]@{
     temporalTracerApk = $TemporalTracerApk
     unityApk = $UnityApk
     serial = $Serial
+    evidence = [ordered]@{
+        questionnaireApk = Get-FileEvidence -Path $QuestionnaireApk
+        temporalTracerApk = Get-FileEvidence -Path $TemporalTracerApk
+        unityApk = Get-FileEvidence -Path $UnityApk
+        questionnaireRender = $questionnaireRenderFacts
+        temporalTracerRender = $temporalRenderFacts
+        directHandoffPreflight = $dryRunFacts
+        questAdb = $questAdbFacts
+        directQuestHandoff = $directQuestFacts
+    }
     counts = [ordered]@{
         requirements = $requirementArray.Count
         failed = $failedCount

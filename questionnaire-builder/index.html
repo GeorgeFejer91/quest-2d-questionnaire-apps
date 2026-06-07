@@ -4743,6 +4743,9 @@
           return data;
         }, directHandoffJobLevel);
 
+        latestData = await runSequenceStep(sequenceLog, "Audit readiness", () => callAppBackend("/api/handoff-readiness-audit", {}), data => workflowReceiptLevel(data?.auditReceipt));
+        latestData = await runSequenceStep(sequenceLog, "Prepare physical packet", () => callAppBackend("/api/physical-gate-packet", physicalGatePacketPayloadFromEvidence(latestData)), data => workflowReceiptLevel(data?.physicalGatePacketReceipt));
+
         const summary = sequenceLevelSummary(sequenceLog);
         setAppBackendStatus(summary.text, summary.level);
         setAppBackendLog({

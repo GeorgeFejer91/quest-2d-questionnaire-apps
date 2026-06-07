@@ -733,12 +733,13 @@ manifest so the zip itself is auditable.
 Problem: a dashboard can expose every required step as a separate button while
 still making the full product path feel unfinished. Reviewers and operators
 then have to remember the correct order: save, validate, generate APK, render,
-detect Quest, install, replay/export, and direct handoff.
+detect Quest, install, replay/export, direct handoff, audit, and packet prep.
 
 Solution: add a `Run headset sequence` button that calls the same companion
 endpoints as the individual controls in the same order. It always requests the
 local render preview during APK generation, keeps the existing `Preflight only`
-toggle for direct handoff safety, and reports readiness/product-path warnings
+toggle for direct handoff safety, reports readiness/product-path warnings, then
+runs the readiness audit and prepares the physical gate packet from that audit
 without inventing a separate backend contract.
 
 Generalizable rule: make the happy path explicit in the GUI, but do not fork

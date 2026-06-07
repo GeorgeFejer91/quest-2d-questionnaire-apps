@@ -337,9 +337,10 @@ The builder's `Run headset sequence` control strings the trusted local actions
 together for the operator-facing path: save, validate, generate with tests and
 local render preview, detect Quest, install the APK, run replay/export, run
 the 2D-first launcher gate, and then run direct handoff preflight or live
-trials according to the same `Preflight only` toggle. It reuses the existing
-companion endpoints so the one-button path and individual-button path share
-the same evidence semantics.
+trials according to the same `Preflight only` toggle. It then runs the
+readiness audit and prepares the physical gate packet from that audit. It
+reuses the existing companion endpoints so the one-button path and
+individual-button path share the same evidence semantics.
 The GUI's `Audit readiness` control calls `/api/handoff-readiness-audit`. That
 companion endpoint runs the Universal Handoff audit against local summaries and
 returns an `auditReceipt`, so the website can show how many requirements are

@@ -369,9 +369,10 @@ save config, validate config, generate the APK with unit tests and a local
 render preview, detect Quest readiness, install the generated APK, run
 replay/export, run the 2D-first launcher gate, and then run direct handoff
 preflight or live trials according to the existing `Preflight only` and
-optional `Wake before readiness` toggles. This button reuses the same
-companion endpoints as the individual controls; it is an orchestration
-convenience, not a different validation path.
+optional `Wake before readiness` toggles. It finishes by running the readiness
+audit and preparing the physical gate packet from that audit. This button
+reuses the same companion endpoints as the individual controls; it is an
+orchestration convenience, not a different validation path.
 Use `Audit readiness` after a sequence or stress run to ask the companion for
 the Universal Handoff requirement matrix. It reports proven offline gates,
 remaining physical headset gates, and an auditable summary path that can be

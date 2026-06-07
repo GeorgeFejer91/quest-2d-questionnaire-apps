@@ -136,6 +136,7 @@ $requirements = @(
     [ordered]@{ id = 'physical-gate-packet-endpoint'; text = '/api/physical-gate-packet' },
     [ordered]@{ id = 'validate-workflow-endpoint'; text = '/api/validate-workflow' },
     [ordered]@{ id = 'run-headset-sequence'; text = 'Run headset sequence' },
+    [ordered]@{ id = 'headset-sequence-packet-tail'; text = 'physicalGatePacketPayloadFromEvidence(latestData)' },
     [ordered]@{ id = 'run-2d-first-launcher'; text = 'Run 2D-first launch' },
     [ordered]@{ id = 'run-readiness-audit'; text = 'Audit readiness' },
     [ordered]@{ id = 'prepare-manual-signoff'; text = 'Prepare manual signoff' },

@@ -88,8 +88,9 @@ direct handoff preflight in the aggregate workflow matrix by sending
 `Run headset sequence` should keep reusing the same companion endpoints as the
 individual controls, in order: save, validate, generate with tests and local
 render preview, readiness, install, replay/export, 2D-first launcher
-preflight/live trial, and direct handoff preflight or live trials. Do not let
-it become a separate hidden backend workflow.
+preflight/live trial, direct handoff preflight or live trials, readiness audit,
+and physical gate packet preparation. Do not let it become a separate hidden
+backend workflow.
 `Audit readiness` should call `/api/handoff-readiness-audit` and show the
 Universal Handoff requirement matrix from local evidence. It is the GUI's
 completion readout: offline evidence can pass while live Quest trials and

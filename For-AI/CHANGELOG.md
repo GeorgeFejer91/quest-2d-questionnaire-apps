@@ -96,6 +96,10 @@ Use absolute dates.
   readiness audit path when available, keeping operator packets tied to the
   evidence displayed in the GUI rather than silently rediscovering the latest
   artifact on disk.
+- Extended `Run headset sequence` so the one-button path finishes by running
+  the readiness audit and preparing the physical gate packet from that audit.
+  Future sequence buttons should end with an auditable completion/packet
+  boundary, not just the last launch or preflight job.
 
 ## 2026-06-07
 

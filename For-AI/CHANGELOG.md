@@ -109,6 +109,10 @@ Use absolute dates.
   proves its ordered companion-endpoint spine and verifies the physical packet
   payload prefers the visible readiness audit before falling back to companion
   summary discovery.
+- Added stop-condition guardrails to the physical gate packet and manual
+  signoff template: no controller-required launch dialog for generic
+  demo/stimulus APKs, no Meta menu or ADB foreground recovery, and frozen Unity
+  video after panel return is a Unity panel-focus/media-resume failure.
 
 ## 2026-06-07
 

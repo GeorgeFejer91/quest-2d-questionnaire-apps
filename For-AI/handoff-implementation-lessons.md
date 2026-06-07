@@ -849,6 +849,25 @@ session. Package the latest evidence paths and exact gate commands, but do not
 let the packet itself close any device, product-path, or human-observation
 gate.
 
+## Operator Packets Need Stop Conditions
+
+Problem: a physical-session runbook can list the right commands while still
+letting the operator normalize bad headset states, such as clearing a
+controller-required launch dialog or using Meta menus to recover from frozen
+Unity video. That turns a product-path failure into ambiguous manual behavior.
+
+Solution: the Universal Handoff physical gate packet now includes operator
+guardrails: use `2D demographics -> Unity Start experiment -> video/stimulus`,
+stop if a generic demo/stimulus APK shows a controller-required launch dialog,
+do not use Meta menu or ADB foreground recovery after the initial launch, and
+treat frozen Unity video after panel return as a Unity panel-focus/media-resume
+bug. The manual signoff template now requires the operator to confirm that no
+controller-required launch dialog blocked the Unity APK.
+
+Generalizable rule: physical gate packets should include stop conditions and
+failure meanings, not only success commands. If an operator action would mask
+the app-owned product path, make it a false signoff rather than a workaround.
+
 ## Operator Packets Should Follow Visible Evidence
 
 Problem: a dashboard can show the operator a specific readiness audit and then

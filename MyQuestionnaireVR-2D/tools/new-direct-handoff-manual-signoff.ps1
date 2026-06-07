@@ -218,6 +218,7 @@ else {
 }
 
 $requiredObservationFields = @(
+    [ordered]@{ name = 'observedNoControllerRequiredLaunchDialog'; label = 'No Horizon controller-required launch dialog blocked the Unity APK; if it appeared, the Unity build was not treated as a valid generic demo/stimulus build.' },
     [ordered]@{ name = 'observedUnityStartGate'; label = 'Unity displayed the Start experiment gate before the first panel launch.' },
     [ordered]@{ name = 'clickedStartExperimentInUnity'; label = 'The operator or participant clicked the Start experiment target inside Unity.' },
     [ordered]@{ name = 'observedQuestionnairePanelFocused'; label = 'The questionnaire 2D panel took focus from Unity.' },
@@ -247,14 +248,21 @@ Use a real product-path run:
 
 1. Launch the source Unity APK through the normal direct handoff validator or
    the builder's Run direct handoff button with Preflight only cleared.
-2. Do not use ADB am start, force-stop, package killing, or Meta menu
+2. If Horizon shows LaunchCheckControllerRequiredDialogActivity or any
+   controller-required launch prompt for a generic demo/stimulus APK, stop the
+   run and rebuild Unity with hand and controller support. Do not clear the
+   prompt and count the run as valid handoff evidence.
+3. Do not use ADB am start, force-stop, package killing, or Meta menu
    navigation after the initial Unity launch.
-3. In the headset, confirm the source Unity app shows its Start experiment
+4. In the headset, confirm the source Unity app shows its Start experiment
    gate before trigger 1, then click that gate.
-4. Confirm this sequence in the headset:
+5. Confirm this sequence in the headset:
    Unity -> questionnaire panel -> same Unity app with video motion resumed ->
    temporal tracer panel -> same Unity app final completion.
-5. Fill operator-signoff-template.json, save it as operator-signoff.json, and
+6. If Unity video stays frozen after a panel return, mark the signoff false.
+   Treat that as a Unity panel-focus/media-resume bug, not as something to fix
+   with Meta menu navigation or ADB foreground switching.
+7. Fill operator-signoff-template.json, save it as operator-signoff.json, and
    run this script again with -OperatorSignoffPath pointing at that file.
 
 Suggested validation command after filling the signoff:
@@ -273,6 +281,7 @@ $template = [ordered]@{
     signedAtUtc = ''
     questSerial = $QuestSerial
     directHandoffSummaryPath = $resolvedDirectText
+    observedNoControllerRequiredLaunchDialog = $false
     observedUnityStartGate = $false
     clickedStartExperimentInUnity = $false
     observedQuestionnairePanelFocused = $false

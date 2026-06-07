@@ -166,6 +166,19 @@ function Read-JsonIfExists {
     return Get-Content -LiteralPath $Path -Encoding UTF8 -Raw | ConvertFrom-Json
 }
 
+function Get-JsonProperty {
+    param(
+        [object]$Object,
+        [string]$Name,
+        [object]$Default = $null
+    )
+
+    if ($null -eq $Object -or -not $Object.PSObject -or -not ($Object.PSObject.Properties.Name -contains $Name)) {
+        return $Default
+    }
+    return $Object.$Name
+}
+
 . (Join-Path $PSScriptRoot 'source-asset-snapshot.ps1')
 
 function Get-FileEvidence {
@@ -1593,13 +1606,38 @@ try {
     if ($null -eq $physicalGatePacketReceipt -or [string]$physicalGatePacketReceipt.kind -ne 'universal-handoff-physical-gate-packet' -or -not [bool]$physicalGatePacketReceipt.checks.runbookWritten -or -not [bool]$physicalGatePacketReceipt.checks.auditSummaryPresent -or -not [bool]$physicalGatePacketReceipt.checks.manualSignoffTemplateWritten -or [string]$physicalGatePacketReceipt.status -eq 'needs-offline-attention') {
         throw "Companion physical-gate-packet did not return a valid operator-ready receipt."
     }
+    $physicalGatePacketSummary = Read-JsonIfExists -Path ([string]$physicalGatePacket.summaryPath)
+    $physicalGatePacketGuardrails = @(Get-JsonProperty -Object $physicalGatePacketSummary -Name 'operatorGuardrails' -Default @())
+    $physicalGatePacketGuardrailIds = @($physicalGatePacketGuardrails | ForEach-Object { [string](Get-JsonProperty -Object $_ -Name 'id' -Default '') })
+    $physicalGatePacketRunbookPath = [string]$physicalGatePacketReceipt.artifacts.runbookPath
+    $physicalGatePacketRunbookText = if (-not [string]::IsNullOrWhiteSpace($physicalGatePacketRunbookPath) -and (Test-Path -LiteralPath $physicalGatePacketRunbookPath)) {
+        Get-Content -LiteralPath $physicalGatePacketRunbookPath -Raw
+    }
+    else {
+        ''
+    }
+    $physicalGatePacketGuardrailsPass = (
+        $physicalGatePacketGuardrailIds -contains '2d-demographics-unity-start-video' -and
+        $physicalGatePacketGuardrailIds -contains 'no-controller-required-dialog' -and
+        $physicalGatePacketGuardrailIds -contains 'no-menu-or-adb-recovery' -and
+        $physicalGatePacketGuardrailIds -contains 'unity-video-resumes-after-panel' -and
+        $physicalGatePacketRunbookText.Contains('LaunchCheckControllerRequiredDialogActivity') -and
+        $physicalGatePacketRunbookText.Contains('Unity video remains frozen') -and
+        $physicalGatePacketRunbookText.Contains('Meta menu navigation')
+    )
+    if (-not $physicalGatePacketGuardrailsPass) {
+        throw "Companion physical-gate-packet did not include the required operator stop-condition guardrails."
+    }
     $summary['endToEndReceipt']['checks']['physicalGatePacketPass'] = $true
+    $summary['endToEndReceipt']['checks']['physicalGatePacketGuardrailsPass'] = $physicalGatePacketGuardrailsPass
     $summary['endToEndReceipt']['artifacts']['physicalGatePacketSummaryPath'] = [string]$physicalGatePacket.summaryPath
     $summary['physicalGatePacket'] = [ordered]@{
         status = $physicalGatePacket.packetStatus
         runId = $physicalGatePacket.runId
         summaryPath = $physicalGatePacket.summaryPath
         physicalGatePacketReceipt = $physicalGatePacketReceipt
+        operatorGuardrailIds = $physicalGatePacketGuardrailIds
+        operatorGuardrailsPass = $physicalGatePacketGuardrailsPass
     }
     $summary['completedAt'] = (Get-Date).ToString('o')
     $summary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $summaryPath -Encoding UTF8

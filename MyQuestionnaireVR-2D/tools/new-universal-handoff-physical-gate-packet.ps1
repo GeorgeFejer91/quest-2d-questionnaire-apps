@@ -277,6 +277,27 @@ Default direct PendingIntent approved: $defaultDirectApproved
 Product-path status: $([string](Get-JsonProperty -Object $nextPhysicalGates -Name 'productPathStatus' -Default 'unknown'))
 Product-path blocked reasons: $(@(Get-JsonProperty -Object $nextPhysicalGates -Name 'productPathBlockedReasons' -Default @()) -join ', ')
 
+Operator preflight guardrails
+-----------------------------
+
+1. The participant-facing first launch should be:
+   2D demographics -> Unity Start experiment gate -> Unity video/stimulus.
+   Do not start the Unity video before the foreground Unity start target is
+   clicked by the participant/operator.
+
+2. Generic demo/stimulus Unity APKs must support hands and controllers. If the
+   headset shows LaunchCheckControllerRequiredDialogActivity or any
+   controller-required launch prompt, stop the trial, record it as a build
+   preflight issue, and rebuild Unity with optional hand tracking plus
+   controller profiles. Do not clear the prompt and count the run as valid
+   product-path evidence.
+
+3. If Unity video remains frozen after returning from a 2D panel, mark the run
+   failed or blocked according to the validator evidence. Do not repair the
+   sequence with Meta menu navigation, ADB foreground switching, force-stop, or
+   package killing. Unity must explicitly own panel-focus pause/resume and
+   clear stale result extras.
+
 Remaining headset gates
 -----------------------
 
@@ -340,6 +361,28 @@ $packet = [ordered]@{
         stdoutPath = $manualStdoutPath
     }
     remainingRequirements = $remainingRequirements
+    operatorGuardrails = @(
+        [ordered]@{
+            id = '2d-demographics-unity-start-video'
+            label = 'Use 2D demographics, then Unity Start experiment, then video/stimulus'
+            failureMeaning = 'The first demographics block is still depending on Unity background pause/resume behavior.'
+        },
+        [ordered]@{
+            id = 'no-controller-required-dialog'
+            label = 'No Horizon controller-required launch dialog for generic demo/stimulus APKs'
+            failureMeaning = 'Rebuild Unity with hand and controller support before collecting product-path evidence.'
+        },
+        [ordered]@{
+            id = 'no-menu-or-adb-recovery'
+            label = 'No Meta menu navigation or ADB foreground switching after the initial product-path launch'
+            failureMeaning = 'The app-owned handoff contract was not proven.'
+        },
+        [ordered]@{
+            id = 'unity-video-resumes-after-panel'
+            label = 'Unity video motion resumes after questionnaire return'
+            failureMeaning = 'Treat as a Unity panel-focus/media-resume bug, not an OS auto-pause guarantee.'
+        }
+    )
     nextActions = @(
         [ordered]@{
             id = 'detect-product-path-readiness'

@@ -410,6 +410,8 @@ function Test-UnityDirectHandoffBridge {
     Add-Check -Name 'panel launch includes return token' -Pass (Test-Text $bridgeText 'putExtra"\s*,\s*ReturnPendingIntentExtra\s*,\s*returnPendingIntent') -Detail 'Panel launch carries PendingIntent Parcelable.'
     Add-Check -Name 'panel launch starts explicit activity' -Pass (Test-Text $bridgeText 'setClassName"\s*,\s*packageName\s*,\s*activityName.*?startActivity"\s*,\s*intent') -Detail 'Questionnaire/tracer are explicit component launches.'
     Add-Check -Name 'result extras reader' -Pass (Test-Text $bridgeText 'mq\.resultStatus.*?mq\.exportJsonPath.*?mq\.exportCsvPath.*?mq\.exportSvgPath') -Detail 'Unity can read completion/export result extras.'
+    Add-Check -Name 'handled result clear method' -Pass (Test-Text $bridgeText 'ClearQuestionnaireResult\s*\(.*?setIntent') -Detail 'Unity can clear consumed completion extras to avoid stale panel results.'
+    Add-Check -Name 'PendingIntent request key includes trigger block identity' -Pass ((Test-Text $bridgeText 'requestKey.*?mq\.triggerId.*?mq\.chainStepId.*?mq\.blockId') -and (Test-Text $bridgeText 'mq\.pendingIntentRequestKey') -and (Test-Text $bridgeText 'GetHashCode\s*\(\s*\)')) -Detail 'Return PendingIntent request codes vary by trigger/chain step/block.'
 
     $checkArray = @($checks.ToArray())
     $failed = @($checkArray | Where-Object { -not $_.pass })

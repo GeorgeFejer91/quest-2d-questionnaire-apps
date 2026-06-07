@@ -539,6 +539,12 @@ The Unity hook uses the callback broker extras supplied by the incoming chain
 intent (`mq.brokerAction`, `mq.brokerPackage`, `mq.brokerActivity`). If the
 standalone orchestrator APK owns the plan, the same hook returns there; if no
 callback extras are present, it falls back to the questionnaire-owned broker.
+For direct `mq.returnPendingIntent` handoffs, the reusable
+`tools\unity\QuestQuestionnaireChainBridge.cs` now creates trigger/block-aware
+return tokens and exposes `ClearQuestionnaireResult()`. Call that method after
+handling the expected `mq.resultStatus=complete` and `mq.triggerId` so a later
+Unity focus callback cannot replay stale result extras and leave media or
+experiment progression stuck.
 
 Before rebuilding a source-hook Peripersonal-style APK, run the Unity preflight:
 

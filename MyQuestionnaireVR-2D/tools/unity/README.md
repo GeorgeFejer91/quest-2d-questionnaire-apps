@@ -232,4 +232,18 @@ QuestQuestionnaireChainBridge.LaunchQuestionnaire(new Dictionary<string, string>
 
 Use direct `mq.finishBehavior=openNext` with `mq.nextPackage` and `mq.nextActivity` only for simple two-app chains. Use the broker for multi-step experiment chains.
 
-When Unity is resumed directly by the questionnaire or launched by the broker after a questionnaire step, call `ReadQuestionnaireResult()` and look for `mq.resultStatus=complete`, `mq.runId`, `mq.chainId`, and the JSON/CSV export paths.
+When Unity is resumed directly by the questionnaire or launched by the broker
+after a questionnaire step, call `ReadQuestionnaireResult()` and look for
+`mq.resultStatus=complete`, `mq.triggerId`, `mq.runId`, `mq.chainId`, and the
+JSON/CSV/SVG export paths. After your scenario code has accepted the expected
+trigger result, call:
+
+```csharp
+QuestQuestionnaireChainBridge.ClearQuestionnaireResult();
+```
+
+That clears the handled Android intent from the live Unity Activity so a later
+focus/resume callback cannot re-read a stale panel result. The bridge also
+creates a distinct return `PendingIntent` request key from caller package,
+caller activity, `mq.triggerId`, `mq.chainStepId`, and `mq.blockId`; keep those
+extras stable and unique for each semantic trigger or chain step.

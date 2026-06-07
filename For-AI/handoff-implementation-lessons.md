@@ -676,7 +676,11 @@ launching a questionnaire/tracer: pause `VideoPlayer`, remember whether playback
 should resume, actively poll for completion while waiting for a panel result,
 consume/clear handled result extras, and accept only the `mq.triggerId` that
 matches the current waiting phase. Unity bridge callbacks should create a
-distinct return `PendingIntent` per trigger or chain step.
+distinct return `PendingIntent` per trigger or chain step. The reusable Unity
+bridge template now exposes `ClearQuestionnaireResult()` and builds the
+PendingIntent request key from caller package/activity plus trigger, chain
+step, and block identity; the static workflow gate checks those exact
+guardrails.
 
 Generalizable rule: Android/Quest can move focus between APKs, but experiment
 continuity belongs to the source app. Treat panel launch as a source-app state

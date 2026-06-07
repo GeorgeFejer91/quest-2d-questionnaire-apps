@@ -98,7 +98,11 @@ video should resume, poll for a completion result while waiting, consume the
 handled result, and require the returned `mq.triggerId` to match the trigger it
 is currently waiting for. The return `PendingIntent` should also be unique per
 trigger or chain step so later panel returns cannot collapse into an earlier
-callback.
+callback. The reusable Unity bridge template under
+`MyQuestionnaireVR-2D/tools/unity/QuestQuestionnaireChainBridge.cs` exposes
+`ClearQuestionnaireResult()` and creates return tokens from caller package,
+caller activity, trigger id, chain step id, and block id; the builder-to-Quest
+workflow matrix statically checks those guardrails.
 
 The 2D panel receives normal Quest panel input while focused. It does not own
 the foreground XR app's OpenXR session or raw controller state.

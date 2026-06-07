@@ -185,6 +185,22 @@ public static class QuestQuestionnaireChainBridge
         return result;
     }
 
+    public static void ClearQuestionnaireResult()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+        using (var currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+        using (var clearedIntent = new AndroidJavaObject("android.content.Intent"))
+        {
+            clearedIntent.Call<AndroidJavaObject>(
+                "setClassName",
+                currentActivity.Call<string>("getPackageName"),
+                currentActivity.Call<AndroidJavaObject>("getClass").Call<string>("getName"));
+            currentActivity.Call("setIntent", clearedIntent);
+        }
+#endif
+    }
+
     public static Dictionary<string, string> ReadValidationExtras()
     {
         var result = new Dictionary<string, string>();
@@ -242,12 +258,22 @@ public static class QuestQuestionnaireChainBridge
             returnIntent.Call<AndroidJavaObject>("setClassName", callerPackage, NormalizeActivity(callerPackage, callerActivity));
             returnIntent.Call<AndroidJavaObject>("addFlags", FlagActivityReorderToFront | FlagActivitySingleTop | FlagActivityNewTask);
             returnIntent.Call<AndroidJavaObject>("putExtra", HandoffSchemaExtra, HandoffSchemaV1);
+            string requestKey = callerPackage
+                + "/"
+                + callerActivity
+                + "/"
+                + GetExtraOrDefault(extras, "mq.triggerId", "")
+                + "/"
+                + GetExtraOrDefault(extras, "mq.chainStepId", "")
+                + "/"
+                + GetExtraOrDefault(extras, "mq.blockId", "");
+            returnIntent.Call<AndroidJavaObject>("putExtra", "mq.pendingIntentRequestKey", requestKey);
             int flags = PendingIntentFlagUpdateCurrent;
             if (buildVersion.GetStatic<int>("SDK_INT") >= 31)
             {
                 flags |= PendingIntentFlagMutable;
             }
-            int requestCode = Mathf.Abs((callerPackage + "/" + callerActivity).GetHashCode());
+            int requestCode = Mathf.Abs(requestKey.GetHashCode());
             return pendingIntentClass.CallStatic<AndroidJavaObject>("getActivity", currentActivity, requestCode, returnIntent, flags);
         }
     }

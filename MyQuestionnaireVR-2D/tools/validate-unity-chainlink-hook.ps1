@@ -66,6 +66,9 @@ Add-Check -Name 'nextBlock command extra' -Pass (Test-Text $bridgeText 'ChainLin
 Add-Check -Name 'direct ChainLink command method' -Pass (Test-Text $bridgeText 'SendChainLinkCommand\s*\(.*?setClassName"\s*,\s*ChainLinkPackage\s*,\s*ChainLinkActivity.*?putExtra"\s*,\s*ChainLinkCommandExtra') -Detail 'Bridge starts ChainLink explicitly.'
 Add-Check -Name 'direct nextBlock helper' -Pass (Test-Text $bridgeText 'SendChainLinkNextBlock\s*\(.*?SendChainLinkCommand\s*\(\s*ChainLinkNextBlockCommand') -Detail 'Bridge exposes SendChainLinkNextBlock.'
 Add-Check -Name 'recommended Android flags' -Pass (Test-Text $bridgeText '0x00020000\s*\|\s*0x20000000') -Detail 'Bridge uses REORDER_TO_FRONT and SINGLE_TOP flags.'
+Add-Check -Name 'direct handoff return token' -Pass ((Test-Text $bridgeText 'ReturnPendingIntentExtra\s*=\s*"mq\.returnPendingIntent"') -and (Test-Text $bridgeText 'PendingIntent.*?getActivity')) -Detail 'Bridge can create a caller-owned PendingIntent return token.'
+Add-Check -Name 'handled result clear method' -Pass (Test-Text $bridgeText 'ClearQuestionnaireResult\s*\(.*?setIntent') -Detail 'Bridge can clear consumed panel completion extras.'
+Add-Check -Name 'trigger-aware PendingIntent request key' -Pass ((Test-Text $bridgeText 'requestKey.*?mq\.triggerId.*?mq\.chainStepId.*?mq\.blockId') -and (Test-Text $bridgeText 'mq\.pendingIntentRequestKey')) -Detail 'Bridge varies return tokens by trigger/chain step/block.'
 
 Add-Check -Name 'Unity XR left controller input' -Pass (Test-Text $hookText 'InputDevices\.GetDeviceAtXRNode\s*\(\s*XRNode\.LeftHand\s*\)') -Detail 'Hook reads left controller.'
 Add-Check -Name 'Unity XR button usages' -Pass (Test-Text $hookText 'CommonUsages\.primaryButton.*?CommonUsages\.triggerButton.*?CommonUsages\.gripButton') -Detail 'Hook supports common Quest button features.'

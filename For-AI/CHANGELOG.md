@@ -216,3 +216,8 @@ Use absolute dates.
   Unity video resume/non-black frame markers, trigger 2 Temporal Tracer export,
   and final Unity completion all passed. Candidate A still requires 10 clean
   trials plus the manual headset gate before default approval.
+- Updated the reusable Unity bridge template and static validators with the
+  panel-focus fixes proven in the demo: source apps can clear consumed result
+  intents via `ClearQuestionnaireResult()`, and return PendingIntent request
+  keys include trigger, chain-step, and block identity to avoid stale callback
+  reuse across panel launches.

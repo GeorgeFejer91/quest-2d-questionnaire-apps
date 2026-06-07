@@ -59,8 +59,8 @@ public static class QuestQuestionnaireChainBridge
             using (var returnPendingIntent = CreateReturnPendingIntent(currentActivity, extras))
             {
                 intent.Call<AndroidJavaObject>("putExtra", ReturnPendingIntentExtra, returnPendingIntent);
+                currentActivity.Call("startActivity", intent);
             }
-            currentActivity.Call("startActivity", intent);
         }
 #else
         Debug.Log("QuestQuestionnaireChainBridge panel launches only run on Android device builds.");
@@ -180,6 +180,22 @@ public static class QuestQuestionnaireChainBridge
             CopyStringExtra(intent, result, "mq.exportSvgPath");
             CopyStringExtra(intent, result, "mq.questionnaireConfigId");
             CopyStringExtra(intent, result, "mq.tracerConfigId");
+        }
+#endif
+        return result;
+    }
+
+    public static Dictionary<string, string> ReadValidationExtras()
+    {
+        var result = new Dictionary<string, string>();
+#if UNITY_ANDROID && !UNITY_EDITOR
+        using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+        using (var currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+        using (var intent = currentActivity.Call<AndroidJavaObject>("getIntent"))
+        {
+            CopyStringExtra(intent, result, "mq.validationAutoTrace");
+            CopyStringExtra(intent, result, "mq.validationFastVideo");
+            CopyStringExtra(intent, result, "mq.validationVideoEndAfterSeconds");
         }
 #endif
         return result;

@@ -54,3 +54,11 @@ Use absolute dates.
 - Fixed the local companion for Windows PowerShell compatibility:
   pairing-token generation no longer requires `RandomNumberGenerator.Fill()`,
   and child-process stderr is captured as text before exit-code evaluation.
+- Added `MyQuestionnaireVR-2D/tools/quest-direct-handoff-validate.ps1` for
+  direct Quest handoff trials. It preflights APK package/activity/catalog
+  agreement, launches Unity once, records focus/logcat/power/export evidence,
+  and classifies asleep-headset or Horizon controller-required launch checks as
+  `blocked`.
+- Rebuilt the local `AweGreatDictatorUnity` demo APK after fixing the custom
+  Android manifest path; the earlier APK launched Unity's stock Activity even
+  though the trigger catalog named the custom return Activity.

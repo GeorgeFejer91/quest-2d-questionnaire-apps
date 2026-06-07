@@ -92,3 +92,27 @@ pairing tokens and validation tokens.
 
 Generalizable rule: local Windows automation scripts should use APIs available
 in the target PowerShell runtime, not only modern .NET examples.
+
+## Direct Handoff Needs Activity And Power Preflight
+
+Problem: a trigger catalog can name a custom Unity Activity while the built APK
+still launches Unity's stock `com.unity3d.player.UnityPlayerGameActivity`. In
+that state the 2D panel can save successfully, but return-to-caller evidence is
+not testing the intended component.
+
+Solution: direct handoff validation now starts with APK `aapt` inspection and
+fails preflight if the package, launchable Activity, trigger catalog Activity,
+or embedded trigger catalog disagree. The Unity demo must enable the custom
+main Android manifest before building.
+
+Problem: when the Quest headset is asleep/unworn, Horizon can intercept an
+ADB-launched immersive app with
+`LaunchCheckControllerRequiredDialogActivity` before Unity starts. No Unity,
+questionnaire, or tracer logs will appear because the product path never begins.
+
+Solution: classify that run as `blocked`, not failed. Record `dumpsys power`,
+`dumpsys window`, logcat, and the blocked reasons. Resume the test only with an
+awake/worn headset or an operator who can clear the system launch gate.
+
+Generalizable rule: for XR-to-panel handoff trials, prove the APK contract and
+headset readiness before interpreting missing panel exports as a handoff bug.

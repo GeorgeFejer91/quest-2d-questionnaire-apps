@@ -66,6 +66,14 @@ After every Unity Quest build, inspect the APK with `aapt dump badging` and
 - No accidental requirements such as eye tracking are present in the merged
   manifest for a simple video stimulus.
 
+Unity can ignore `Assets/Plugins/Android/AndroidManifest.xml` when
+`ProjectSettings/ProjectSettings.asset` has `useCustomMainManifest: 0`. Unity
+6000.2.7f2 did not expose `PlayerSettings.Android.useCustomMainManifest` as a
+script property in this project, so build scripts should patch the
+ProjectSettings text or otherwise prove the merged APK uses the custom
+Activity. A catalog that points to a custom Activity is not enough; verify the
+APK's `launchable-activity`.
+
 ## Distinguish Quest Launch Gates From Video Failures
 
 The Horizon OS log markers
@@ -79,3 +87,9 @@ ADB screenshots and UIAutomator may return black or no root node for protected
 system dialogs. Record logcat and foreground evidence. Waking the headset with
 `KEYCODE_WAKEUP` can clear sleep state, but it does not replace a physical
 controller/hardware gate when Horizon requires controllers.
+
+On the 2026-06-07 Quest 3 run, `dumpsys power` reported
+`mWakefulness=Asleep` and `dumpsys window` reported the Horizon launch-check
+dialog as the resumed Activity. Treat this as an unattended headset blocker:
+the next valid trial must begin with the headset awake/worn, then launch Unity
+once and avoid any ADB foreground switch after that launch.

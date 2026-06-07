@@ -125,6 +125,18 @@ product-path pass must not use shell commands to force the foreground app.
 The proof must show both packages stay alive and the focus sequence returns to
 the same XR package/activity through app-owned handoff.
 
+Run a direct Quest evidence attempt with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\quest-direct-handoff-validate.ps1 -Serial <quest-serial> -TrialCount 1 -FastVideoForValidation -AutoTraceForValidation
+```
+
+The script installs the questionnaire, temporal tracer, and Unity demo APKs,
+pushes only the validation replay marker before the product-path launch, starts
+Unity once, then records focus samples, logcat, power state, and exports. It
+classifies Horizon launch-check or asleep-headset runs as `blocked` instead of
+as handoff failures.
+
 ## Local Validation
 
 The no-headset stress ladder is:

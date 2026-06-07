@@ -92,6 +92,19 @@ For Quest work, record evidence:
 - answer/trace counts,
 - any system prompt or controller-required warning.
 
+For direct XR-to-panel handoff, use:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\quest-direct-handoff-validate.ps1 -Serial <quest-serial> -TrialCount 1 -FastVideoForValidation -AutoTraceForValidation
+```
+
+This validator checks APK package/activity/catalog agreement before installing,
+then launches Unity once and only observes/pulls evidence after that. If the
+headset is asleep or Horizon opens
+`LaunchCheckControllerRequiredDialogActivity` before Unity logs appear, the run
+is `blocked`; wake/wear the headset or clear the system dialog before claiming
+a handoff result.
+
 ## ADB Baseline
 
 Start device-facing work with read-only discovery:

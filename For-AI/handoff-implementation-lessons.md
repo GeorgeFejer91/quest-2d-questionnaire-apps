@@ -179,6 +179,28 @@ Generalizable rule: for multi-tool experiment builders, make the validation
 artifact line up with the user's promised workflow instead of relying on a
 collection of unrelated green checks.
 
+## Completion Audits Should Be Requirement-First
+
+Problem: once the workflow has many receipts, a future agent can confuse
+strong offline evidence with actual goal completion, or miss that only the
+physical Quest gates remain. Narrative summaries are especially risky because
+the requested end state includes both website/companion/APK generation and
+real Quest behavior.
+
+Solution: add `audit-universal-handoff-readiness.ps1`. It reads the latest
+full companion receipt and real direct-handoff summaries, then emits a
+requirement-by-requirement matrix for the original product promise: hosted GUI,
+local companion contract, APK generation, local renders, evidence bundle,
+direct PendingIntent preflight, at least one real product-path trial, 10 clean
+Quest product-path trials, and manual headset pass. It exits cleanly for
+`pass-with-physical-pending` when the only missing items are physical gates,
+and `-RequireComplete` turns that same state into a failure.
+
+Generalizable rule: long-running goal threads need a machine-readable
+completion audit that preserves the original scope. Make the audit prove
+completion or name exactly which requirement remains, instead of letting green
+subchecks redefine success.
+
 ## Browser Controls Need Job Handles For Long Work
 
 Problem: `/api/validate-workflow` originally ran the full builder-to-Quest

@@ -33,6 +33,10 @@ Use absolute dates.
   required runner controls/endpoints after publication. The companion workflow
   validator now includes this hosted publication gate in its end-to-end
   receipt unless explicitly skipped.
+- Added `MyQuestionnaireVR-2D/tools/audit-universal-handoff-readiness.ps1` to
+  summarize the original Universal Quest Handoff requirements from current
+  receipts and distinguish offline proof from the remaining physical Quest
+  gates.
 
 ## 2026-06-07
 

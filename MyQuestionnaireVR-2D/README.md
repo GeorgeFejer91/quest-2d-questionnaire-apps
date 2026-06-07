@@ -209,6 +209,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-builder-com
 Use `-SkipApkBuild` only for faster diagnostics when APK assembly has already
 been covered by another gate.
 
+Summarize the full Universal Quest Handoff evidence state from the current
+artifact receipts:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\audit-universal-handoff-readiness.ps1
+```
+
+The audit reports which original workflow requirements are proven, which
+artifact proves each one, and which physical gates still prevent completion.
+Use `-RequireComplete` only when the 10 clean real Quest trials and manual
+headset pass are expected to be present; otherwise a
+`pass-with-physical-pending` status is the correct overnight state.
+
 Run the full builder-to-Quest evidence spine for a saved GUI config:
 
 ```powershell

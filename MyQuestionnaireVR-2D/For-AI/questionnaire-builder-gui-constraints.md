@@ -124,9 +124,13 @@ Workflow constraint:
   local companion for trusted PC actions.
 - Section 1 should include a user-friendly "Load example APK" fallback with the
   GitHub folder URL for `example-scenario-apk/`.
-- Device-state helpers in developer runners, such as `Wake before readiness`,
-  must be explicit opt-in controls, disabled by default, and hidden from the
-  hosted final-product path unless they become a user-facing requirement.
+- Device-state helpers in developer runners, such as `Wake before Quest
+  verification`, must be explicit opt-in controls, disabled by default, and
+  hidden from the hosted final-product path unless they become a user-facing
+  requirement. When enabled for offline replay/export, 2D-first, or direct
+  handoff jobs, the local companion must send only one bounded wake request
+  before the shared readiness probe and record the wake attempt in the job
+  summary/receipt.
 
 Security and portability constraints:
 

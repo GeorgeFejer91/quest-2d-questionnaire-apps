@@ -431,3 +431,11 @@ Use absolute dates.
   readiness audit so completion summaries keep the controller-dialog prevention
   gate visible alongside APK/catalog, render, companion, and physical Quest
   gates.
+- Extended the opt-in wake-before-readiness protocol from direct handoff to the
+  shared `quest-adb-readiness.ps1` probe and replay/export wrapper. Offline
+  verification jobs can now send one recorded `KEYCODE_WAKEUP`, re-probe
+  product-path readiness, and keep blocked headset/display states auditable.
+- Updated the Quest verification runbook: live replay/export, 2D-first launch,
+  and direct handoff claims must use explicit headset serials, record readiness
+  and wake evidence, and leave the physical gate blocked/pending when the
+  headset remains asleep or Horizon launch-check dialogs are focused.

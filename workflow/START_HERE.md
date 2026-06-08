@@ -168,6 +168,17 @@ Use this order and do not skip a rung when claiming a higher-level pass:
 7. Chain validation: ChainLink plan, repeated blocks, no overwrites, block
    timestamps, foreground app handoff, and final state.
 
+Before any live Quest replay/export, 2D-first launch, or direct handoff claim,
+run the shared ADB readiness probe with an explicit physical Quest serial. If
+readiness is `online` but `productPathStatus=blocked` with
+`headset-asleep-or-display-off`, use exactly one opt-in
+`-WakeBeforeReadiness` recovery or ask the operator to wear/wake the headset,
+then rerun readiness and continue only after product-path state is `ready`.
+Record the readiness summary, wake attempt, replay/export summary, and handoff
+summary; if the headset remains asleep or a Horizon launch-check dialog is
+focused, mark the physical Quest gate blocked/pending instead of claiming a
+pass.
+
 Routine visual iteration should use local Android render previews first. Use
 headset screenshots only for final evidence, capture-route debugging, or
 suspected compositor/panel mismatches.

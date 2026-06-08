@@ -1174,7 +1174,7 @@
               </label>
               <label class="toggle-row" data-dev-only>
                 <input id="directHandoffWakeBeforeReadiness" type="checkbox">
-                <span>Wake before readiness</span>
+                <span>Wake before Quest verification</span>
               </label>
               <label data-dev-only>
                 Direct summary for signoff
@@ -6250,7 +6250,8 @@
         const data = await callAppBackend("/api/quest-replay", {
           apk: apkPath,
           questSerial: byId("workflowQuestSerial").value.trim(),
-          waitSeconds: 20
+          waitSeconds: 20,
+          wakeBeforeReadiness: directHandoffWakeBeforeReadiness()
         });
         setAppBackendStatus(questReplayJobText(data), questReplayJobLevel(data));
         setWorkflowReceiptStatus(data);
@@ -6527,7 +6528,8 @@
           const data = await callAppBackend("/api/quest-replay", {
             apk: apkPath,
             questSerial: serialInput.value.trim(),
-            waitSeconds: 20
+            waitSeconds: 20,
+            wakeBeforeReadiness: directHandoffWakeBeforeReadiness()
           });
           if (data.jobStatus === "running" && (data.runId || data.jobId)) {
             return pollQuestReplayJob(data.runId || data.jobId);

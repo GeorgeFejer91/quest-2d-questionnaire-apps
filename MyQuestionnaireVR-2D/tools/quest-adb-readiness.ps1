@@ -8,7 +8,8 @@ param(
     [int]$WaitSeconds = 0,
     [int]$PollSeconds = 5,
     [switch]$RestartServer,
-    [switch]$RequireOnline
+    [switch]$RequireOnline,
+    [switch]$WakeBeforeReadiness
 )
 
 $ErrorActionPreference = 'Stop'
@@ -308,10 +309,26 @@ $productPath = [ordered]@{
     ready = $false
     blockedReasons = @()
 }
+$wakeAttempt = [ordered]@{
+    requested = [bool]$WakeBeforeReadiness
+    attempted = $false
+    exitCode = $null
+    outputPath = ''
+    timestampUtc = ''
+}
 if ($null -ne $targetDevice) {
     $serial = [string]$targetDevice.serial
     $probeDir = Join-Path $OutputRoot 'online-device-probes'
     New-Item -ItemType Directory -Force -Path $probeDir | Out-Null
+    if ($WakeBeforeReadiness) {
+        $wakePath = Join-Path $probeDir 'wake-before-readiness.txt'
+        $wakeCapture = Invoke-SerialAdbCapture -Serial $serial -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP') -OutputPath $wakePath
+        $wakeAttempt.attempted = $true
+        $wakeAttempt.exitCode = $wakeCapture.exitCode
+        $wakeAttempt.outputPath = $wakePath
+        $wakeAttempt.timestampUtc = (Get-Date).ToUniversalTime().ToString('o')
+        Start-Sleep -Seconds 2
+    }
     $deviceProps.serial = $serial
     $deviceProps.model = (Invoke-SerialAdbCapture -Serial $serial -Arguments @('shell', 'getprop', 'ro.product.model') -OutputPath (Join-Path $probeDir 'model.txt')).output -join "`n"
     $deviceProps.manufacturer = (Invoke-SerialAdbCapture -Serial $serial -Arguments @('shell', 'getprop', 'ro.product.manufacturer') -OutputPath (Join-Path $probeDir 'manufacturer.txt')).output -join "`n"
@@ -349,6 +366,9 @@ if ($readiness -eq 'online') {
     } elseif ($productPath.status -eq 'blocked') {
         $reasonText = (@($productPath.blockedReasons) -join ', ')
         $recommendations += "ADB is online, but product-path launch is blocked: $reasonText. Put on/wake the headset and clear system launch prompts before direct handoff, replay/export, or foreground validation."
+        if ($WakeBeforeReadiness -and @($productPath.blockedReasons) -contains 'headset-asleep-or-display-off') {
+            $recommendations += 'One wake-before-readiness recovery was attempted, but the display is still asleep or off. Put on the headset, clear any proximity/lock state, and rerun readiness before claiming a Quest pass.'
+        }
     }
 }
 $status = if ($readiness -eq 'online') { 'pass' } else { if ($RequireOnline) { 'fail' } else { 'warn' } }
@@ -361,6 +381,8 @@ $summary = [ordered]@{
     expectedSerial = $ExpectedSerial
     connectAddress = $ConnectAddress
     waitSeconds = $WaitSeconds
+    wakeBeforeReadiness = [bool]$WakeBeforeReadiness
+    wakeAttempt = $wakeAttempt
     outputRoot = $OutputRoot
     latestDevices = $latestDevices
     onlineCount = $onlineDevices.Count

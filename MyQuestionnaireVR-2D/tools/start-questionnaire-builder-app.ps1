@@ -1064,6 +1064,7 @@ function New-QuestReplayJobReceipt {
     $questValidation = Get-JsonProperty -Object $Summary -Name 'questValidation'
     $summaryDryRun = if ($null -ne $Summary) { [bool](Get-JsonProperty -Object $Summary -Name 'dryRun' -Default $DryRun) } else { $DryRun }
     $productPathStatus = [string](Get-JsonProperty -Object $Summary -Name 'productPathStatus' -Default 'not-probed')
+    $wakeBeforeReadiness = [bool](Get-JsonProperty -Object $Summary -Name 'wakeBeforeReadiness' -Default $false)
     return [ordered]@{
         schemaVersion = 'mq.builder_runner.job_receipt.v1'
         kind = 'quest-replay-export'
@@ -1071,6 +1072,7 @@ function New-QuestReplayJobReceipt {
         jobStatus = $JobStatus
         actionStatus = $ReplayStatus
         dryRun = $summaryDryRun
+        wakeBeforeReadiness = $wakeBeforeReadiness
         productPathStatus = $productPathStatus
         productPathReady = [bool](Get-JsonProperty -Object $productPath -Name 'ready' -Default $false)
         physicalQuestProductPathPending = ($summaryDryRun -or $productPathStatus -ne 'ready' -or [string]$ReplayStatus -ne 'pass')
@@ -1082,6 +1084,7 @@ function New-QuestReplayJobReceipt {
             questValidationSummaryWritten = -not [string]::IsNullOrWhiteSpace([string](Get-JsonProperty -Object $Summary -Name 'questValidationSummaryPath' -Default ''))
             replayExportAttempted = ($null -ne $questValidation)
             dryRunContractPass = ($summaryDryRun -and [string]$ReplayStatus -ne 'fail' -and $null -eq $questValidation)
+            wakeBeforeReadiness = $wakeBeforeReadiness
         }
         artifacts = [ordered]@{
             summaryPath = $SummaryPath
@@ -1092,6 +1095,7 @@ function New-QuestReplayJobReceipt {
             readinessSummaryPath = Get-JsonProperty -Object $Summary -Name 'readinessSummaryPath'
             productPathStatus = $productPathStatus
             productPathBlockedReasons = @(Get-JsonProperty -Object $Summary -Name 'productPathBlockedReasons' -Default @())
+            readinessWakeAttempt = Get-JsonProperty -Object $Summary -Name 'readinessWakeAttempt'
             questValidationSummaryPath = Get-JsonProperty -Object $Summary -Name 'questValidationSummaryPath'
             questValidation = $questValidation
         }
@@ -1829,6 +1833,8 @@ function Get-QuestReplayJobStatus {
         apk = $job['apk']
         questSerial = $job['questSerial']
         dryRun = [bool]$job['dryRun']
+        wakeBeforeReadinessRequested = [bool]$job['wakeBeforeReadinessRequested']
+        wakeBeforeReadiness = [bool]$job['wakeBeforeReadiness']
         artifactDir = $job['artifactDir']
         summaryPath = $job['summaryPath']
         stdoutPath = $job['stdoutPath']
@@ -1853,6 +1859,8 @@ function Start-QuestReplayJob {
     $serial = if ($Payload.PSObject.Properties.Name -contains 'questSerial') { [string]$Payload.questSerial } else { '' }
     $dryRun = ($Payload.PSObject.Properties.Name -contains 'dryRun' -and [bool]$Payload.dryRun)
     $waitSeconds = if ($Payload.PSObject.Properties.Name -contains 'waitSeconds') { [int]$Payload.waitSeconds } else { 20 }
+    $wakeBeforeReadinessRequested = ($Payload.PSObject.Properties.Name -contains 'wakeBeforeReadiness' -and [bool]$Payload.wakeBeforeReadiness)
+    $wakeBeforeReadiness = (-not $dryRun -and $wakeBeforeReadinessRequested)
 
     $stdoutPath = Join-Path $jobDir 'replay-stdout.txt'
     $stderrPath = Join-Path $jobDir 'replay-stderr.txt'
@@ -1882,6 +1890,9 @@ function Start-QuestReplayJob {
     if ($dryRun) {
         $arguments += '-DryRun'
     }
+    if ($wakeBeforeReadinessRequested) {
+        $arguments += '-WakeBeforeReadiness'
+    }
     if ($Payload.PSObject.Properties.Name -contains 'leaveForeground' -and [bool]$Payload.leaveForeground) {
         $arguments += '-LeaveForeground'
     }
@@ -1904,6 +1915,8 @@ function Start-QuestReplayJob {
         apk = $apk
         questSerial = $serial
         dryRun = [bool]$dryRun
+        wakeBeforeReadinessRequested = [bool]$wakeBeforeReadinessRequested
+        wakeBeforeReadiness = [bool]$wakeBeforeReadiness
         artifactDir = $jobDir
         stdoutPath = $stdoutPath
         stderrPath = $stderrPath

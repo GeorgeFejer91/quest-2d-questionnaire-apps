@@ -7,7 +7,8 @@ param(
     [int]$WaitSeconds = 20,
     [switch]$DryRun,
     [switch]$LeaveForeground,
-    [switch]$StopLegacyUnityApp
+    [switch]$StopLegacyUnityApp,
+    [switch]$WakeBeforeReadiness
 )
 
 $ErrorActionPreference = 'Stop'
@@ -98,6 +99,9 @@ if (-not [string]::IsNullOrWhiteSpace($Serial)) {
 }
 if (-not $DryRun) {
     $readinessArgs += '-RequireOnline'
+    if ($WakeBeforeReadiness) {
+        $readinessArgs += '-WakeBeforeReadiness'
+    }
 }
 
 $readinessOutputPath = Join-Path $OutputRoot 'quest-adb-readiness-output.txt'
@@ -131,6 +135,9 @@ $notes = New-Object 'System.Collections.Generic.List[string]'
 if ($DryRun) {
     $status = if ($readinessSummary -and $readinessSummary.readiness -eq 'online' -and $productPathStatus -eq 'ready') { 'pass' } else { 'warn' }
     $notes.Add('Dry run: verified APK path and readiness summary without installing, launching, replaying, or pulling exports.') | Out-Null
+    if ($WakeBeforeReadiness) {
+        $notes.Add('Dry run ignored -WakeBeforeReadiness; live replay/export is required before any wake action is sent to the headset.') | Out-Null
+    }
     if ($readinessSummary -and $readinessSummary.readiness -eq 'online' -and $productPathStatus -ne 'ready') {
         $notes.Add("Dry run detected product-path readiness $productPathStatus; live replay/export should wait until the headset is awake and system launch prompts are clear.") | Out-Null
     }
@@ -202,6 +209,9 @@ $summary = [ordered]@{
     runId = $RunId
     projectPath = $ProjectPath
     dryRun = [bool]$DryRun
+    wakeBeforeReadinessRequested = [bool]$WakeBeforeReadiness
+    wakeBeforeReadiness = [bool]($WakeBeforeReadiness -and -not $DryRun)
+    readinessWakeAttempt = if ($readinessSummary -and $readinessSummary.PSObject.Properties.Name -contains 'wakeAttempt') { $readinessSummary.wakeAttempt } else { $null }
     apk = $apkEvidence
     serial = $targetSerial
     readiness = if ($readinessSummary) { $readinessSummary.readiness } else { 'missing-summary' }

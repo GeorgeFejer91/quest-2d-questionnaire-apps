@@ -230,6 +230,15 @@ the installed Quest app.
 
 - Follow the validation ladder in `workflow/START_HERE.md` and
   `workflow/05-release-checklist.md`.
+- Quest verification must start with the shared ADB readiness probe against an
+  explicit physical headset serial. Ignore offline emulators as proof of Quest
+  readiness. If ADB is online but product-path readiness is blocked because the
+  headset is asleep/display-off, use at most one explicit
+  `-WakeBeforeReadiness` recovery, record the `wakeAttempt`, rerun readiness,
+  and proceed to replay/export or handoff only once `productPathStatus` is
+  `ready`. If the headset remains asleep or a Horizon controller launch-check
+  dialog is focused, mark the physical gate blocked/pending and ask the headset
+  operator to clear it.
 - Do not claim a Quest chain is experiment-ready from routing evidence alone
   when the foreground scenario cannot emit a real completion signal.
 - Do not commit generated Gradle state, `Builds/`, `artifacts/`, `.gradle/`,

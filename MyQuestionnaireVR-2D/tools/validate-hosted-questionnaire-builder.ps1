@@ -124,7 +124,7 @@ $requirements = @(
     [ordered]@{ id = 'downloads-online-connector'; text = 'Online connector launcher' },
     [ordered]@{ id = 'dependency-status-before-apk'; text = 'id="dependencyStatusButton" type="button">Dependency status' },
     [ordered]@{ id = 'dependency-install-before-apk'; text = 'id="installDependenciesButton" type="button">Install dependencies' },
-    [ordered]@{ id = 'apk-first-example-catalog'; text = 'Load example APK' },
+    [ordered]@{ id = 'apk-first-example-catalog'; text = 'Load preloaded demo' },
     [ordered]@{ id = 'apk-scan-stage'; text = 'Load APK and scan triggers' },
     [ordered]@{ id = 'trigger-block-assignment'; text = 'Block 1' },
     [ordered]@{ id = 'questionnaire-type-select'; text = 'Add questionnaire element' },

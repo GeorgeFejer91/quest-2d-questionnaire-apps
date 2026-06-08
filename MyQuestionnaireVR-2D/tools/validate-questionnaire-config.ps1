@@ -183,7 +183,7 @@ if ($config.PSObject.Properties.Name -contains 'triggerQuestionnaireMapping' -an
         }
     }
 
-    $allowedTriggerModes = @('none', 'demographics', 'baseline', 'maia2', 'pictographic', 'slider', 'temporalTracer', 'full')
+    $allowedTriggerModes = @('none', 'demographics', 'baseline', 'maia2', 'pictographic', 'slider', 'full')
     $allowedQuestionnaireModules = @('demographics', 'maia2', 'pictographic', 'slider')
     $seenTriggers = @{}
     foreach ($trigger in @($mapping.triggers)) {

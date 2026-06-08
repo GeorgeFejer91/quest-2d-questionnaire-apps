@@ -71,11 +71,11 @@ public final class ChainLaunchContractTest {
                 + "\"nextPackage\":\"org.example.unity\","
                 + "\"nextActivity\":\"org.example.unity.UnityPlayerActivity\","
                 + "\"questionnaireMode\":\"demographics\","
-                + "\"questionnaireSequence\":[\"demographics\",\"maia2\"],"
-                + "\"triggerId\":\"trigger_1_launch_questionnaire\","
+                + "\"questionnaireSequence\":[\"demographics\"],"
+                + "\"triggerId\":\"study_start_block_1\","
                 + "\"blockNumber\":\"001\","
-                + "\"blockId\":\"001_trigger_trigger_1_launch_questionnaire\","
-                + "\"saveNamespace\":\"trigger_trigger_1_launch_questionnaire\","
+                + "\"blockId\":\"001_study_start_block_1\","
+                + "\"saveNamespace\":\"study_start_block_1\","
                 + "\"autoCloseDelayMs\":0"
                 + "}}");
 
@@ -84,16 +84,16 @@ public final class ChainLaunchContractTest {
 
         assertEquals("questionnaireFirst", config.chainDefaults.startMode);
         assertFalse(context.chained);
-        assertFalse(context.isDemographicsOnly());
-        assertTrue(context.isBaselineOnly());
-        assertEquals("demographics,maia2", context.questionnaireSequenceCsv());
+        assertTrue(context.isDemographicsOnly());
+        assertFalse(context.isBaselineOnly());
+        assertEquals("demographics", context.questionnaireSequenceCsv());
         assertTrue(context.shouldOpenNext());
         assertEquals("org.example.unity", context.nextPackage);
         assertEquals("org.example.unity.UnityPlayerActivity", context.nextActivity);
-        assertEquals("trigger_1_launch_questionnaire", context.triggerId);
+        assertEquals("study_start_block_1", context.triggerId);
         assertEquals("001", context.blockNumber);
-        assertEquals("001_trigger_trigger_1_launch_questionnaire", context.blockId);
-        assertEquals("trigger_trigger_1_launch_questionnaire", context.saveNamespace);
+        assertEquals("001_study_start_block_1", context.blockId);
+        assertEquals("study_start_block_1", context.saveNamespace);
         assertEquals(0L, context.autoCloseDelayMs);
     }
 
@@ -195,7 +195,7 @@ public final class ChainLaunchContractTest {
         Intent intent = new Intent(QuestionnaireLaunchContext.ACTION_RUN);
         intent.setClassName("org.questquestionnaire.questionnaires2d", "org.questquestionnaire.questionnaires2d.MainActivity");
         intent.putExtra(QuestionnaireLaunchContext.EXTRA_SESSION_ID, "session-demo");
-        intent.putExtra(QuestionnaireLaunchContext.EXTRA_TRIGGER_ID, "trigger_1_launch_questionnaire");
+        intent.putExtra(QuestionnaireLaunchContext.EXTRA_TRIGGER_ID, "study_start_block_1");
         intent.putExtra(QuestionnaireLaunchContext.EXTRA_QUESTIONNAIRE_MODE, QuestionnaireLaunchContext.MODE_DEMOGRAPHICS);
         intent.putExtra(QuestionnaireLaunchContext.EXTRA_FINISH_BEHAVIOR, QuestionnaireLaunchContext.FINISH_STAY_SAVED);
         intent.putExtra(QuestionnaireLaunchContext.EXTRA_AUTO_CLOSE_DELAY_MS, 0L);
@@ -210,7 +210,7 @@ public final class ChainLaunchContractTest {
 
         String jsonPath = new JSONObject(indexText.trim()).getString("jsonPath");
         JSONObject record = new JSONObject(new String(Files.readAllBytes(new File(jsonPath).toPath()), StandardCharsets.UTF_8));
-        assertEquals("trigger_1_launch_questionnaire", record.getString("triggerId"));
+        assertEquals("study_start_block_1", record.getString("triggerId"));
         assertEquals("demographics", record.getString("questionnaireMode"));
         assertEquals(0, record.getJSONArray("maia2Answers").length());
         assertEquals(0, record.getJSONArray("pictographicSelections").length());

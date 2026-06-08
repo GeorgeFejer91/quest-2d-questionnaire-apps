@@ -446,6 +446,7 @@ assert(!html.includes('const startupElementTypes = ["demographics", "maia2"'), "
 assert(!html.includes('<h3>MAIA-2</h3>'), "MAIA-2 should not appear as a standalone questionnaire panel heading.");
 assert(!html.includes('>MAIA-2</button>'), "MAIA-2 should not appear as a standalone questionnaire button.");
 assert(!html.includes('Likert MAIA-2 preload'), "MAIA-2 should not appear as a visible top-level Likert option.");
+assert(!html.includes('<option value="temporalTracer">'), "Temporal tracer should not appear as a visible trigger-block route in the product GUI.");
 assert(html.includes('Before experiment/running APK'), "Block 1 label should use experiment/running APK wording.");
 assert(html.includes('stage-scenario-apk'), "Builder should expose scenario APK staging before headset install.");
 assert(html.includes('id="csvTemplateKind"'), "Hosted product flow should expose questionnaire type CSV templates.");
@@ -727,15 +728,15 @@ assert(!handoffBlockHtml.includes("Multiple choice CSV"), "Visible block dropdow
 assert(!handoffBlockHtml.includes("Text entry CSV"), "Visible block dropdown should hide unsupported text-entry imports.");
 assert(!handoffBlockHtml.includes("Temporal tracer"), "Visible block dropdown should hide unsupported temporal-tracer imports.");
 
-document.getElementById("triggerMode0").value = "temporalTracer";
+document.getElementById("triggerMode0").value = "slider";
 context.__api.refresh();
 const assignedHandoff = context.__api.buildConfig();
 const assignedHandoffQuality = context.__api.qualityReport(assignedHandoff);
 const assignedHandoffPlan = context.__api.buildChainPlan(assignedHandoff);
-assert(assignedHandoff.triggerQuestionnaireMapping.triggers[0].questionnaireMode === "temporalTracer", "Builder assignment should map the passive trigger to the temporal tracer.");
-assert(assignedHandoff.triggerQuestionnaireMapping.triggers[0].questionnaireSequence.length === 0, "Temporal tracer trigger should not pretend to be an internal questionnaire sequence.");
-assert(assignedHandoff.experimentBlockRegistry.blocks.some(block => block.type === "temporalTracer"), "Assigned handoff registry should include a temporal tracer block.");
-assert(assignedHandoffPlan.steps.some(step => step.type === "temporalTracer" && step.action === "org.questquestionnaire.temporaltracer2d.RUN"), "Assigned handoff chain plan should launch the temporal tracer action.");
+assert(assignedHandoff.triggerQuestionnaireMapping.triggers[0].questionnaireMode === "slider", "Builder assignment should map the passive trigger to an in-APK slider block.");
+assert(assignedHandoff.triggerQuestionnaireMapping.triggers[0].questionnaireSequence.join(",") === "slider", "Slider trigger should use an internal questionnaire sequence.");
+assert(assignedHandoff.experimentBlockRegistry.blocks.some(block => block.type === "questionnaire" && block.questionnaireMode === "slider"), "Assigned handoff registry should include a questionnaire-owned slider block.");
+assert(assignedHandoffPlan.steps.some(step => step.type === "questionnaire" && step.action === "org.questquestionnaire.questionnaires2d.RUN"), "Assigned handoff chain plan should launch the generated questionnaire APK.");
 assert(assignedHandoffQuality.status === "pass", "Assigned handoff demo config should pass quality report.");
 
 context.__api.applyQuestionnaireFirstDefaults();

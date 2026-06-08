@@ -217,10 +217,12 @@ $exampleCatalogPath = [System.IO.Path]::GetFullPath($exampleCatalogPath)
 $exampleCatalog = Read-JsonIfExists -Path $exampleCatalogPath
 $exampleTriggers = if ($exampleCatalog -and $exampleCatalog.triggers) { @($exampleCatalog.triggers) } else { @() }
 $exampleTriggerIds = @($exampleTriggers | ForEach-Object { [string]$_.triggerId })
-$exampleRecommendedModes = @{}
-foreach ($trigger in $exampleTriggers) {
-    $exampleRecommendedModes[[string]$trigger.triggerId] = [string]$trigger.recommendedMode
-}
+$exampleStudyLogicHints = @($exampleTriggers | Where-Object {
+    -not [string]::IsNullOrWhiteSpace([string]$_.recommendedMode) -or
+    -not [string]::IsNullOrWhiteSpace([string]$_.questionnaireMode) -or
+    -not [string]::IsNullOrWhiteSpace([string]$_.blockId) -or
+    -not [string]::IsNullOrWhiteSpace([string]$_.blockNumber)
+})
 $preflight = if ($directHandoffDryRunSummary) { $directHandoffDryRunSummary.preflight } else { $null }
 $unityEmbeddedCatalog = if ($preflight) { $preflight.unityEmbeddedTriggerCatalog } else { $null }
 $unityEmbeddedTriggerCount = [int](Get-FirstPropertyValue -Object $unityEmbeddedCatalog -Names @('triggerCount') -Default 0)
@@ -229,10 +231,9 @@ $demoUnityCatalogPass = (
     [string]$exampleCatalog.schemaVersion -eq 'mq.quest_questionnaire_trigger_catalog.v1' -and
     [string]$exampleCatalog.package -eq 'org.questquestionnaire.stimulusdemo' -and
     [string]$exampleCatalog.activity -eq 'org.questquestionnaire.stimulusdemo.StimulusUnityPlayerGameActivity' -and
-    $exampleTriggerIds -contains 'trigger_1_launch_questionnaire' -and
-    $exampleTriggerIds -contains 'trigger_2_video_complete' -and
-    $exampleRecommendedModes['trigger_1_launch_questionnaire'] -eq 'demographics' -and
-    $exampleRecommendedModes['trigger_2_video_complete'] -eq 'temporalTracer' -and
+    $exampleTriggerIds.Count -eq 1 -and
+    $exampleTriggerIds -contains 'trigger_1_complete' -and
+    $exampleStudyLogicHints.Count -eq 0 -and
     [bool]$demoUnityApkEvidence.exists -and
     [int64]$demoUnityApkEvidence.bytes -gt 0 -and
     $preflight -and
@@ -243,7 +244,7 @@ $demoUnityCatalogPass = (
     [string]$preflight.apkInfo.unity.activity -eq [string]$exampleCatalog.activity -and
     $unityEmbeddedCatalog -and
     [string]$unityEmbeddedCatalog.parseStatus -eq 'pass' -and
-    $unityEmbeddedTriggerCount -ge 2
+    $unityEmbeddedTriggerCount -eq 1
 )
 
 $latestTwoDFirstWorkflow = Resolve-LatestSummary `
@@ -289,7 +290,7 @@ if ($twoDFirstConfig -and $twoDFirstConfig.chainDefaults) {
         [string]$twoDFirstConfig.chainDefaults.startMode -eq 'questionnaireFirst' -and
         [string]$twoDFirstConfig.chainDefaults.finishBehavior -eq 'openNext' -and
         [string]$twoDFirstConfig.chainDefaults.questionnaireMode -eq 'demographics' -and
-        [string]$twoDFirstConfig.chainDefaults.triggerId -eq 'trigger_1_launch_questionnaire' -and
+        [string]$twoDFirstConfig.chainDefaults.triggerId -eq 'study_start_block_1' -and
         -not [string]::IsNullOrWhiteSpace([string]$twoDFirstConfig.chainDefaults.nextPackage)
     )
 }
@@ -461,10 +462,10 @@ $requirements += New-Requirement `
     -Evidence "companionTokenAuthorization=$($checks.companionTokenAuthorization); runnerJobReceiptsInspectable=$($checks.runnerJobReceiptsInspectable)"
 $requirements += New-Requirement `
     -Id 'demo-unity-apk-trigger-catalog' `
-    -Requirement 'The demo Unity stimulus APK and public example trigger catalog advertise the two questionnaire/tracer triggers used by the builder workflow.' `
+    -Requirement 'The demo Unity stimulus APK and public example trigger catalog advertise exactly one passive trigger id; all questionnaire routing stays in the generated 2D APK.' `
     -Status $(if ($demoUnityCatalogPass) { 'proven' } else { 'missing' }) `
     -EvidencePath $directHandoffDryRunSummaryPath `
-    -Evidence "unityApk=$($demoUnityApkEvidence.path); bytes=$($demoUnityApkEvidence.bytes); sha256=$($demoUnityApkEvidence.sha256); preflightStatus=$($preflight.status); embeddedTriggerCount=$unityEmbeddedTriggerCount; exampleCatalog=$exampleCatalogPath"
+    -Evidence "unityApk=$($demoUnityApkEvidence.path); bytes=$($demoUnityApkEvidence.bytes); sha256=$($demoUnityApkEvidence.sha256); preflightStatus=$($preflight.status); embeddedTriggerCount=$unityEmbeddedTriggerCount; exampleCatalog=$exampleCatalogPath; passiveStudyLogicHintCount=$($exampleStudyLogicHints.Count)"
 $requirements += New-Requirement `
     -Id 'unity-input-modality-guardrails' `
     -Requirement 'Generic Unity demo/stimulus APKs must pass hand-and-controller input-modality preflight before headset trials, so Horizon controller-required launch dialogs are treated as build issues unless controller-only input is explicit.' `

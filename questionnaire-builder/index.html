@@ -856,10 +856,8 @@
               <option value="demographics">Demographics fields</option>
               <option value="slider">Slider / VAS items</option>
               <option value="likert">Likert items</option>
-              <option value="likert">Likert items</option>
               <option value="multipleChoice">Multiple choice items</option>
               <option value="textEntry">Text entry items</option>
-              <option value="temporalTracer">Temporal tracer dimensions</option>
             </select>
             <button id="downloadCsvTemplateButton" type="button">Download CSV template</button>
             <input id="loadCsvInput" type="file" accept=".csv,text/csv">
@@ -1381,7 +1379,7 @@
       "assets/bin/Data/StreamingAssets/questionnaire-trigger-catalog.json"
     ];
 
-    const triggerQuestionnaireModes = ["none", "demographics", "baseline", "maia2", "pictographic", "slider", "temporalTracer", "full"];
+    const triggerQuestionnaireModes = ["none", "demographics", "baseline", "maia2", "pictographic", "slider", "full"];
     const questionnaireModules = ["demographics", "maia2", "pictographic", "slider"];
     const questionnaireModeLabels = {
       none: "Skip",

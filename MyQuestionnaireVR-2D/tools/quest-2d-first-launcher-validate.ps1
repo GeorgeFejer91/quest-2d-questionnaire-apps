@@ -286,6 +286,7 @@ function New-ReplayMarker {
 
 function Pull-DeviceTree {
     param([string]$DevicePath, [string]$Destination, [string]$Label, [string]$TrialDir)
+    $Destination = [System.IO.Path]::GetFullPath($Destination)
     New-Item -ItemType Directory -Force -Path $Destination | Out-Null
     $listResult = Invoke-AdbText -Arguments @('shell', 'find', $DevicePath, '-type', 'f') -OutputPath (Join-Path $TrialDir "$Label-file-list.txt")
     $files = @()
@@ -299,9 +300,21 @@ function Pull-DeviceTree {
             if ([string]::IsNullOrWhiteSpace($relative)) {
                 continue
             }
-            $localPath = Join-Path $Destination ($relative -replace '/', [System.IO.Path]::DirectorySeparatorChar)
-            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $localPath) | Out-Null
-            $pullResult = Invoke-AdbText -Arguments @('pull', $deviceFile, $localPath) -OutputPath (Join-Path $TrialDir ("$Label-pull-" + ($files.Count + 1) + ".txt"))
+            $relativeLocal = $relative -replace '/', [System.IO.Path]::DirectorySeparatorChar
+            $localPath = Join-Path $Destination $relativeLocal
+            if ($localPath.Length -gt 240) {
+                $hashBytes = [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($relative))
+                $hash = ([System.BitConverter]::ToString($hashBytes)).Replace('-', '').Substring(0, 12).ToLowerInvariant()
+                $extension = [System.IO.Path]::GetExtension($relativeLocal)
+                $name = [System.IO.Path]::GetFileNameWithoutExtension($relativeLocal)
+                if ($name.Length -gt 72) {
+                    $name = $name.Substring(0, 72)
+                }
+                $localPath = Join-Path $Destination ("$name-$hash$extension")
+            }
+            $localParent = Split-Path -Parent $localPath
+            New-Item -ItemType Directory -Force -Path $localParent | Out-Null
+            $pullResult = Invoke-AdbText -Arguments @('pull', $deviceFile, $localParent) -OutputPath (Join-Path $TrialDir ("$Label-pull-" + ($files.Count + 1) + ".txt"))
             $files += [ordered]@{
                 device = $deviceFile
                 local = $localPath
@@ -455,7 +468,7 @@ if (-not $chainDefaults) {
     if ([string]$chainDefaults.startMode -ne 'questionnaireFirst') { $preflightIssues.Add("chainDefaults.startMode is '$($chainDefaults.startMode)', expected questionnaireFirst") | Out-Null }
     if ([string]$chainDefaults.finishBehavior -ne 'openNext') { $preflightIssues.Add("chainDefaults.finishBehavior is '$($chainDefaults.finishBehavior)', expected openNext") | Out-Null }
     if ([string]$chainDefaults.questionnaireMode -ne 'demographics') { $preflightIssues.Add("chainDefaults.questionnaireMode is '$($chainDefaults.questionnaireMode)', expected demographics") | Out-Null }
-    if ([string]$chainDefaults.triggerId -ne 'trigger_1_launch_questionnaire') { $preflightIssues.Add("chainDefaults.triggerId is '$($chainDefaults.triggerId)', expected trigger_1_launch_questionnaire") | Out-Null }
+    if ([string]$chainDefaults.triggerId -ne 'study_start_block_1') { $preflightIssues.Add("chainDefaults.triggerId is '$($chainDefaults.triggerId)', expected study_start_block_1") | Out-Null }
     if ([string]$chainDefaults.nextPackage -ne $UnityPackage) { $preflightIssues.Add("chainDefaults.nextPackage is '$($chainDefaults.nextPackage)', expected $UnityPackage") | Out-Null }
     if (-not [string]::IsNullOrWhiteSpace([string]$chainDefaults.nextActivity) -and [string]$chainDefaults.nextActivity -ne $UnityActivity) {
         $preflightIssues.Add("chainDefaults.nextActivity is '$($chainDefaults.nextActivity)', expected $UnityActivity") | Out-Null
@@ -634,11 +647,11 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
     $finalUnityFocused = ((Get-FocusLines -Text $finalFocus) -join "`n") -match [regex]::Escape($UnityPackage)
     $headsetAsleep = $powerFinal -match 'mWakefulness=Asleep' -or $finalFocus -match 'isSleeping=true'
     $displayOffFinal = $powerFinal -match 'mInteractive=false|Display Power:\s*state=OFF'
-    $qJsonCount = @($questionnairePull.files | Where-Object { $_.local -match '\.json$' -and $_.local -notmatch 'in_progress' }).Count
-    $qCsvCount = @($questionnairePull.files | Where-Object { $_.local -match '\.csv$' -and $_.local -notmatch 'in_progress' }).Count
+    $qJsonCount = @($questionnairePull.files | Where-Object { $_.local -match '\.json$' -and $_.local -notmatch 'in_progress' -and [int]$_.pullExitCode -eq 0 -and [int64]$_.bytes -gt 0 }).Count
+    $qCsvCount = @($questionnairePull.files | Where-Object { $_.local -match '\.csv$' -and $_.local -notmatch 'in_progress' -and [int]$_.pullExitCode -eq 0 -and [int64]$_.bytes -gt 0 }).Count
 
     $markerCounts = [ordered]@{
-        fatalLogs = Count-Matches -Text $allLogText -Pattern 'FATAL EXCEPTION|AndroidRuntime'
+        fatalLogs = Count-Matches -Text $allLogText -Pattern 'FATAL EXCEPTION|\s[EF]\s+AndroidRuntime\s*:'
         controllerRequiredDialogs = Count-Matches -Text ($allLogText + "`n" + $finalFocus) -Pattern 'LaunchCheckControllerRequiredDialogActivity'
         questionnaireReplayStart = Count-Matches -Text $allLogText -Pattern 'MYQUESTIONNAIRE_COMMAND_REPLAY_START'
         questionnaireExportComplete = Count-Matches -Text $allLogText -Pattern 'MYQUESTIONNAIRE_EXPORT_COMPLETE'
@@ -649,6 +662,11 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
         unityExperimentStart = Count-Matches -Text $allLogText -Pattern 'QQ_STIMULUS_EXPERIMENT_START|VIDEO_PREPARE_START|VIDEO_PLAY'
     }
 
+    $questionnaireObserved = (
+        ($observedPackages -contains $questionnairePackage) -or
+        $markerCounts.questionnaireReplayStart -ge 1 -or
+        $markerCounts.questionnaireExportComplete -ge 1
+    )
     $handoffOk = (
         $launch.exitCode -eq 0 -and
         $markerCounts.fatalLogs -eq 0 -and
@@ -657,7 +675,7 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
         $markerCounts.questionnaireOpenNextReturn -ge 1 -and
         $markerCounts.questionnaireTargetMissing -eq 0 -and
         $markerCounts.questionnaireReturnFailed -eq 0 -and
-        ($observedPackages -contains $questionnairePackage) -and
+        $questionnaireObserved -and
         ($observedPackages -contains $UnityPackage) -and
         $qJsonCount -ge 1 -and
         $qCsvCount -ge 1
@@ -674,6 +692,7 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
     if ($markerCounts.questionnaireTargetMissing -gt 0) { $failureReasons.Add('questionnaire-openNext-target-missing') | Out-Null }
     if ($markerCounts.questionnaireReturnFailed -gt 0) { $failureReasons.Add('questionnaire-openNext-launch-failed') | Out-Null }
     if ($markerCounts.questionnaireOpenNextReturn -lt 1) { $failureReasons.Add('questionnaire-openNext-return-not-observed') | Out-Null }
+    if (-not $questionnaireObserved) { $failureReasons.Add('questionnaire-run-not-observed') | Out-Null }
     if (-not ($observedPackages -contains $UnityPackage)) { $failureReasons.Add('unity-foreground-not-observed-after-questionnaire') | Out-Null }
     if ($qJsonCount -lt 1 -or $qCsvCount -lt 1) { $failureReasons.Add('questionnaire-export-files-missing') | Out-Null }
 

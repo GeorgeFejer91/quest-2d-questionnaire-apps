@@ -61,7 +61,7 @@ Or start the local app backend explicitly:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-questionnaire-builder-app.ps1
 ```
 
-The launcher opens the questionnaire builder HTML at `http://127.0.0.1:8765/`.
+The launcher opens the questionnaire builder HTML at `http://127.0.0.1:8776/`.
 All user input stays in the browser UI. The local backend saves configs under
 `QuestionnaireConfigs\generated\`, runs the PowerShell validator, and can run
 APK generation from the `Windows App Runner` panel.
@@ -72,10 +72,10 @@ For the online connector workflow, start the local companion first:
 Start-QuestionnaireBuilderOnlineConnector.cmd
 ```
 
-That opens the hosted static builder page and prints a local pairing token. In
-the page's `Windows App Runner` panel, keep the connector URL as
-`http://127.0.0.1:8765`, enter the pairing token, then use the same controls as
-offline mode. The online page is only a static GUI. File access, dependency
+That opens the connected builder page served by the local companion and prints a
+local pairing token. The default connector URL is `http://127.0.0.1:8776`; if a
+hosted browser blocks hosted-to-loopback fetches, use the local page the
+connector opened. The online page is only a static GUI. File access, dependency
 checks, config validation, APK generation, and render previews are performed by
 the local companion running on the user's PC.
 

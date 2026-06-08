@@ -1,5 +1,5 @@
 param(
-    [int]$Port = 8765,
+    [int]$Port = 8776,
     [string]$ProjectPath = "",
     [string]$ReferenceProjectPath = "",
     [ValidateSet('Offline', 'OnlineConnector')]
@@ -128,10 +128,15 @@ function Set-CorsHeaders {
 
     $origin = [string]$Context.Request.Headers['Origin']
     if (-not [string]::IsNullOrWhiteSpace($origin) -and (Test-OriginAllowed -Origin $origin)) {
+        $requestedHeaders = [string]$Context.Request.Headers['Access-Control-Request-Headers']
+        $allowedHeaders = 'Content-Type, X-MQ-Builder-Token'
+        if (-not [string]::IsNullOrWhiteSpace($requestedHeaders)) {
+            $allowedHeaders = $requestedHeaders
+        }
         $Context.Response.Headers['Access-Control-Allow-Origin'] = $origin
-        $Context.Response.Headers['Vary'] = 'Origin'
+        $Context.Response.Headers['Vary'] = 'Origin, Access-Control-Request-Headers'
         $Context.Response.Headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-        $Context.Response.Headers['Access-Control-Allow-Headers'] = 'Content-Type, X-MQ-Builder-Token'
+        $Context.Response.Headers['Access-Control-Allow-Headers'] = $allowedHeaders
         $Context.Response.Headers['Access-Control-Max-Age'] = '600'
         $Context.Response.Headers['Access-Control-Allow-Private-Network'] = 'true'
     }
@@ -3207,12 +3212,7 @@ Write-Host "Allowed origins: $($EffectiveAllowedOrigins -join ', ')"
 Write-Host "Press Ctrl+C in this window to stop the backend."
 
 if (-not $NoOpen) {
-    if ($Mode -eq 'OnlineConnector') {
-        Start-Process $OnlinePageUrl
-    }
-    else {
-        Start-Process $url
-    }
+    Start-Process $url
 }
 
 try {

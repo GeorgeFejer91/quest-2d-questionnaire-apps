@@ -9,16 +9,18 @@ Required modes:
 - Offline desktop mode: the user double-clicks the desktop launcher, the local
   companion service starts on `127.0.0.1`, and the same HTML GUI opens in the
   local browser.
-- Online connector mode: the user opens the hosted static GUI and connects it
-  to the local companion service with a pairing token.
+- Online connector mode: the user starts the companion from the hosted/static
+  package and uses the connected local builder page it opens. The hosted static
+  GUI remains the public entry point, but browsers may block hosted pages from
+  calling loopback APIs directly.
 
 Do not fork the GUI into separate offline and online implementations. Prefer one
 HTML/JavaScript UI with mode-specific visibility:
 
 - Offline mode may auto-fill the local connector URL and pairing token because
   the local companion injects them when serving the page.
-- Online mode must ask the user for the connector URL/token or use safe defaults
-  such as `http://127.0.0.1:8765`.
+- Online mode must ask the user for the connector URL/token or use the default
+  connector URL `http://127.0.0.1:8776`.
 - Online mode should show only the final-product path: download/connect the
   local companion, load or scan an APK trigger catalog, assign questionnaire
   types to detected trigger blocks, generate the questionnaire APK, detect a
@@ -30,6 +32,8 @@ HTML/JavaScript UI with mode-specific visibility:
   the trigger catalog. Sequential block gating must not disable the connector
   URL, pairing token, Check backend button, Quest serial, or Detect Quest
   controls.
+- Do not restore `8765` as the default companion port; the lab browser has
+  shown stale service-worker content from older local tools on that origin.
 - Development-only controls such as workflow validation, direct handoff trials,
   replay/export stress runners, audit packets, raw logs, and pipeline commands
   may remain in the shared source for offline engineering, but must be hidden

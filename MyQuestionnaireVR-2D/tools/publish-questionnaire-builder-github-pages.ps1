@@ -88,9 +88,9 @@ Local build actions require the Windows companion running on the user's PC:
 Start-QuestionnaireBuilderOnlineConnector.cmd
 ```
 
-That companion exposes a token-protected API at `http://127.0.0.1:8765`.
-Enter the printed pairing token in the web UI before saving configs,
-checking dependencies, validating configs, or generating APKs.
+That companion opens a connected local builder page and exposes a token-protected
+API at `http://127.0.0.1:8776`. Use the local page it opens when a browser blocks
+hosted-to-loopback fetches.
 
 The hosted page is intentionally static. It does not install software or run
 build tools directly; the local companion owns file system and build actions.
@@ -104,7 +104,7 @@ $manifest = [ordered]@{
     pagesRoot = $pagesRootFull
     targetDir = $targetDir
     entrypoint = Join-Path $targetDir 'index.html'
-    localConnectorUrl = 'http://127.0.0.1:8765'
+    localConnectorUrl = 'http://127.0.0.1:8776'
     localConnectorLauncher = 'Start-QuestionnaireBuilderOnlineConnector.cmd'
     completedAt = (Get-Date).ToString('o')
 }

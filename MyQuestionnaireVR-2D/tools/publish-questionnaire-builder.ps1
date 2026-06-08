@@ -200,9 +200,10 @@ evidence.
 For the desktop app flow, double-click Start-QuestionnaireBuilderApp.cmd. It
 starts a localhost companion and opens this same HTML GUI in the local browser.
 For the online GitHub Pages flow, double-click
-Start-QuestionnaireBuilderOnlineConnector.cmd, open the hosted page, and enter
-the pairing token printed by the local companion. The hosted page is static; it
-only talks to the local companion API on 127.0.0.1.
+Start-QuestionnaireBuilderOnlineConnector.cmd. It opens the connected local
+builder page served by the companion on 127.0.0.1:8776. The hosted page is
+static; use the connected local page when the browser blocks hosted-to-loopback
+API calls.
 
 The builder runs local quality guardrails for headset questionnaire use:
 language item-count parity, participant burden, duplicate items, long wording,

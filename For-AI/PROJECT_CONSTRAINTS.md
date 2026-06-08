@@ -112,7 +112,10 @@ The questionnaire builder must keep both launch paths available:
   starts the local companion and opens the dashboard in the user's browser.
 - Online connector GUI:
   `MyQuestionnaireVR-2D/Start-QuestionnaireBuilderOnlineConnector.cmd` starts
-  the local companion while the hosted static GitHub Pages page connects to it.
+  the local companion and opens the same connected builder page from the local
+  companion origin. The hosted static GitHub Pages page remains the published
+  product entry point, but browser private-network rules may block hosted pages
+  from calling loopback APIs directly.
 
 Keep both paths backed by the same HTML/JavaScript source and local companion
 API. The hosted online GUI is the final user-facing product and should stay
@@ -126,6 +129,9 @@ hosted final-product surface unless they become true user requirements.
 After any GUI or website change, open the resulting website URL before the work
 is considered done. For hosted GUI changes, regenerate the staged Pages copy,
 commit, push, and verify the public URL so the change actually goes online.
+The local companion default port is `8776`; avoid reusing `8765` as the default
+because that origin has been contaminated by older local web apps/service-worker
+caches on the lab PC and can show the wrong application.
 
 The questionnaire builder is an APK-first workflow. The first user action in a
 fresh build should be loading an existing scenario APK or trigger catalog with a

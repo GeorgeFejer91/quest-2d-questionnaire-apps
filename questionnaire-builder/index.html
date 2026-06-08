@@ -1242,7 +1242,7 @@
             <div class="grid two">
               <label>
                 Connector URL
-                <input id="appBackendUrl" type="url" value="http://127.0.0.1:8765" spellcheck="false">
+                <input id="appBackendUrl" type="url" value="http://127.0.0.1:8776" spellcheck="false">
               </label>
               <label>
                 Pairing token
@@ -5129,7 +5129,7 @@
       const fieldValue = byId("appBackendUrl")?.value;
       const injectedUrl = window.MQ_LOCAL_BACKEND_URL || "";
       const localOrigin = isLoopbackPage() ? window.location.origin : "";
-      return normalizeAppBackendUrl(fieldValue || injectedUrl || localOrigin || "http://127.0.0.1:8765");
+      return normalizeAppBackendUrl(fieldValue || injectedUrl || localOrigin || "http://127.0.0.1:8776");
     }
 
     function appBackendToken() {
@@ -5164,7 +5164,7 @@
       if (urlInput) {
         const injectedUrl = window.MQ_LOCAL_BACKEND_URL || "";
         const localOrigin = isLoopbackPage() ? window.location.origin : "";
-        urlInput.value = normalizeAppBackendUrl(injectedUrl || localOrigin || urlInput.value || "http://127.0.0.1:8765");
+        urlInput.value = normalizeAppBackendUrl(injectedUrl || localOrigin || urlInput.value || "http://127.0.0.1:8776");
       }
       if (tokenInput && window.MQ_LOCAL_BACKEND_TOKEN) {
         tokenInput.value = window.MQ_LOCAL_BACKEND_TOKEN;

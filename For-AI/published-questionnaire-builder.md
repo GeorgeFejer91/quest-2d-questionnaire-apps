@@ -97,12 +97,18 @@ install software, write files, validate configs, or build APKs. Those actions
 belong to the local companion at:
 
 ```text
-http://127.0.0.1:8765
+http://127.0.0.1:8776
 ```
 
 Privileged local actions require the `X-MQ-Builder-Token` header. The companion
 generates the token locally on each PC. It is not tied to one machine, user
 profile, or repository path.
+
+Use the connected local builder page opened by
+`Start-QuestionnaireBuilderOnlineConnector.cmd` when a browser blocks the hosted
+GitHub Pages page from fetching loopback APIs. Do not default back to port 8765;
+that origin can be controlled by stale browser caches/service workers from older
+local tools on the lab PC.
 
 `GET /api/status` is also the compatibility check. In hosted final-product
 mode, the GUI should warn only about product-path capabilities it actually

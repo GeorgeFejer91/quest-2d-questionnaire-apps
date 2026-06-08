@@ -23,6 +23,10 @@
       box-sizing: border-box;
     }
 
+    [hidden] {
+      display: none !important;
+    }
+
     html {
       scroll-behavior: smooth;
     }
@@ -112,6 +116,11 @@
 
     .workflow-nav {
       margin-bottom: 16px;
+    }
+
+    .dynamic-block-nav {
+      display: grid;
+      gap: 8px;
     }
 
     .nav-link {
@@ -349,6 +358,107 @@
       padding: 12px;
     }
 
+    .study-block-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .study-block {
+      display: grid;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel-soft);
+      padding: 12px;
+    }
+
+    .block-segments-wrapper {
+      padding: 0;
+      margin-bottom: 0;
+      border-bottom: 0;
+    }
+
+    .block-segment {
+      scroll-margin-top: 20px;
+      display: block;
+      padding: 0 0 28px;
+      margin-bottom: 28px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
+      background: transparent;
+    }
+
+    .block-segment .panel {
+      margin-top: 0;
+    }
+
+    .study-block-header {
+      display: grid;
+      gap: 6px;
+    }
+
+    .study-block-kicker {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .study-block-title {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .questionnaire-stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .questionnaire-element {
+      display: grid;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+      padding: 10px;
+    }
+
+    .questionnaire-element-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .questionnaire-element-title {
+      font-weight: 700;
+    }
+
+    .questionnaire-element-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .questionnaire-element-actions input,
+    .questionnaire-element-actions select,
+    .questionnaire-element-actions button {
+      width: 100%;
+    }
+
+    .questionnaire-add-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .hidden-protocol-controls {
+      display: none !important;
+    }
+
     .trigger-number {
       color: var(--accent);
       font-weight: 700;
@@ -574,7 +684,7 @@
       margin-top: 10px;
     }
 
-    .hosted-final-product [data-dev-only] {
+    [data-dev-only] {
       display: none !important;
     }
 
@@ -633,34 +743,40 @@
           <span>Load APK</span>
           <span id="navApkState" class="nav-state">Required</span>
         </a>
-        <a id="navTriggers" class="nav-link locked" href="#trigger-stage">
-          <span class="nav-number">02</span>
-          <span>Block builder</span>
+        <a id="navTriggers" class="nav-link locked" href="#block-segment-startup">
+          <span id="navTriggersNumber" class="nav-number">02</span>
+          <span id="navTriggersLabel">Block 1</span>
           <span id="navTriggersState" class="nav-state">Locked</span>
         </a>
-        <a id="navQuestionnaires" class="nav-link locked" href="#questionnaire-stage" data-dev-only>
+        <div id="dynamicBlockNavLinks" class="dynamic-block-nav"></div>
+        <a id="navQuestionnaires" class="nav-link locked" href="#questionnaire-stage" data-dev-only hidden>
           <span class="nav-number">03</span>
           <span>Questionnaires</span>
           <span id="navQuestionnairesState" class="nav-state">Locked</span>
         </a>
-        <a id="navProject" class="nav-link locked" href="#project-stage" data-dev-only>
+        <a id="navProject" class="nav-link locked" href="#project-stage" data-dev-only hidden>
           <span class="nav-number">04</span>
           <span>Project</span>
           <span id="navProjectState" class="nav-state">Locked</span>
         </a>
         <a id="navRunner" class="nav-link locked" href="#runner-stage">
-          <span id="navRunnerNumber" class="nav-number">05</span>
-          <span id="navRunnerLabel">Export</span>
+          <span id="navRunnerNumber" class="nav-number">03</span>
+          <span id="navRunnerLabel">Bake APK</span>
           <span id="navRunnerState" class="nav-state">Locked</span>
         </a>
-        <a id="navReview" class="nav-link locked" href="#review-stage" data-dev-only>
-          <span class="nav-number">06</span>
+        <a id="navInstall" class="nav-link locked" href="#install-stage">
+          <span id="navInstallNumber" class="nav-number">04</span>
+          <span id="navInstallLabel">Load headset</span>
+          <span id="navInstallState" class="nav-state">Locked</span>
+        </a>
+        <a id="navReview" class="nav-link locked" href="#review-stage" data-dev-only hidden>
+          <span class="nav-number">07</span>
           <span>Review</span>
           <span id="navReviewState" class="nav-state">Locked</span>
         </a>
       </nav>
 
-      <div class="side-group">
+      <div class="side-group" data-dev-only>
         <div class="side-group-title">Reference</div>
         <a class="side-link" href="https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/blob/main/MyQuestionnaireVR-2D/README.md" target="_blank" rel="noreferrer">Instructions</a>
         <a class="side-link" href="https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/blob/main/workflow/START_HERE.md" target="_blank" rel="noreferrer" data-dev-only>Workflow docs</a>
@@ -679,7 +795,7 @@
         <button id="installDependenciesButton" type="button">Install dependencies</button>
       </div>
 
-      <div class="side-group">
+      <div class="side-group" data-dev-only>
         <div class="side-group-title">Files</div>
         <button id="loadCurrentButton" type="button" data-requires-apk-control data-dev-only>Reload preview config</button>
         <button id="copyButton" type="button" data-requires-apk-control data-dev-only>Copy JSON</button>
@@ -708,6 +824,7 @@
             </div>
           </div>
           <div id="triggerCatalogStatus" class="issue">No trigger catalog loaded.</div>
+          <div id="stagedScenarioApkStatus" class="issue">No scenario APK staged for headset install.</div>
         </div>
 
         <div class="panel">
@@ -723,57 +840,38 @@
         </div>
       </section>
 
-      <section id="trigger-stage" class="stage" data-requires-apk>
-        <div class="stage-heading">
-          <div>
-            <h2>2. Build questionnaire blocks</h2>
-            <p id="triggerSummary" class="subtle">After the APK scan, each detected trigger becomes a block slot for a questionnaire.</p>
-          </div>
-          <div class="stage-state">Locked</div>
-        </div>
+      <div id="trigger-stage" class="stage block-segments-wrapper" data-requires-apk>
         <div class="locked-message issue error">Choose an existing APK before editing trigger blocks.</div>
         <div class="stage-body">
-          <div class="panel">
-            <div id="questionnairePalette" class="palette" aria-label="Questionnaire block palette">
-              <button class="palette-item" type="button" draggable="true" data-mode="baseline">
-                Baseline
-                <span>Demographics and MAIA-2</span>
-              </button>
-              <button class="palette-item" type="button" draggable="true" data-mode="demographics">
-                Demographics
-                <span>Participant details only</span>
-              </button>
-              <button class="palette-item" type="button" draggable="true" data-mode="maia2">
-                MAIA-2
-                <span>Interoception only</span>
-              </button>
-              <button class="palette-item" type="button" draggable="true" data-mode="pictographic">
-                Pictographic
-                <span>Embodiment scales</span>
-              </button>
-              <button class="palette-item" type="button" draggable="true" data-mode="slider">
-                Slider
-                <span>Custom Viscereality items</span>
-              </button>
-              <button class="palette-item" type="button" draggable="true" data-mode="temporalTracer">
-                Temporal tracer
-                <span>Experience trace panel</span>
-              </button>
-              <button class="palette-item" type="button" draggable="true" data-mode="full">
-                Full
-                <span>All included screens</span>
-              </button>
-              <button class="palette-item" type="button" draggable="true" data-mode="none">
-                Skip
-                <span>No questionnaire</span>
-              </button>
-            </div>
-            <div id="triggerMappingList" class="block-list"></div>
+          <div id="triggerMappingList" class="study-block-list"></div>
+          <div id="startupProtocolControls" class="hidden-protocol-controls" aria-hidden="true">
+            <input id="block1ModuleDemographics" type="checkbox">
+            <input id="block1ModuleMaia2" type="checkbox">
+            <input id="block1ModulePictographic" type="checkbox">
+            <input id="block1ModuleSlider" type="checkbox">
           </div>
+          <div id="legacyTemplateControls" class="hidden-protocol-controls" aria-hidden="true">
+            <div id="questionnairePalette" class="palette" aria-label="Questionnaire block palette"></div>
+            <select id="csvTemplateKind" aria-label="CSV template type">
+              <option value="demographics">Demographics fields</option>
+              <option value="slider">Slider / VAS items</option>
+              <option value="likert">Likert items</option>
+              <option value="likert">Likert items</option>
+              <option value="multipleChoice">Multiple choice items</option>
+              <option value="textEntry">Text entry items</option>
+              <option value="temporalTracer">Temporal tracer dimensions</option>
+            </select>
+            <button id="downloadCsvTemplateButton" type="button">Download CSV template</button>
+            <input id="loadCsvInput" type="file" accept=".csv,text/csv">
+            <button id="downloadPictographicZipTemplateButton" type="button">Download ZIP template</button>
+            <input id="loadPictographicZipInput" type="file" accept=".zip,application/zip">
+          </div>
+          <div id="csvStatus" class="issue" hidden></div>
+          <div id="pictographicZipStatus" class="issue" hidden></div>
         </div>
-      </section>
+      </div>
 
-      <section id="questionnaire-stage" class="stage" data-requires-apk data-dev-only>
+      <section id="questionnaire-stage" class="stage" data-requires-apk data-dev-only hidden>
         <div class="stage-heading">
           <div>
             <h2>3. Build questionnaire content</h2>
@@ -785,21 +883,11 @@
         <div class="stage-body">
           <div class="panel">
             <div class="section-title">
-              <h3>CSV import</h3>
-              <div class="file-row">
-                <input id="loadCsvInput" type="file" accept=".csv,text/csv">
-              </div>
-            </div>
-            <div id="csvStatus" class="issue">No CSV loaded.</div>
-          </div>
-
-          <div class="panel">
-            <div class="section-title">
               <h3>Available blocks</h3>
             </div>
             <label class="toggle-row">
               <input id="includeMaia" type="checkbox" checked>
-              <span>Include MAIA-2 interoception block</span>
+              <span>Include Likert questionnaire block</span>
             </label>
             <label class="toggle-row">
               <input id="includePictographic" type="checkbox" checked>
@@ -810,7 +898,7 @@
 
           <div class="panel">
             <div class="section-title">
-              <h3>MAIA-2</h3>
+              <h3>Likert</h3>
             </div>
             <div class="grid two">
               <label>
@@ -823,14 +911,14 @@
               </label>
             </div>
             <label style="margin-top: 12px;">
-              Inline MAIA-2 JSON items
+              Inline Likert JSON items
               <textarea id="maiaInline" placeholder='[{"id":"maia_01","text":"..."}]'></textarea>
             </label>
           </div>
 
           <div class="panel">
             <div class="section-title">
-              <h3>Viscereality slider items</h3>
+              <h3>Custom slider items</h3>
             </div>
             <div class="grid">
               <label>
@@ -877,7 +965,7 @@
         </div>
       </section>
 
-      <section id="project-stage" class="stage" data-requires-apk data-dev-only>
+      <section id="project-stage" class="stage" data-requires-apk data-dev-only hidden>
         <div class="stage-heading">
           <div>
             <h2>4. Set project and return behavior</h2>
@@ -894,7 +982,7 @@
             <div class="grid">
               <label>
                 Questionnaire id
-                <input id="questionnaireId" value="viscereality-maia2">
+                <input id="questionnaireId" value="quest-questionnaire-study">
               </label>
               <label>
                 Questionnaire version
@@ -946,11 +1034,15 @@
             <div class="grid">
               <label>
                 Default questionnaire mode
-                <input id="chainQuestionnaireMode" placeholder="demographics, baseline, pictographic, or full">
+                <input id="chainQuestionnaireMode" placeholder="none, demographics, likert, pictographic, or slider">
+              </label>
+              <label>
+                Default questionnaire sequence
+                <input id="chainQuestionnaireSequence" placeholder="demographics, likert, pictographic, slider">
               </label>
               <label>
                 Default trigger id
-                <input id="chainTriggerId" placeholder="trigger_1_launch_questionnaire">
+                <input id="chainTriggerId" placeholder="study_start_block_1">
               </label>
               <label>
                 Default block number
@@ -960,11 +1052,11 @@
             <div class="grid">
               <label>
                 Default block id
-                <input id="chainBlockId" placeholder="001_trigger_trigger_1_launch_questionnaire">
+                <input id="chainBlockId" placeholder="001_questionnaire_start">
               </label>
               <label>
                 Default save namespace
-                <input id="chainSaveNamespace" placeholder="trigger_trigger_1_launch_questionnaire">
+                <input id="chainSaveNamespace" placeholder="block_001_start">
               </label>
               <label class="button-label">
                 Launcher preset
@@ -981,11 +1073,11 @@
             <div class="grid">
               <label>
                 Experiment id
-                <input id="experimentId" value="peripersonal-space-right-orbit">
+                <input id="experimentId" value="quest-questionnaire-stimulus-demo">
               </label>
               <label>
                 ChainLink plan id
-                <input id="chainlinkPlanId" value="peripersonal-space-right-maia2-pictographic">
+                <input id="chainlinkPlanId" value="quest-questionnaire-stimulus-demo-plan">
               </label>
               <label>
                 Trigger button
@@ -995,7 +1087,7 @@
             <div class="grid">
               <label>
                 Target APK package
-                <input id="chainlinkScenarioPackage" value="com.Viscereality.ViscerealityPeriPersonalSpaceRight">
+                <input id="chainlinkScenarioPackage" value="org.questquestionnaire.stimulusdemo">
               </label>
               <label>
                 Target APK activity
@@ -1008,7 +1100,7 @@
             </div>
             <label>
               Target APK label
-              <input id="chainlinkScenarioLabel" value="Peripersonal Space Right orbital scenario">
+              <input id="chainlinkScenarioLabel" value="Questionnaire Stimulus Builder Demo">
             </label>
             <div id="experimentBlockRegistryList" class="block-list" style="margin-top: 10px;"></div>
           </div>
@@ -1018,8 +1110,8 @@
       <section id="runner-stage" class="stage" data-requires-apk>
         <div class="stage-heading">
           <div>
-            <h2 id="runnerStageTitle">5. Save and generate APK</h2>
-            <p id="runnerStageSubtitle" class="subtle">The hosted page sends local actions to the companion on this PC.</p>
+            <h2 id="runnerStageTitle">3. Bake questionnaire APK</h2>
+            <p id="runnerStageSubtitle" class="subtle">Generate the configured questionnaire APK through the local companion on this PC.</p>
           </div>
           <div class="stage-state">Locked</div>
         </div>
@@ -1044,7 +1136,7 @@
             <div id="artifactPreviewStrip" class="artifact-preview-strip" hidden></div>
             <div class="compact-grid">
               <label class="toggle-row" data-dev-only>
-                <input id="appRunTests" type="checkbox" checked>
+                <input id="appRunTests" type="checkbox">
                 <span>Run unit tests</span>
               </label>
               <label class="toggle-row" data-dev-only>
@@ -1075,10 +1167,6 @@
                 <input id="directHandoffWakeBeforeReadiness" type="checkbox">
                 <span>Wake before readiness</span>
               </label>
-              <label>
-                Quest serial
-                <input id="workflowQuestSerial" placeholder="2G0YC1ZG1002QL" spellcheck="false">
-              </label>
               <label data-dev-only>
                 Direct summary for signoff
                 <input id="manualSignoffDirectSummary" placeholder="artifacts\\quest-direct-handoff\\...\\quest-direct-handoff-validation-summary.json" spellcheck="false">
@@ -1090,11 +1178,9 @@
             </div>
             <div class="button-row" style="margin-top: 10px;">
               <button id="checkBackendButton" type="button">Check backend</button>
-              <button id="questReadinessButton" type="button">Detect Quest</button>
               <button id="saveConfigAppButton" type="button" data-dev-only>Save config</button>
               <button id="validateConfigAppButton" type="button" data-dev-only>Validate config</button>
-              <button id="generateApkAppButton" class="primary" type="button" data-requires-apk-control>Generate APK</button>
-              <button id="installApkAppButton" type="button" data-requires-apk-control>Install APK on Quest</button>
+              <button id="generateApkAppButton" class="primary" type="button" data-requires-apk-control>Bake questionnaire APK</button>
               <button id="questReplayAppButton" type="button" data-dev-only>Run replay/export</button>
               <button id="twoDFirstLauncherAppButton" type="button" data-dev-only>Run 2D-first launch</button>
               <button id="directHandoffAppButton" type="button" data-dev-only>Run direct handoff</button>
@@ -1117,7 +1203,39 @@
         </div>
       </section>
 
-      <section id="review-stage" class="stage" data-requires-apk data-dev-only>
+      <section id="install-stage" class="stage" data-requires-apk>
+        <div class="stage-heading">
+          <div>
+            <h2 id="installStageTitle">4. Load APKs onto headset</h2>
+            <p id="installStageSubtitle" class="subtle">Install the staged scenario APK and the generated questionnaire APK on the connected Quest.</p>
+          </div>
+          <div class="stage-state">Locked</div>
+        </div>
+        <div class="locked-message issue error">Choose an existing APK before installing the workflow.</div>
+        <div class="stage-body">
+          <div class="panel">
+            <div class="section-title">
+              <h3>Headset load</h3>
+            </div>
+            <div class="grid two">
+              <label>
+                Quest serial
+                <input id="workflowQuestSerial" placeholder="2G0YC1ZG1002QL" spellcheck="false">
+              </label>
+              <label>
+                Scenario APK staged by scan
+                <input id="stagedScenarioApkPath" readonly placeholder="Load a scenario APK file to stage it for install.">
+              </label>
+            </div>
+            <div class="button-row" style="margin-top: 10px;">
+              <button id="questReadinessButton" type="button">Detect Quest</button>
+              <button id="installApkAppButton" class="primary" type="button" data-requires-apk-control>Install both APKs on Quest</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="review-stage" class="stage" data-requires-apk data-dev-only hidden>
         <div class="stage-heading">
           <div>
             <h2>6. Review output</h2>
@@ -1163,9 +1281,9 @@
   <script>
     const blockDefaults = [
       { id: "demographics", type: "demographics", label: "Demographics" },
-      { id: "maia2", type: "likert", label: "MAIA-2" },
+      { id: "maia2", type: "likert", label: "Likert preload" },
       { id: "pictographic", type: "pictographic", label: "Pictographic" },
-      { id: "viscereality", type: "slider", label: "Viscereality slider" },
+      { id: "custom_slider", type: "slider", label: "Custom slider" },
       { id: "end", type: "blackScreen", label: "Black screen end" }
     ];
 
@@ -1201,10 +1319,30 @@
     let blocks = structuredClone(blockDefaults);
     let triggerCatalog = null;
     let triggerMappings = [];
+    let triggerCatalogWarnings = [];
+    let templateOnlyBlockElements = { startup: [], triggers: {} };
+    let customParticipantFields = null;
     let lastGeneratedApkPath = "";
+    let lastScenarioApkPath = "";
+    let lastScenarioApkName = "";
     let lastEvidenceData = null;
     let artifactPreviewObjectUrls = [];
     const exampleApkFolderUrl = "https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/tree/main/example-scenario-apk";
+    const exampleTriggerCatalog = {
+      schemaVersion: "mq.quest_questionnaire_trigger_catalog.v1",
+      catalogVersion: "1.0.0",
+      scenarioId: "quest-questionnaire-stimulus-demo",
+      package: "org.questquestionnaire.stimulusdemo",
+      activity: "org.questquestionnaire.stimulusdemo.StimulusUnityPlayerGameActivity",
+      label: "Questionnaire Stimulus Builder Demo",
+      triggers: [
+        {
+          triggerId: "trigger_1_complete",
+          label: "After trigger 1",
+          description: "Fired once by the running APK. The questionnaire APK decides which configured block resumes next."
+        }
+      ]
+    };
     const exampleTriggerCatalogUrlCandidates = [
       "../example-scenario-apk/questionnaire-trigger-catalog.json",
       "../../../example-scenario-apk/questionnaire-trigger-catalog.json",
@@ -1216,6 +1354,7 @@
       { id: "evidence-bundle", label: "evidence bundles" },
       { id: "workflow-render-previews", label: "workflow render previews" },
       { id: "workflow-receipt", label: "workflow receipts" },
+      { id: "stage-scenario-apk", label: "scenario APK staging" },
       { id: "direct-handoff-preflight", label: "direct handoff preflight" },
       { id: "2d-first-launcher-preflight", label: "2D-first launcher preflight" },
       { id: "handoff-readiness-audit", label: "handoff readiness audit" },
@@ -1228,6 +1367,7 @@
     const hostedProductBackendCapabilities = [
       { id: "generate-apk", label: "APK generation" },
       { id: "generate-apk-receipt", label: "APK generation receipts" },
+      { id: "stage-scenario-apk", label: "scenario APK staging" },
       { id: "install-apk", label: "Quest APK install" },
       { id: "install-apk-job-status", label: "Quest install job status" },
       { id: "quest-readiness", label: "Quest detection" },
@@ -1242,11 +1382,12 @@
     ];
 
     const triggerQuestionnaireModes = ["none", "demographics", "baseline", "maia2", "pictographic", "slider", "temporalTracer", "full"];
+    const questionnaireModules = ["demographics", "maia2", "pictographic", "slider"];
     const questionnaireModeLabels = {
       none: "Skip",
       demographics: "Demographics",
       baseline: "Baseline",
-      maia2: "MAIA-2",
+      maia2: "Likert",
       pictographic: "Pictographic",
       slider: "Slider",
       temporalTracer: "Temporal tracer",
@@ -1254,15 +1395,116 @@
     };
     const questionnaireModeDetails = {
       none: "No questionnaire runs for this trigger.",
-      demographics: "Participant details only.",
-      baseline: "Demographics and MAIA-2.",
-      maia2: "MAIA-2 interoception block.",
+      demographics: "CSV-backed participant fields. Demographics is a preload, not a fixed first block.",
+      baseline: "Demographics plus Likert preload.",
+      maia2: "Likert questionnaire block with optional established-instrument preload.",
       pictographic: "Three embodiment scales.",
-      slider: "Custom Viscereality slider items.",
+      slider: "Custom uploaded slider items.",
       temporalTracer: "Temporal experience trace exported as SVG, CSV, and JSON.",
       full: "All included questionnaire screens."
     };
+    const questionnaireElementDefinitions = {
+      demographics: {
+        label: "Demographics",
+        detail: "Participant info, consent, and signature fields. Download the CSV and change the fields as needed.",
+        templateKind: "demographics",
+        uploadType: "csv",
+        preloadOptions: [["default", "Participant info preload"]]
+      },
+      maia2: {
+        label: "Likert",
+          detail: "Upload a generic Likert CSV or choose an established-instrument preload.",
+          templateKind: "likert",
+          uploadType: "csv",
+        preloadOptions: [["maia2", "Established Likert preload"]]
+      },
+      pictographic: {
+        label: "Pictographic scale",
+        detail: "ZIP template with placeholder PNGs and a manifest.",
+        templateKind: "pictographic",
+        uploadType: "zip",
+        preloadOptions: [["default", "Default pictographic scales"], ["uploaded", "Uploaded ZIP"]]
+      },
+      slider: {
+        label: "Slider / VAS",
+        detail: "CSV-uploaded continuous or numeric slider items.",
+        templateKind: "slider",
+        uploadType: "csv",
+        preloadOptions: [["current", "Current uploaded slider items"]]
+      },
+      likert: {
+        label: "Likert",
+        detail: "Generic Likert items with optional established-instrument preloads.",
+        templateKind: "likert",
+        uploadType: "csv",
+        preloadOptions: [["maia2", "Established Likert preload"]]
+      },
+      multipleChoice: {
+        label: "Multiple choice CSV",
+        detail: "Template for custom choice items; runtime import is not enabled yet.",
+        templateKind: "multipleChoice",
+        uploadType: "csvUnsupported",
+        preloadOptions: [["template", "Template only"]]
+      },
+      textEntry: {
+        label: "Text entry CSV",
+        detail: "Template for open text responses; runtime import is not enabled yet.",
+        templateKind: "textEntry",
+        uploadType: "csvUnsupported",
+        preloadOptions: [["template", "Template only"]]
+      },
+      temporalTracer: {
+        label: "Temporal tracer",
+        detail: "Dimension template for temporal experience tracing.",
+        templateKind: "temporalTracer",
+        uploadType: "csvUnsupported",
+        preloadOptions: [["default", "Temporal tracer template"]]
+      }
+    };
+    const startupElementTypes = ["demographics", "likert", "pictographic", "slider"];
+    const triggerElementTypes = ["demographics", "likert", "pictographic", "slider"];
+    const templateOnlyElementTypes = ["multipleChoice", "textEntry"];
+    const maia2PreloadItems = [
+      "When I am tense I notice where the tension is located in my body.",
+      "I notice when I am uncomfortable in my body.",
+      "I notice where in my body I am comfortable.",
+      "I notice changes in my breathing, such as whether it slows down or speeds up.",
+      "I ignore physical tension or discomfort until they become more severe.",
+      "I distract myself from sensations of discomfort.",
+      "When I feel pain or discomfort, I try to power through it.",
+      "I try to ignore pain",
+      "I push feelings of discomfort away by focusing on something",
+      "When I feel unpleasant body sensations, I occupy myself with something else so I don’t have to feel them.",
+      "When I feel physical pain, I become upset.",
+      "I start to worry that something is wrong if I feel any discomfort.",
+      "I can notice an unpleasant body sensation without worrying about it.",
+      "I can stay calm and not worry when I have feelings of discomfort or pain.",
+      "When I am in discomfort or pain I can’t get it out of my mind",
+      "I can pay attention to my breath without being distracted by things happening around me.",
+      "I can maintain awareness of my inner bodily sensations even when there is a lot going on around me.",
+      "When I am in conversation with someone, I can pay attention to my posture.",
+      "I can return awareness to my body if I am distracted.",
+      "I can refocus my attention from thinking to sensing my body.",
+      "I can maintain awareness of my whole body even when a part of me is in pain or discomfort.",
+      "I am able to consciously focus on my body as a whole.",
+      "I notice how my body changes when I am angry.",
+      "When something is wrong in my life I can feel it in my body.",
+      "I notice that my body feels different after a peaceful experience.",
+      "I notice that my breathing becomes free and easy when I feel comfortable.",
+      "I notice how my body changes when I feel happy / joyful.",
+      "When I feel overwhelmed I can find a calm place inside.",
+      "When I bring awareness to my body I feel a sense of calm.",
+      "I can use my breath to reduce tension.",
+      "When I am caught up in thoughts, I can calm my mind by focusing on my body/breathing.",
+      "I listen for information from my body about my emotional state.",
+      "When I am upset, I take time to explore how my body feels.",
+      "I listen to my body to inform me about what to do.",
+      "I am at home in my body.",
+      "I feel my body is a safe place.",
+      "I trust my body sensations."
+    ];
     let selectedQuestionnaireMode = "pictographic";
+    let customPictographicPrompts = null;
 
     function byId(id) {
       return document.getElementById(id);
@@ -1271,7 +1513,7 @@
     function activeBlockDefaults() {
       return blockDefaults.filter(block =>
         block.id === "demographics" ||
-        block.id === "viscereality" ||
+        block.id === "custom_slider" ||
         block.id === "end" ||
         (block.id === "maia2" && byId("includeMaia").checked) ||
         (block.id === "pictographic" && byId("includePictographic").checked));
@@ -1319,7 +1561,77 @@
       return Number.isFinite(value) ? value : fallback;
     }
 
+    function normalizeQuestionnaireSequence(value, fallbackMode = "") {
+      const raw = Array.isArray(value)
+        ? value
+        : String(value || "").split(",");
+      const result = [];
+      const append = module => {
+        const cleaned = String(module || "").trim();
+        if (cleaned === "baseline") {
+          append("demographics");
+          append("maia2");
+          return;
+        }
+        if (cleaned === "full") {
+          questionnaireModules.forEach(append);
+          return;
+        }
+        if (questionnaireModules.includes(cleaned) && !result.includes(cleaned)) {
+          result.push(cleaned);
+        }
+      };
+      raw.forEach(append);
+      if (result.length > 0) {
+        return result;
+      }
+      append(fallbackMode);
+      return result;
+    }
+
+    function questionnaireSequenceLabel(sequence, fallbackMode = "") {
+      const normalized = normalizeQuestionnaireSequence(sequence, fallbackMode);
+      if (normalized.length === 0) {
+        return questionnaireModeLabel(fallbackMode || "none");
+      }
+      return normalized.map(module => questionnaireModeLabel(module)).join(" + ");
+    }
+
+    function legacyModeForSequence(sequence, fallbackMode = "none") {
+      const normalized = normalizeQuestionnaireSequence(sequence, fallbackMode);
+      const key = normalized.join(",");
+      if (key === "") return "none";
+      if (key === "demographics") return "demographics";
+      if (key === "demographics,maia2") return "baseline";
+      if (key === "maia2") return "maia2";
+      if (key === "pictographic") return "pictographic";
+      if (key === "slider") return "slider";
+      if (key === "demographics,maia2,pictographic,slider") return "full";
+      const fallbackSequence = normalizeQuestionnaireSequence([], fallbackMode).join(",");
+      return fallbackSequence && fallbackSequence === key ? fallbackMode : "full";
+    }
+
+    function startupQuestionnaireSequence() {
+      const sequence = [];
+      if (byId("block1ModuleDemographics").checked) sequence.push("demographics");
+      if (byId("block1ModuleMaia2").checked) sequence.push("maia2");
+      if (byId("block1ModulePictographic").checked) sequence.push("pictographic");
+      if (byId("block1ModuleSlider").checked) sequence.push("slider");
+      return sequence;
+    }
+
+    function setStartupQuestionnaireSequence(sequence, fallbackMode = "demographics") {
+      const normalized = normalizeQuestionnaireSequence(sequence, fallbackMode);
+      byId("block1ModuleDemographics").checked = normalized.includes("demographics");
+      byId("block1ModuleMaia2").checked = normalized.includes("maia2");
+      byId("block1ModulePictographic").checked = normalized.includes("pictographic");
+      byId("block1ModuleSlider").checked = normalized.includes("slider");
+      byId("chainQuestionnaireSequence").value = normalized.join(",");
+      byId("chainQuestionnaireMode").value = legacyModeForSequence(normalized, fallbackMode);
+    }
+
     function chainDefaults() {
+      const sequence = startupQuestionnaireSequence();
       return {
         finishBehavior: byId("chainFinishBehavior").value.trim() || "staySaved",
         startMode: byId("chainStartMode").value.trim() || "unityFirst",
@@ -1327,7 +1639,8 @@
         callerActivity: byId("chainCallerActivity").value.trim(),
         nextPackage: byId("chainNextPackage").value.trim(),
         nextActivity: byId("chainNextActivity").value.trim(),
-        questionnaireMode: byId("chainQuestionnaireMode").value.trim(),
+        questionnaireMode: legacyModeForSequence(sequence, byId("chainQuestionnaireMode").value.trim()),
+        questionnaireSequence: sequence,
         triggerId: byId("chainTriggerId").value.trim(),
         blockNumber: byId("chainBlockNumber").value.trim(),
         blockId: byId("chainBlockId").value.trim(),
@@ -1367,6 +1680,7 @@
         activity: raw.activity || "",
         action: raw.action || "",
         questionnaireMode: raw.questionnaireMode || "",
+        questionnaireSequence: normalizeQuestionnaireSequence(raw.questionnaireSequence || [], raw.questionnaireMode || ""),
         scenarioMode: raw.scenarioMode || "",
         targetMode: raw.targetMode || raw.scenarioMode || "",
         saveNamespace: raw.saveNamespace || `${number}_${idStem}`,
@@ -1380,9 +1694,6 @@
         throw new Error("Trigger catalog must be a JSON object.");
       }
       const triggers = Array.isArray(catalog.triggers) ? catalog.triggers : [];
-      if (triggers.length === 0) {
-        throw new Error("Trigger catalog does not contain any triggers.");
-      }
       const normalized = {
         schemaVersion: catalog.schemaVersion || "mq.quest_questionnaire_trigger_catalog.v1",
         catalogVersion: catalog.catalogVersion || "1.0.0",
@@ -1391,6 +1702,7 @@
         activity: catalog.activity || catalog.activityName || "",
         label: catalog.label || catalog.scenarioLabel || "",
         sourceApkName,
+        passiveTriggerWarnings: [],
         triggers: []
       };
       const seen = new Set();
@@ -1406,27 +1718,38 @@
           throw new Error(`Trigger id ${triggerId} is duplicated in the catalog.`);
         }
         seen.add(triggerId.toLowerCase());
+        const sourceRecommendedMode = trigger.recommendedMode || trigger.questionnaireMode || "";
+        const studyLogicFields = ["recommendedMode", "questionnaireMode", "blockId", "blockNumber", "questionnaireType", "flowMode"]
+          .filter(field => Object.prototype.hasOwnProperty.call(trigger, field));
+        if (studyLogicFields.length > 0) {
+          normalized.passiveTriggerWarnings.push(
+            `Trigger ${triggerId} includes ${studyLogicFields.join(", ")}. Treat this as legacy metadata only; Unity should emit passive trigger IDs and the questionnaire APK should own block routing.`
+          );
+        }
         normalized.triggers.push({
           triggerId,
           label: trigger.label || trigger.name || `Trigger ${triggerId}`,
           description: trigger.description || "",
-          recommendedMode: trigger.recommendedMode || trigger.questionnaireMode || "none"
+          recommendedMode: sourceRecommendedMode || "none",
+          sourceRecommendedMode,
+          sourceStudyLogicFields: studyLogicFields
         });
       });
       return normalized;
     }
 
     function defaultTriggerMapping(trigger, index) {
-      const mode = triggerQuestionnaireModes.includes(trigger.recommendedMode)
-        ? trigger.recommendedMode
-        : "none";
-      const number = blockNumber(index);
+      const mode = "none";
+      const number = blockNumber(index + 1);
       const stem = safeFileStem(trigger.triggerId, `trigger-${number}`);
       return {
         triggerId: trigger.triggerId,
         label: trigger.label || `Trigger ${trigger.triggerId}`,
         enabled: mode !== "none",
         questionnaireMode: mode,
+        questionnaireSequence: normalizeQuestionnaireSequence([], mode),
+        sourceRecommendedMode: trigger.sourceRecommendedMode || "",
+        sourceStudyLogicFields: trigger.sourceStudyLogicFields || [],
         blockNumber: number,
         blockId: `${number}_trigger_${stem}`,
         saveNamespace: `trigger_${stem}`,
@@ -1436,10 +1759,11 @@
     }
 
     function preferredStartupMapping() {
-      return triggerMappings.find(mapping => mapping.questionnaireMode === "demographics")
-        || triggerMappings.find(mapping => mapping.enabled && mapping.questionnaireMode !== "none")
-        || triggerMappings[0]
-        || null;
+      return null;
+    }
+
+    function shouldUseHostedQuestionnaireFirstDefaults() {
+      return isHostedFinalProductPage() && triggerCatalog && triggerMappings.length > 0;
     }
 
     function applyQuestionnaireFirstDefaults(refreshAfter = true) {
@@ -1450,25 +1774,26 @@
       const targetActivity = byId("chainlinkScenarioActivity").value.trim()
         || byId("chainCallerActivity").value.trim()
         || (triggerCatalog && triggerCatalog.activity ? triggerCatalog.activity : "");
-      const fallbackTriggerId = "study_start_demographics";
-      const triggerId = startup && startup.triggerId ? startup.triggerId : fallbackTriggerId;
+      const fallbackTriggerId = "study_start_block_1";
+      const triggerId = fallbackTriggerId;
       const blockNumberValue = startup && startup.blockNumber ? startup.blockNumber : "001";
-      const normalizedBlockNumber = /^\d{3}$/.test(String(blockNumberValue)) ? blockNumberValue : "001";
+      const normalizedBlockNumber = "001";
       const safeTriggerStem = safeFileStem(triggerId, fallbackTriggerId);
 
       byId("chainStartMode").value = "questionnaireFirst";
       byId("chainFinishBehavior").value = "openNext";
-      byId("chainQuestionnaireMode").value = "demographics";
+      setStartupQuestionnaireSequence([], "none");
       byId("chainTriggerId").value = triggerId;
       byId("chainBlockNumber").value = normalizedBlockNumber;
-      byId("chainBlockId").value = startup && startup.blockId ? startup.blockId : `${normalizedBlockNumber}_trigger_${safeTriggerStem}`;
-      byId("chainSaveNamespace").value = startup && startup.saveNamespace ? startup.saveNamespace : `trigger_${safeTriggerStem}`;
+      byId("chainBlockId").value = `${normalizedBlockNumber}_questionnaire_start`;
+      byId("chainSaveNamespace").value = "block_001_start";
       if (targetPackage) {
         byId("chainNextPackage").value = targetPackage;
       }
       if (targetActivity) {
         byId("chainNextActivity").value = targetActivity;
       }
+      renderTriggerMappingList();
       if (refreshAfter) {
         refresh();
       }
@@ -1476,6 +1801,7 @@
 
     function applyTriggerCatalog(catalog, sourceApkName = "") {
       triggerCatalog = normalizeTriggerCatalog(catalog, sourceApkName);
+      triggerCatalogWarnings = triggerCatalog.passiveTriggerWarnings || [];
       const existingById = new Map(triggerMappings.map(mapping => [String(mapping.triggerId).toLowerCase(), mapping]));
       triggerMappings = triggerCatalog.triggers.map((trigger, index) => ({
         ...defaultTriggerMapping(trigger, index),
@@ -1502,11 +1828,45 @@
         byId("experimentId").value = triggerCatalog.scenarioId;
       }
       renderTriggerMappingList();
-      if (byId("chainStartMode").value.trim() === "questionnaireFirst") {
-        applyQuestionnaireFirstDefaults(false);
-      }
-      setTriggerCatalogStatus(`Loaded ${triggerMappings.length} trigger${triggerMappings.length === 1 ? "" : "s"} from ${sourceApkName || "catalog JSON"}.`, "ok");
+      applyQuestionnaireFirstDefaults(false);
+      const warningSuffix = triggerCatalogWarnings.length > 0
+        ? ` ${triggerCatalogWarnings.length} passive-trigger warning${triggerCatalogWarnings.length === 1 ? "" : "s"}; keep questionnaire routing in the 2D APK.`
+        : "";
+      setTriggerCatalogStatus(`Loaded ${triggerMappings.length} trigger${triggerMappings.length === 1 ? "" : "s"} from ${sourceApkName || "catalog JSON"}.${warningSuffix}`, triggerCatalogWarnings.length > 0 ? "" : "ok");
       refresh();
+    }
+
+    function triggerQuestionnaireSequence(index, fallbackMode = "none") {
+      const mode = byId(`triggerMode${index}`).value || fallbackMode || "none";
+      if (mode === "temporalTracer") {
+        return [];
+      }
+      const sequence = [];
+      questionnaireModules.forEach(module => {
+        const checkbox = byId(`triggerModule${index}_${module}`);
+        if (checkbox && checkbox.checked) {
+          sequence.push(module);
+        }
+      });
+      if (mode === "none") {
+        return sequence;
+      }
+      return sequence.length > 0 ? sequence : normalizeQuestionnaireSequence([], mode);
+    }
+
+    function setTriggerQuestionnaireSequence(index, sequence, fallbackMode = "none") {
+      const normalized = normalizeQuestionnaireSequence(sequence, fallbackMode);
+      questionnaireModules.forEach(module => {
+        const checkbox = byId(`triggerModule${index}_${module}`);
+        if (checkbox) {
+          checkbox.checked = normalized.includes(module);
+        }
+      });
+      const select = byId(`triggerMode${index}`);
+      if (select) {
+        select.value = fallbackMode === "temporalTracer" ? "temporalTracer" : legacyModeForSequence(normalized, fallbackMode);
+      }
+      updateTriggerDropZone(index);
     }
 
     function readTriggerMappingsFromDom() {
@@ -1519,11 +1879,16 @@
         const blockIdElement = byId(`triggerBlockId${index}`);
         const namespaceElement = byId(`triggerSaveNamespace${index}`);
         const languageElement = byId(`triggerLanguage${index}`);
-        const mode = modeElement.value || "none";
+        const rawMode = modeElement.value || "none";
+        const sequence = triggerQuestionnaireSequence(index, rawMode);
+        const mode = rawMode === "temporalTracer" ? "temporalTracer" : legacyModeForSequence(sequence, rawMode);
         return {
           ...mapping,
-          enabled: mode !== "none",
+          enabled: mode !== "none" || sequence.length > 0,
           questionnaireMode: mode,
+          questionnaireSequence: sequence,
+          sourceRecommendedMode: mapping.sourceRecommendedMode || "",
+          sourceStudyLogicFields: mapping.sourceStudyLogicFields || [],
           blockNumber: numberElement.value.trim() || blockNumber(index),
           blockId: blockIdElement.value.trim() || mapping.blockId,
           saveNamespace: namespaceElement.value.trim() || mapping.saveNamespace,
@@ -1545,11 +1910,15 @@
         scenarioId: triggerCatalog?.scenarioId || "",
         scenarioPackage: triggerCatalog?.package || "",
         scenarioActivity: triggerCatalog?.activity || "",
+        passiveTriggerWarnings: triggerCatalogWarnings,
         triggers: triggerMappings.map(mapping => ({
           triggerId: mapping.triggerId,
           label: mapping.label,
           enabled: mapping.enabled,
           questionnaireMode: mapping.questionnaireMode,
+          questionnaireSequence: mapping.questionnaireSequence || [],
+          sourceRecommendedMode: mapping.sourceRecommendedMode || "",
+          sourceStudyLogicFields: mapping.sourceStudyLogicFields || [],
           blockNumber: mapping.blockNumber,
           blockId: mapping.blockId,
           saveNamespace: mapping.saveNamespace,
@@ -1567,17 +1936,75 @@
       return questionnaireModeDetails[mode] || "";
     }
 
+    function visibleBlockSegmentCount() {
+      return triggerCatalog ? 1 + triggerMappings.length : 1;
+    }
+
+    function segmentNumber(value) {
+      return String(value).padStart(2, "0");
+    }
+
+    function updateWorkflowStepNumbers() {
+      const blockCount = visibleBlockSegmentCount();
+      const bakeNumber = blockCount + 2;
+      const installNumber = blockCount + 3;
+      if (byId("navTriggersNumber")) {
+        byId("navTriggersNumber").textContent = segmentNumber(2);
+      }
+      if (byId("navTriggersLabel")) {
+        byId("navTriggersLabel").textContent = "Block 1";
+      }
+      if (byId("navRunnerNumber")) {
+        byId("navRunnerNumber").textContent = segmentNumber(bakeNumber);
+      }
+      if (byId("navInstallNumber")) {
+        byId("navInstallNumber").textContent = segmentNumber(installNumber);
+      }
+      if (byId("runnerStageTitle")) {
+        byId("runnerStageTitle").textContent = `${bakeNumber}. Bake questionnaire APK`;
+      }
+      if (byId("installStageTitle")) {
+        byId("installStageTitle").textContent = `${installNumber}. Load APKs onto headset`;
+      }
+    }
+
+    function renderDynamicBlockNavLinks() {
+      const host = byId("dynamicBlockNavLinks");
+      const unlocked = hasTriggerManifest();
+      if (!triggerCatalog || triggerMappings.length === 0) {
+        host.innerHTML = "";
+        return;
+      }
+      host.innerHTML = triggerMappings.map((mapping, index) => {
+        const blockNumber = index + 2;
+        return `
+          <a id="navTriggerBlock${index}" class="nav-link ${unlocked ? "" : "locked"}" href="#block-segment-trigger-${index}" aria-disabled="${unlocked ? "false" : "true"}">
+            <span class="nav-number">${segmentNumber(index + 3)}</span>
+            <span>Block ${blockNumber}</span>
+            <span class="nav-state">${unlocked ? "Ready" : "Locked"}</span>
+          </a>
+        `;
+      }).join("");
+    }
+
     function setTriggerSummary() {
-      const summary = byId("triggerSummary");
+      let summary = null;
+      try {
+        summary = byId("triggerSummary");
+      } catch (error) {
+        return;
+      }
       if (!summary) {
         return;
       }
       if (triggerMappings.length === 0) {
-        summary.textContent = "No trigger blocks available yet.";
+        summary.textContent = triggerCatalog
+          ? "Block 1 is the first configurable questionnaire block. The scanned APK has 0 passive Unity return triggers, so no later return blocks are needed."
+          : "Load a scenario APK or trigger catalog to create Block 1 plus the scanned return blocks.";
         return;
       }
       const enabled = readTriggerMappingsFromDom().filter(mapping => mapping.enabled).length;
-      summary.textContent = `${triggerMappings.length} manifest trigger${triggerMappings.length === 1 ? "" : "s"} found. ${enabled} questionnaire block${enabled === 1 ? "" : "s"} enabled.`;
+      summary.textContent = `Block 1 is the first configurable questionnaire block. ${triggerMappings.length} scanned trigger${triggerMappings.length === 1 ? "" : "s"} created ${triggerMappings.length} later return block${triggerMappings.length === 1 ? "" : "s"}; ${enabled} return block${enabled === 1 ? "" : "s"} currently include questionnaire elements.`;
     }
 
     function updateTriggerDropZone(index) {
@@ -1590,11 +2017,338 @@
         return;
       }
       const mode = select.value || "none";
-      zone.classList.toggle("empty", mode === "none");
+      const sequence = triggerQuestionnaireSequence(index, mode);
+      zone.classList.toggle("empty", mode === "none" && sequence.length === 0);
       zone.innerHTML = `
-        <div class="block-label">${escapeHtml(questionnaireModeLabel(mode))}</div>
-        <div class="subtle">${escapeHtml(questionnaireModeDetail(mode))}</div>
+        <div class="block-label">${escapeHtml(mode === "temporalTracer" ? questionnaireModeLabel(mode) : questionnaireSequenceLabel(sequence, mode))}</div>
+        <div class="subtle">${escapeHtml(mode === "temporalTracer" ? questionnaireModeDetail(mode) : "Modules run in this trigger block.")}</div>
       `;
+    }
+
+    function addTemplateOnlyElement(blockKind, index, type) {
+      const key = blockKind === "startup" ? "startup" : String(index);
+      const target = blockKind === "startup"
+        ? templateOnlyBlockElements.startup
+        : (templateOnlyBlockElements.triggers[key] || (templateOnlyBlockElements.triggers[key] = []));
+      target.push({ id: `${type}_${Date.now()}_${target.length}`, type });
+    }
+
+    function removeTemplateOnlyElement(blockKind, index, id) {
+      const key = blockKind === "startup" ? "startup" : String(index);
+      const target = blockKind === "startup"
+        ? templateOnlyBlockElements.startup
+        : (templateOnlyBlockElements.triggers[key] || []);
+      const next = target.filter(element => element.id !== id);
+      if (blockKind === "startup") {
+        templateOnlyBlockElements.startup = next;
+      } else {
+        templateOnlyBlockElements.triggers[key] = next;
+      }
+    }
+
+    function templateOnlyElementsForBlock(blockKind, index) {
+      const key = blockKind === "startup" ? "startup" : String(index);
+      return blockKind === "startup"
+        ? templateOnlyBlockElements.startup
+        : (templateOnlyBlockElements.triggers[key] || []);
+    }
+
+    function elementDefinition(type) {
+      return questionnaireElementDefinitions[type] || {
+        label: questionnaireModeLabel(type),
+        detail: "",
+        templateKind: type,
+        uploadType: "csvUnsupported",
+        preloadOptions: []
+      };
+    }
+
+    function runtimeElementType(type) {
+      return type === "likert" ? "maia2" : type;
+    }
+
+    function elementOptionsForBlock(blockKind) {
+      const types = blockKind === "startup" ? startupElementTypes : triggerElementTypes;
+      return types
+        .map(type => `<option value="${escapeHtml(type)}">${escapeHtml(elementDefinition(type).label)}</option>`)
+        .join("");
+    }
+
+    function selectedRuntimeElements(blockKind, index) {
+      if (blockKind === "startup") {
+        return startupQuestionnaireSequence().map(type => ({ type, id: type, templateOnly: false }));
+      }
+      const select = byId(`triggerMode${index}`);
+      const mode = select ? select.value || "none" : "none";
+      if (mode === "temporalTracer") {
+        return [{ type: "temporalTracer", id: "temporalTracer", templateOnly: false }];
+      }
+      return triggerQuestionnaireSequence(index, mode).map(type => ({ type, id: type, templateOnly: false }));
+    }
+
+    function allElementsForBlock(blockKind, index, mapping = null) {
+      const runtimeElements = mapping
+        ? (mapping.questionnaireMode === "temporalTracer"
+          ? [{ type: "temporalTracer", id: "temporalTracer", templateOnly: false }]
+          : normalizeQuestionnaireSequence(mapping.questionnaireSequence || [], mapping.questionnaireMode || "none")
+            .map(type => ({ type, id: type, templateOnly: false })))
+        : selectedRuntimeElements(blockKind, index);
+      return [
+        ...runtimeElements,
+        ...templateOnlyElementsForBlock(blockKind, index).map(element => ({ ...element, templateOnly: true }))
+      ];
+    }
+
+    function hiddenInputForElement(blockKind, index, type) {
+      if (blockKind === "startup") {
+        const ids = {
+          demographics: "block1ModuleDemographics",
+          maia2: "block1ModuleMaia2",
+          pictographic: "block1ModulePictographic",
+          slider: "block1ModuleSlider"
+        };
+        return ids[type] ? byId(ids[type]) : null;
+      }
+      if (type === "temporalTracer") {
+        return byId(`triggerMode${index}`);
+      }
+      return byId(`triggerModule${index}_${type}`);
+    }
+
+    function setElementSelected(blockKind, index, type, selected) {
+      if (templateOnlyElementTypes.includes(type)) {
+        if (selected) {
+          addTemplateOnlyElement(blockKind, index, type);
+        }
+        return;
+      }
+
+      const control = hiddenInputForElement(blockKind, index, type);
+      if (!control) {
+        return;
+      }
+      if (type === "temporalTracer") {
+        control.value = selected ? "temporalTracer" : "none";
+        if (selected) {
+          questionnaireModules.forEach(module => {
+            const checkbox = byId(`triggerModule${index}_${module}`);
+            if (checkbox) {
+              checkbox.checked = false;
+            }
+          });
+        }
+        return;
+      }
+
+      control.checked = selected;
+      if (blockKind === "trigger") {
+        const modeControl = byId(`triggerMode${index}`);
+        const sequence = triggerQuestionnaireSequence(index, modeControl ? modeControl.value || "none" : "none");
+        if (modeControl) {
+          modeControl.value = legacyModeForSequence(sequence, modeControl.value || "none");
+        }
+      }
+    }
+
+    function refreshBlockBuilderAfterEdit() {
+      triggerMappings = readTriggerMappingsFromDom();
+      setTriggerSummary();
+      renderTriggerMappingList();
+      refresh();
+    }
+
+    function addQuestionnaireElement(blockKind, index, type) {
+      const runtimeType = runtimeElementType(type);
+      setElementSelected(blockKind, index, runtimeType, true);
+      if (runtimeType === "maia2") {
+        byId("includeMaia").checked = true;
+      }
+      if (runtimeType === "pictographic") {
+        byId("includePictographic").checked = true;
+      }
+      refreshBlockBuilderAfterEdit();
+    }
+
+    function removeQuestionnaireElement(blockKind, index, type, elementId, templateOnly) {
+      if (templateOnly) {
+        removeTemplateOnlyElement(blockKind, index, elementId);
+      } else {
+        setElementSelected(blockKind, index, type, false);
+      }
+      refreshBlockBuilderAfterEdit();
+    }
+
+    function elementTemplateFileName(type) {
+      return `questionnaire-${safeFileStem(type)}-template.csv`;
+    }
+
+    function downloadElementTemplate(type) {
+      const definition = elementDefinition(type);
+      if (definition.uploadType === "zip" || type === "pictographic") {
+        downloadPictographicZipTemplate();
+        return;
+      }
+      const kind = definition.templateKind || type;
+      downloadTextFile(elementTemplateFileName(kind), csvTemplateText(kind), "text/csv");
+    }
+
+    function downloadElementPreload(type) {
+      if (type === "maia2") {
+        downloadTextFile("questionnaire-likert-maia2-preload.csv", maia2PreloadCsvText(), "text/csv");
+        return;
+      }
+      if (type === "demographics") {
+        downloadTextFile("questionnaire-demographics-suggested-preload.csv", csvTemplateText("demographics"), "text/csv");
+        return;
+      }
+      if (type === "pictographic") {
+        downloadPictographicZipTemplate();
+        return;
+      }
+      downloadElementTemplate(type);
+    }
+
+    function chooseUploadForElement(type) {
+      const definition = elementDefinition(type);
+      if (definition.uploadType === "zip" || type === "pictographic") {
+        byId("loadPictographicZipInput").click();
+        return;
+      }
+      byId("csvTemplateKind").value = definition.templateKind || "slider";
+      if (definition.uploadType === "csvUnsupported") {
+        setCsvStatus(`${definition.label} CSV templates can be downloaded now. APK import/render support for this type is still guarded so unsupported rows fail loudly.`, "error");
+      }
+      byId("loadCsvInput").click();
+    }
+
+    function elementPreloadControls(type) {
+      const definition = elementDefinition(type);
+      if (!definition.preloadOptions || definition.preloadOptions.length === 0) {
+        return "";
+      }
+      const options = definition.preloadOptions
+        .map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`)
+        .join("");
+      return `
+        <select data-element-preload="${escapeHtml(type)}" aria-label="${escapeHtml(definition.label)} preload">
+          ${options}
+        </select>
+        <button type="button" data-action="download-preload" data-type="${escapeHtml(type)}">Download preload CSV</button>
+      `;
+    }
+
+    function renderQuestionnaireElement(blockKind, index, element) {
+      const definition = elementDefinition(element.type);
+      const templateNote = element.templateOnly ? "Template only until APK runtime support is added." : definition.detail;
+      return `
+        <div class="questionnaire-element" data-element-id="${escapeHtml(element.id)}" data-element-type="${escapeHtml(element.type)}" data-template-only="${element.templateOnly ? "true" : "false"}">
+          <div class="questionnaire-element-header">
+            <div>
+              <div class="questionnaire-element-title">${escapeHtml(definition.label)}</div>
+              <div class="subtle">${escapeHtml(templateNote)}</div>
+            </div>
+            <button type="button" data-action="remove-element" data-block-kind="${escapeHtml(blockKind)}" data-index="${index}" data-type="${escapeHtml(element.type)}" data-element-id="${escapeHtml(element.id)}" data-template-only="${element.templateOnly ? "true" : "false"}">Remove</button>
+          </div>
+          <div class="questionnaire-element-actions">
+            <button type="button" data-action="download-template" data-type="${escapeHtml(element.type)}">Download template</button>
+            ${elementPreloadControls(element.type)}
+            <button type="button" data-action="upload-element" data-type="${escapeHtml(element.type)}">${definition.uploadType === "zip" ? "Upload ZIP" : "Upload CSV"}</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderElementStack(blockKind, index, mapping = null) {
+      const elements = allElementsForBlock(blockKind, index, mapping);
+      if (elements.length === 0) {
+        return `<div class="issue">No questionnaire elements assigned to this block yet.</div>`;
+      }
+      return elements.map(element => renderQuestionnaireElement(blockKind, index, element)).join("");
+    }
+
+    function triggerHiddenControls(mapping, index) {
+      return `
+        <div class="hidden-protocol-controls" aria-hidden="true">
+          <input id="triggerMode${index}" value="${escapeHtml(mapping.questionnaireMode || "none")}">
+          <input id="triggerModule${index}_demographics" type="checkbox">
+          <input id="triggerModule${index}_maia2" type="checkbox">
+          <input id="triggerModule${index}_pictographic" type="checkbox">
+          <input id="triggerModule${index}_slider" type="checkbox">
+          <input id="triggerBlockNumber${index}" value="${escapeHtml(mapping.blockNumber)}">
+          <input id="triggerLanguage${index}" value="${escapeHtml(mapping.language || "")}">
+          <input id="triggerBlockId${index}" value="${escapeHtml(mapping.blockId)}">
+          <input id="triggerSaveNamespace${index}" value="${escapeHtml(mapping.saveNamespace)}">
+        </div>
+      `;
+    }
+
+    function renderBlockCard({ blockKind, index = 0, title, kicker, subtitle, mapping = null }) {
+      const options = elementOptionsForBlock(blockKind);
+      const stepNumber = blockKind === "startup" ? 2 : index + 3;
+      const segmentId = blockKind === "startup" ? "block-segment-startup" : `block-segment-trigger-${index}`;
+      const subtitleElement = blockKind === "startup"
+        ? `<p id="triggerSummary" class="subtle">${escapeHtml(subtitle)}</p>`
+        : `<p class="subtle">${escapeHtml(subtitle)}</p>`;
+      return `
+        <section id="${escapeHtml(segmentId)}" class="block-segment study-block" data-block-kind="${escapeHtml(blockKind)}" data-index="${index}">
+          ${mapping ? triggerHiddenControls(mapping, index) : ""}
+          <div class="stage-heading">
+            <div>
+              <div class="study-block-kicker">${escapeHtml(kicker)}</div>
+              <h2>${stepNumber}. ${escapeHtml(title)}</h2>
+              ${subtitleElement}
+            </div>
+            <div class="stage-state">Ready</div>
+          </div>
+          <div class="stage-body">
+            <div class="panel">
+              <div class="questionnaire-stack">
+                ${renderElementStack(blockKind, index, mapping)}
+              </div>
+              <div class="questionnaire-add-row">
+                <select data-add-select="${escapeHtml(blockKind)}" data-index="${index}" aria-label="Questionnaire type">
+                  ${options}
+                </select>
+                <button type="button" data-action="add-element" data-block-kind="${escapeHtml(blockKind)}" data-index="${index}">Add questionnaire element</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function wireBlockBuilderActions(host) {
+      if (!host || typeof host.querySelectorAll !== "function") {
+        return;
+      }
+      host.querySelectorAll('[data-action="add-element"]').forEach(button => {
+        button.addEventListener("click", () => {
+          const blockKind = button.dataset.blockKind;
+          const index = Number(button.dataset.index || 0);
+          const select = host.querySelector(`select[data-add-select="${blockKind}"][data-index="${index}"]`);
+          addQuestionnaireElement(blockKind, index, select ? select.value : "demographics");
+        });
+      });
+      host.querySelectorAll('[data-action="remove-element"]').forEach(button => {
+        button.addEventListener("click", () => {
+          removeQuestionnaireElement(
+            button.dataset.blockKind,
+            Number(button.dataset.index || 0),
+            button.dataset.type,
+            button.dataset.elementId,
+            button.dataset.templateOnly === "true"
+          );
+        });
+      });
+      host.querySelectorAll('[data-action="download-template"]').forEach(button => {
+        button.addEventListener("click", () => downloadElementTemplate(button.dataset.type));
+      });
+      host.querySelectorAll('[data-action="download-preload"]').forEach(button => {
+        button.addEventListener("click", () => downloadElementPreload(button.dataset.type));
+      });
+      host.querySelectorAll('[data-action="upload-element"]').forEach(button => {
+        button.addEventListener("click", () => chooseUploadForElement(button.dataset.type));
+      });
     }
 
     function assignTriggerMode(index, mode) {
@@ -1606,94 +2360,47 @@
         return;
       }
       select.value = mode;
-      updateTriggerDropZone(index);
+      setTriggerQuestionnaireSequence(index, normalizeQuestionnaireSequence([], mode), mode);
       triggerMappings = readTriggerMappingsFromDom();
+      if (shouldUseHostedQuestionnaireFirstDefaults()) {
+        applyQuestionnaireFirstDefaults(false);
+      }
       setTriggerSummary();
+      renderTriggerMappingList();
       refresh();
     }
 
     function renderTriggerMappingList() {
       const host = byId("triggerMappingList");
       host.innerHTML = "";
-      if (triggerMappings.length === 0) {
+      if (!triggerCatalog) {
         setTriggerSummary();
+        updateWorkflowStepNumbers();
+        renderDynamicBlockNavLinks();
         return;
       }
+      host.innerHTML = [
+        renderBlockCard({
+          blockKind: "startup",
+          title: "Block 1",
+          kicker: "Before experiment/running APK",
+          subtitle: "Add one or more questionnaire elements from the type selector below."
+        }),
+        ...triggerMappings.map((mapping, index) => renderBlockCard({
+          blockKind: "trigger",
+          index,
+          title: `Block ${index + 2}`,
+          kicker: mapping.label || `After trigger ${index + 1}`,
+          subtitle: "Resumes when the running APK emits this passive trigger.",
+          mapping
+        }))
+      ].join("");
       triggerMappings.forEach((mapping, index) => {
-        const row = document.createElement("div");
-        row.className = "block-row trigger-row";
-        const label = escapeHtml(mapping.label || `Trigger ${mapping.triggerId}`);
-        const triggerId = escapeHtml(mapping.triggerId);
-        const blockNumberValue = escapeHtml(mapping.blockNumber);
-        const languageValue = escapeHtml(mapping.language || "");
-        const blockIdValue = escapeHtml(mapping.blockId);
-        const saveNamespaceValue = escapeHtml(mapping.saveNamespace);
-        const modeOptions = triggerQuestionnaireModes
-          .map(mode => `<option value="${mode}">${mode}</option>`)
-          .join("");
-        row.innerHTML = `
-          <div class="trigger-number">${String(index + 1).padStart(2, "0")}</div>
-          <div>
-            <strong>${label}</strong>
-            <div class="subtle">Event ID: ${triggerId}</div>
-            <div class="drop-zone" data-trigger-drop="${index}" tabindex="0"></div>
-          </div>
-          <div class="grid" style="grid-column: 1 / -1; margin-top: 8px;">
-            <label>
-              Questionnaire block
-              <select id="triggerMode${index}">${modeOptions}</select>
-            </label>
-            <label>
-              Block number
-              <input id="triggerBlockNumber${index}" value="${blockNumberValue}">
-            </label>
-            <label>
-              Language override
-              <input id="triggerLanguage${index}" value="${languageValue}" placeholder="English or Deutsch">
-            </label>
-          </div>
-          <div class="grid two" style="grid-column: 1 / -1; margin-top: 8px;">
-            <label>
-              Block id
-              <input id="triggerBlockId${index}" value="${blockIdValue}">
-            </label>
-            <label>
-              Save namespace
-              <input id="triggerSaveNamespace${index}" value="${saveNamespaceValue}">
-            </label>
-          </div>
-        `;
-        host.appendChild(row);
-        byId(`triggerMode${index}`).value = mapping.questionnaireMode || "none";
-        updateTriggerDropZone(index);
-        byId(`triggerMode${index}`).addEventListener("change", () => {
-          updateTriggerDropZone(index);
-          triggerMappings = readTriggerMappingsFromDom();
-          setTriggerSummary();
-        });
-        if (typeof row.querySelector !== "function") {
-          return;
-        }
-        const dropZone = row.querySelector(`[data-trigger-drop="${index}"]`);
-        if (!dropZone) {
-          return;
-        }
-        dropZone.addEventListener("dragover", event => {
-          event.preventDefault();
-          dropZone.classList.add("drag-over");
-        });
-        dropZone.addEventListener("dragleave", () => {
-          dropZone.classList.remove("drag-over");
-        });
-        dropZone.addEventListener("drop", event => {
-          event.preventDefault();
-          dropZone.classList.remove("drag-over");
-          assignTriggerMode(index, event.dataTransfer.getData("text/plain"));
-        });
-        dropZone.addEventListener("click", () => {
-          assignTriggerMode(index, selectedQuestionnaireMode);
-        });
+        setTriggerQuestionnaireSequence(index, mapping.questionnaireSequence || [], mapping.questionnaireMode || "none");
       });
+      wireBlockBuilderActions(host);
+      updateWorkflowStepNumbers();
+      renderDynamicBlockNavLinks();
       setTriggerSummary();
     }
 
@@ -1703,6 +2410,46 @@
       status.textContent = text;
     }
 
+    function setStagedScenarioApkStatus(text, level = "") {
+      const status = byId("stagedScenarioApkStatus");
+      if (!status) {
+        return;
+      }
+      status.className = `issue ${level}`;
+      status.textContent = text;
+    }
+
+    function setStagedScenarioApkPath(path = "") {
+      lastScenarioApkPath = String(path || "").trim();
+      const field = byId("stagedScenarioApkPath");
+      if (field) {
+        field.value = lastScenarioApkPath;
+      }
+    }
+
+    function bytesToBase64(bytes) {
+      let binary = "";
+      const chunkSize = 0x8000;
+      for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        const chunk = bytes.subarray(offset, offset + chunkSize);
+        binary += String.fromCharCode(...chunk);
+      }
+      return btoa(binary);
+    }
+
+    async function stageScenarioApkFile(file) {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      const data = await callAppBackend("/api/stage-scenario-apk", {
+        fileName: file.name,
+        base64: bytesToBase64(bytes)
+      });
+      lastScenarioApkName = data.fileName || file.name;
+      setStagedScenarioApkPath(data.apk || "");
+      setStagedScenarioApkStatus(`Scenario APK staged for headset install: ${lastScenarioApkName}.`, "ok");
+      return data;
+    }
+
     function setExampleApkStatus(text, level = "") {
       const status = byId("exampleApkStatus");
       status.className = `issue ${level}`;
@@ -1710,32 +2457,12 @@
     }
 
     async function loadExampleTriggerCatalog() {
-      let lastError = null;
       setExampleApkStatus("Loading repository example...", "");
-      for (const candidate of exampleTriggerCatalogUrlCandidates) {
-        let url = candidate;
-        try {
-          const baseHref = window.location && window.location.href ? window.location.href : null;
-          if (baseHref && !candidate.startsWith("http")) {
-            url = new URL(candidate, baseHref).href;
-          }
-        } catch (error) {
-          url = candidate;
-        }
-        try {
-          const response = await fetch(url, { cache: "no-store" });
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-          const catalog = await response.json();
-          applyTriggerCatalog(catalog, "repository example APK");
-          setExampleApkStatus("Repository example loaded.", "ok");
-          return;
-        } catch (error) {
-          lastError = error;
-        }
-      }
-      setExampleApkStatus(`Could not load the repository example. Open the folder URL and download it manually. ${lastError?.message || ""}`.trim(), "error");
+      lastScenarioApkName = "";
+      setStagedScenarioApkPath("");
+      setStagedScenarioApkStatus("Repository example loaded from trigger catalog only; load a local scenario APK file before installing both APKs.", "warn");
+      applyTriggerCatalog(JSON.parse(JSON.stringify(exampleTriggerCatalog)), "repository example APK");
+      setExampleApkStatus("Repository example loaded: one passive Unity end trigger creates Block 1 plus Block 2.", "ok");
     }
 
     function findEndOfCentralDirectory(bytes) {
@@ -1823,13 +2550,54 @@
         return;
       }
       try {
+        const isJson = file.name.toLowerCase().endsWith(".json");
         const catalog = file.name.toLowerCase().endsWith(".json")
           ? JSON.parse(await file.text())
           : await extractTriggerCatalogFromApk(file);
+        let staged = null;
+        let stageError = "";
+        if (isJson) {
+          lastScenarioApkName = "";
+          setStagedScenarioApkPath("");
+          setStagedScenarioApkStatus("Trigger catalog loaded from JSON; load a local scenario APK file before installing both APKs.", "warn");
+        } else {
+          try {
+            staged = await stageScenarioApkFile(file);
+          } catch (error) {
+            stageError = error.message || String(error);
+            lastScenarioApkName = file.name;
+            setStagedScenarioApkPath("");
+            setStagedScenarioApkStatus(`Scenario APK scan succeeded, but staging for headset install failed: ${stageError}`, "error");
+          }
+        }
         applyTriggerCatalog(catalog, file.name);
+        if (staged) {
+          setStagedScenarioApkStatus(`Scenario APK staged for headset install: ${staged.fileName || file.name}.`, "ok");
+        } else if (stageError) {
+          setTriggerCatalogStatus(`Loaded ${triggerMappings.length} trigger${triggerMappings.length === 1 ? "" : "s"} from ${file.name}, but scenario APK staging failed. ${stageError}`, "error");
+        }
       } catch (error) {
         setTriggerCatalogStatus(error.message || String(error), "error");
       }
+    }
+
+    function expectedOutputsForQuestionnaireSequence(sequence, fallbackMode = "none") {
+      const normalized = normalizeQuestionnaireSequence(sequence, fallbackMode);
+      const outputs = {};
+      if (normalized.includes("demographics")) {
+        outputs.demographics = true;
+      }
+      if (normalized.includes("maia2")) {
+        outputs.maia2Answers = numberValue("maiaExpectedCount", 37);
+        outputs.maia2Scores = 8;
+      }
+      if (normalized.includes("pictographic")) {
+        outputs.pictographicSelections = (customPictographicPrompts || pictographicDefaults).length;
+      }
+      if (normalized.includes("slider")) {
+        outputs.sliderAnswers = numberValue("sliderExpectedCount", 42);
+      }
+      return outputs;
     }
 
     function expectedOutputsForQuestionnaireMode(mode) {
@@ -1843,7 +2611,7 @@
         return { maia2Answers: 37, maia2Scores: 8 };
       }
       if (mode === "pictographic") {
-        return { pictographicSelections: 3 };
+        return { pictographicSelections: (customPictographicPrompts || pictographicDefaults).length };
       }
       if (mode === "slider") {
         return { sliderAnswers: numberValue("sliderExpectedCount", 42) };
@@ -1856,7 +2624,7 @@
           demographics: true,
           maia2Answers: 37,
           maia2Scores: 8,
-          pictographicSelections: 3,
+          pictographicSelections: (customPictographicPrompts || pictographicDefaults).length,
           sliderAnswers: numberValue("sliderExpectedCount", 42)
         };
       }
@@ -1874,25 +2642,28 @@
       const scenarioLabel = byId("chainlinkScenarioLabel").value.trim() || "Scenario APK";
       const triggerButton = byId("chainlinkTriggerButton").value.trim() || "auto-unused-non-breath-tracking";
       const repeats = clampedInteger("chainlinkPictographicRepeats", 2, 1, 50);
-      const questionnairePackage = "org.viscereality.questionnaires2d";
-      const questionnaireActivity = "org.viscereality.questionnaires2d.MainActivity";
-      const questionnaireAction = "org.viscereality.questionnaires2d.RUN";
-      const temporalTracerPackage = "org.viscereality.temporaltracer2d";
-      const temporalTracerActivity = "org.viscereality.temporaltracer2d.MainActivity";
-      const temporalTracerAction = "org.viscereality.temporaltracer2d.RUN";
+      const questionnairePackage = "org.questquestionnaire.questionnaires2d";
+      const questionnaireActivity = "org.questquestionnaire.questionnaires2d.MainActivity";
+      const questionnaireAction = "org.questquestionnaire.questionnaires2d.RUN";
+      const temporalTracerPackage = "org.questquestionnaire.temporaltracer2d";
+      const temporalTracerActivity = "org.questquestionnaire.temporaltracer2d.MainActivity";
+      const temporalTracerAction = "org.questquestionnaire.temporaltracer2d.RUN";
       const triggerFinishBehavior = defaults.startMode === "questionnaireFirst" ? "resumeCaller" : (defaults.finishBehavior || "resumeCaller");
       const mappedTriggers = readTriggerMappingsFromDom()
-        .filter(mapping => mapping.enabled && mapping.questionnaireMode !== "none");
+        .filter(mapping => mapping.enabled && (mapping.questionnaireMode !== "none" || (mapping.questionnaireSequence || []).length > 0));
 
-      if (mappedTriggers.length > 0) {
+      if (triggerMappings.length > 0 || triggerCatalog) {
         const triggerBlocks = mappedTriggers.map((mapping, index) => {
           const temporal = mapping.questionnaireMode === "temporalTracer";
+          const sequence = temporal ? [] : normalizeQuestionnaireSequence(mapping.questionnaireSequence, mapping.questionnaireMode);
+          const mode = temporal ? "temporalTracer" : legacyModeForSequence(sequence, mapping.questionnaireMode);
           const packageName = temporal ? temporalTracerPackage : questionnairePackage;
           const activityName = temporal ? temporalTracerActivity : questionnaireActivity;
           const actionName = temporal ? temporalTracerAction : questionnaireAction;
           const modeExtras = temporal ? {} : {
-            "mq.questionnaireMode": mapping.questionnaireMode,
-            "mq.flowMode": mapping.questionnaireMode
+            "mq.questionnaireMode": mode,
+            "mq.questionnaireSequence": sequence.join(","),
+            "mq.flowMode": mode
           };
           return {
             number: /^\d{3}$/.test(String(mapping.blockNumber || "")) ? mapping.blockNumber : blockNumber(index),
@@ -1908,9 +2679,10 @@
             package: packageName,
             activity: activityName,
             action: actionName,
-            questionnaireMode: mapping.questionnaireMode,
+            questionnaireMode: mode,
+            questionnaireSequence: sequence,
             saveNamespace: mapping.saveNamespace || `trigger_${safeFileStem(mapping.triggerId, `trigger-${index + 1}`)}`,
-            expectedOutputs: expectedOutputsForQuestionnaireMode(mapping.questionnaireMode),
+            expectedOutputs: temporal ? expectedOutputsForQuestionnaireMode(mapping.questionnaireMode) : expectedOutputsForQuestionnaireSequence(sequence, mode),
             extras: {
               ...modeExtras,
               "mq.handoffSchema": "mq.handoff.v1",
@@ -1925,7 +2697,7 @@
         });
 
         return {
-          schemaVersion: "viscereality.chainlink.block-registry.v1",
+          schemaVersion: "questquestionnaire.chainlink.block-registry.v1",
           experimentId,
           planId,
           questionnaireId,
@@ -1961,16 +2733,18 @@
         {
           id: "baseline_questionnaire",
           type: "questionnaire",
-          label: "Language, demographics, MAIA-2",
+          label: "Language, participant fields, Likert preload",
           trigger: { type: "onPlanStart" },
           package: questionnairePackage,
           activity: questionnaireActivity,
           action: questionnaireAction,
           questionnaireMode: "baseline",
+          questionnaireSequence: ["demographics", "maia2"],
           saveNamespace: "baseline_maia2",
           expectedOutputs: { demographics: true, maia2Answers: 37, maia2Scores: 8 },
           extras: {
             "mq.questionnaireMode": "baseline",
+            "mq.questionnaireSequence": "demographics,maia2",
             "mq.flowMode": "baseline",
             "mq.finishBehavior": "resumeCaller",
             "mq.autoCloseDelayMs": defaults.autoCloseDelayMs
@@ -2010,10 +2784,12 @@
           activity: questionnaireActivity,
           action: questionnaireAction,
           questionnaireMode: "pictographic",
+          questionnaireSequence: ["pictographic"],
           saveNamespace: `pictographic_${String(repeat).padStart(2, "0")}`,
-          expectedOutputs: { pictographicSelections: 3 },
+          expectedOutputs: { pictographicSelections: (customPictographicPrompts || pictographicDefaults).length },
           extras: {
             "mq.questionnaireMode": "pictographic",
+            "mq.questionnaireSequence": "pictographic",
             "mq.flowMode": "pictographic",
             "mq.blockInstance": repeat,
             "mq.finishBehavior": "resumeCaller",
@@ -2042,7 +2818,7 @@
       }
 
       return {
-        schemaVersion: "viscereality.chainlink.block-registry.v1",
+        schemaVersion: "questquestionnaire.chainlink.block-registry.v1",
         experimentId,
         planId,
         questionnaireId,
@@ -2137,7 +2913,8 @@
     function makePictographicFields() {
       const host = byId("pictographicFields");
       host.innerHTML = "";
-      pictographicDefaults.forEach((prompt, index) => {
+      const prompts = customPictographicPrompts || pictographicDefaults;
+      prompts.forEach((prompt, index) => {
         const section = document.createElement("div");
         section.className = "grid";
         section.innerHTML = `
@@ -2187,6 +2964,22 @@
     }
 
     function pictographicBlock() {
+      if (Array.isArray(customPictographicPrompts) && customPictographicPrompts.length > 0) {
+        return {
+          id: "pictographic",
+          type: "pictographic",
+          choices: ["A", "B", "C", "D", "E", "F", "G", "H"],
+          prompts: customPictographicPrompts.map(prompt => ({
+            id: prompt.id,
+            imageFileName: prompt.imageFileName,
+            source: prompt.source || "",
+            dataUrl: prompt.dataUrl || "",
+            promptEnglish: prompt.promptEnglish || "",
+            promptDeutsch: prompt.promptDeutsch || "",
+            choices: prompt.choices && prompt.choices.length > 0 ? prompt.choices : ["A", "B", "C", "D", "E", "F", "G"]
+          }))
+        };
+      }
       return {
         id: "pictographic",
         type: "pictographic",
@@ -2206,7 +2999,7 @@
       const english = lineItems("englishItems");
       const german = lineItems("germanItems");
       const block = {
-        id: "viscereality",
+        id: "custom_slider",
         type: "slider",
         expectedItemCount: numberValue("sliderExpectedCount", 42),
         min: numberValue("sliderMin", 0),
@@ -2245,13 +3038,60 @@
       return block;
     }
 
+    function requiredModulesFromProtocol() {
+      const required = new Set(startupQuestionnaireSequence());
+      readTriggerMappingsFromDom().forEach(mapping => {
+        normalizeQuestionnaireSequence(mapping.questionnaireSequence, mapping.questionnaireMode).forEach(module => required.add(module));
+      });
+      return required;
+    }
+
+    function syncAvailableBlocksWithProtocol() {
+      const required = requiredModulesFromProtocol();
+      if (required.has("maia2")) {
+        byId("includeMaia").checked = true;
+      }
+      if (required.has("pictographic")) {
+        byId("includePictographic").checked = true;
+      }
+    }
+
+    function defaultParticipantFields() {
+      return [
+        { id: "name", type: "text", required: true },
+        { id: "age", type: "integer", required: true },
+        { id: "gender", type: "singleChoice", required: true },
+        { id: "consent", type: "checkbox", required: true }
+      ];
+    }
+
+    function participantFieldsForConfig() {
+      return Array.isArray(customParticipantFields) && customParticipantFields.length > 0
+        ? customParticipantFields.map(field => ({ ...field }))
+        : defaultParticipantFields();
+    }
+
+    function appDisplayNameForConfig(stub, registry) {
+      const defaults = stub.chainDefaults || {};
+      if (defaults.startMode !== "questionnaireFirst") {
+        return "MyQuestionnaireVR 2D";
+      }
+      const targetLabel = registry?.targetApp?.label
+        || registry?.scenario?.label
+        || byId("chainlinkScenarioLabel").value.trim()
+        || defaults.nextPackage
+        || "Scenario APK";
+      return `Start Experiment | ${targetLabel}`;
+    }
+
     function buildConfig() {
+      syncAvailableBlocksWithProtocol();
       blocks = normalizeBlocks(blocks);
       const blockBuilders = {
         demographics: () => ({ id: "demographics", type: "demographics" }),
         maia2: maiaBlock,
         pictographic: pictographicBlock,
-        viscereality: sliderBlock,
+        custom_slider: sliderBlock,
         end: () => ({ id: "end", type: "blackScreen" })
       };
 
@@ -2262,14 +3102,10 @@
         questionnaireId: byId("questionnaireId").value.trim(),
         questionnaireVersion: byId("questionnaireVersion").value.trim(),
         appVersion: byId("appVersion").value.trim(),
+        appDisplayName: appDisplayNameForConfig(stub, registry),
         uiTextSource: "Assets/StreamingAssets/UIText.txt",
         languages: ["English", "Deutsch"],
-        participantFields: [
-          { id: "name", type: "text", required: true },
-          { id: "age", type: "integer", required: true },
-          { id: "gender", type: "singleChoice", required: true },
-          { id: "consent", type: "checkbox", required: true }
-        ],
+        participantFields: participantFieldsForConfig(),
         blocks: blocks.map(block => blockBuilders[block.id]()),
         exports: {
           destination: "Application.persistentDataPath/QuestionnaireExports",
@@ -2287,7 +3123,7 @@
 
     function validate(config) {
       const issues = [];
-      const requiredIds = ["demographics", "viscereality", "end"];
+      const requiredIds = ["demographics", "custom_slider", "end"];
       if (!config.questionnaireId) {
         issues.push({ level: "error", text: "Questionnaire id is required." });
       }
@@ -2298,8 +3134,10 @@
       const finishBehavior = config.chainDefaults?.finishBehavior || "staySaved";
       const allowedStartModes = ["unityFirst", "questionnaireFirst"];
       const startMode = config.chainDefaults?.startMode || "unityFirst";
-      const allowedDefaultQuestionnaireModes = ["", "demographics", "baseline", "pictographic", "full"];
+      const allowedDefaultQuestionnaireModes = ["", "none", "demographics", "baseline", "maia2", "pictographic", "slider", "full"];
+      const allowedQuestionnaireModules = new Set(questionnaireModules);
       const defaultQuestionnaireMode = config.chainDefaults?.questionnaireMode || "";
+      const defaultSequence = normalizeQuestionnaireSequence(config.chainDefaults?.questionnaireSequence || [], defaultQuestionnaireMode);
       if (!allowedFinishBehaviors.includes(finishBehavior)) {
         issues.push({ level: "error", text: "Finish behavior must be staySaved, resumeCaller, or openNext." });
       }
@@ -2307,7 +3145,21 @@
         issues.push({ level: "error", text: "Study start mode must be unityFirst or questionnaireFirst." });
       }
       if (!allowedDefaultQuestionnaireModes.includes(defaultQuestionnaireMode)) {
-        issues.push({ level: "error", text: "Default questionnaire mode must be demographics, baseline, pictographic, full, or blank." });
+        issues.push({ level: "error", text: "Default questionnaire mode must be none, demographics, baseline, maia2, pictographic, slider, full, or blank." });
+      }
+      (config.chainDefaults?.questionnaireSequence || []).forEach(module => {
+        if (!allowedQuestionnaireModules.has(module)) {
+          issues.push({ level: "error", text: `Default questionnaire sequence contains unsupported module ${module}.` });
+        }
+      });
+      if (defaultSequence.some(module => module === "maia2") && !config.blocks.some(block => block.id === "maia2")) {
+        issues.push({ level: "error", text: "Default questionnaire sequence includes Likert, but the Likert block is not packaged." });
+      }
+      if (defaultSequence.some(module => module === "pictographic") && !config.blocks.some(block => block.id === "pictographic")) {
+        issues.push({ level: "error", text: "Default questionnaire sequence includes pictographic, but the pictographic block is not packaged." });
+      }
+      if (defaultSequence.some(module => module === "slider") && !config.blocks.some(block => block.id === "custom_slider")) {
+        issues.push({ level: "error", text: "Default questionnaire sequence includes slider, but the slider block is not packaged." });
       }
       if (config.chainDefaults?.blockNumber && !/^\d{3}$/.test(String(config.chainDefaults.blockNumber))) {
         issues.push({ level: "error", text: "Default block number must use three digits." });
@@ -2322,8 +3174,8 @@
         if (finishBehavior !== "openNext") {
           issues.push({ level: "error", text: "2D-first launcher mode requires finish behavior openNext." });
         }
-        if (defaultQuestionnaireMode !== "demographics") {
-          issues.push({ level: "error", text: "2D-first launcher mode must default to demographics." });
+        if (defaultSequence.length === 0) {
+          issues.push({ level: "warn", text: "Block 1 has no questionnaire elements. Add demographics, Likert, slider, pictographic, or another supported element unless this study intentionally opens Unity immediately." });
         }
         if (!config.chainDefaults?.triggerId) {
           issues.push({ level: "error", text: "2D-first launcher mode needs a default trigger id for the Unity completion handoff." });
@@ -2358,11 +3210,26 @@
       }
       const triggerMapping = config.triggerQuestionnaireMapping;
       if (triggerMapping && Array.isArray(triggerMapping.triggers)) {
+        (triggerMapping.passiveTriggerWarnings || []).forEach(warning => {
+          issues.push({ level: "warn", text: warning });
+        });
         const seenTriggers = new Set();
         const allowedModes = new Set(triggerQuestionnaireModes);
         triggerMapping.triggers.forEach(trigger => {
           const triggerId = String(trigger.triggerId || "").trim();
           const mode = trigger.questionnaireMode || "none";
+          if (trigger.sourceRecommendedMode && trigger.sourceRecommendedMode !== "none") {
+            issues.push({
+              level: "warn",
+              text: `Trigger ${triggerId || "unknown"} came from a Unity catalog with source recommendedMode=${trigger.sourceRecommendedMode}; V2 should keep this assignment in the 2D questionnaire protocol instead.`
+            });
+          }
+          if (Array.isArray(trigger.sourceStudyLogicFields) && trigger.sourceStudyLogicFields.length > 0) {
+            issues.push({
+              level: "warn",
+              text: `Trigger ${triggerId || "unknown"} source catalog includes study-logic fields (${trigger.sourceStudyLogicFields.join(", ")}); Unity should emit passive trigger IDs only.`
+            });
+          }
           if (!triggerId) {
             issues.push({ level: "error", text: "A trigger mapping is missing triggerId." });
           } else if (seenTriggers.has(triggerId.toLowerCase())) {
@@ -2371,6 +3238,21 @@
           seenTriggers.add(triggerId.toLowerCase());
           if (!allowedModes.has(mode)) {
             issues.push({ level: "error", text: `Trigger ${triggerId || "unknown"} uses unsupported questionnaireMode ${trigger.questionnaireMode}.` });
+          }
+          const triggerSequence = normalizeQuestionnaireSequence(trigger.questionnaireSequence || [], mode);
+          (trigger.questionnaireSequence || []).forEach(module => {
+            if (!allowedQuestionnaireModules.has(module)) {
+              issues.push({ level: "error", text: `Trigger ${triggerId || "unknown"} sequence contains unsupported module ${module}.` });
+            }
+          });
+          if (triggerSequence.some(module => module === "maia2") && !config.blocks.some(block => block.id === "maia2")) {
+            issues.push({ level: "error", text: `Trigger ${triggerId || "unknown"} needs packaged Likert content.` });
+          }
+          if (triggerSequence.some(module => module === "pictographic") && !config.blocks.some(block => block.id === "pictographic")) {
+            issues.push({ level: "error", text: `Trigger ${triggerId || "unknown"} needs packaged pictographic content.` });
+          }
+          if (triggerSequence.some(module => module === "slider") && !config.blocks.some(block => block.id === "custom_slider")) {
+            issues.push({ level: "error", text: `Trigger ${triggerId || "unknown"} needs packaged slider content.` });
           }
           if (trigger.enabled && mode === "none") {
             issues.push({ level: "warn", text: `Trigger ${triggerId} is enabled but mapped to none.` });
@@ -2399,11 +3281,14 @@
 
       const maia = config.blocks.find(block => block.id === "maia2");
       if (maia && Array.isArray(maia.items) && maia.items.length !== maia.expectedItemCount) {
-        issues.push({ level: "error", text: `MAIA-2 inline count is ${maia.items.length}; expected ${maia.expectedItemCount}.` });
+        issues.push({ level: "error", text: `Likert inline count is ${maia.items.length}; expected ${maia.expectedItemCount}.` });
       }
 
-      const slider = config.blocks.find(block => block.id === "viscereality");
+      const slider = config.blocks.find(block => block.id === "custom_slider");
       if (slider) {
+        if (Number(slider.min) !== 0 || Number(slider.max) !== 100 || slider.wholeNumbers !== true) {
+          issues.push({ level: "error", text: "Slider block should use whole-number 0..100 scores." });
+        }
         if (!slider.anchors.left || !slider.anchors.right) {
           issues.push({ level: "error", text: "Slider left and right anchors are required." });
         }
@@ -2421,8 +3306,8 @@
         .forEach(issue => issues.push(issue));
 
       const pictographic = config.blocks.find(block => block.id === "pictographic");
-      if (pictographic && pictographic.prompts.length !== 3) {
-        issues.push({ level: "error", text: "The pictographic block should have exactly 3 prompts when included." });
+      if (pictographic && pictographic.prompts.length < 1) {
+        issues.push({ level: "error", text: "The pictographic block should have at least 1 prompt when included." });
       }
 
       if (issues.length === 0) {
@@ -2433,7 +3318,7 @@
     }
 
     function sliderItemsFor(config, language) {
-      const slider = config.blocks.find(block => block.id === "viscereality");
+      const slider = config.blocks.find(block => block.id === "custom_slider");
       const languageBlock = slider?.languages?.[language];
       if (languageBlock && Array.isArray(languageBlock.items)) {
         return languageBlock.items;
@@ -2453,7 +3338,7 @@
       const pictographic = config.blocks.find(block => block.id === "pictographic");
       const english = sliderItemsFor(config, "English");
       const deutsch = sliderItemsFor(config, "Deutsch");
-      const slider = config.blocks.find(block => block.id === "viscereality");
+      const slider = config.blocks.find(block => block.id === "custom_slider");
       const sliderCount = Math.max(english.length, deutsch.length, Number(slider?.expectedItemCount || 0));
       return {
         maia: Number(maia?.expectedItemCount || 0),
@@ -2704,6 +3589,9 @@
       byId("questionnaireId").value = config.questionnaireId || "";
       byId("questionnaireVersion").value = config.questionnaireVersion || "";
       byId("appVersion").value = config.appVersion || "";
+      customParticipantFields = Array.isArray(config.participantFields)
+        ? config.participantFields.map(field => ({ ...field }))
+        : null;
       byId("chainFinishBehavior").value = config.chainDefaults?.finishBehavior || "staySaved";
       byId("chainStartMode").value = config.chainDefaults?.startMode || "unityFirst";
       byId("chainCallerPackage").value = config.chainDefaults?.callerPackage || "";
@@ -2711,19 +3599,21 @@
       byId("chainNextPackage").value = config.chainDefaults?.nextPackage || "";
       byId("chainNextActivity").value = config.chainDefaults?.nextActivity || "";
       byId("chainQuestionnaireMode").value = config.chainDefaults?.questionnaireMode || "";
+      byId("chainQuestionnaireSequence").value = (config.chainDefaults?.questionnaireSequence || []).join(",");
+      setStartupQuestionnaireSequence(config.chainDefaults?.questionnaireSequence || [], config.chainDefaults?.questionnaireMode || "none");
       byId("chainTriggerId").value = config.chainDefaults?.triggerId || "";
       byId("chainBlockNumber").value = config.chainDefaults?.blockNumber || "";
       byId("chainBlockId").value = config.chainDefaults?.blockId || "";
       byId("chainSaveNamespace").value = config.chainDefaults?.saveNamespace || "";
       byId("chainAutoCloseDelayMs").value = config.chainDefaults?.autoCloseDelayMs ?? 2000;
       const registry = config.experimentBlockRegistry || {};
-      byId("experimentId").value = registry.experimentId || byId("experimentId").value || "peripersonal-space-right-orbit";
-      byId("chainlinkPlanId").value = registry.planId || byId("chainlinkPlanId").value || "peripersonal-space-right-maia2-pictographic";
+      byId("experimentId").value = registry.experimentId || byId("experimentId").value || "quest-questionnaire-stimulus-demo";
+      byId("chainlinkPlanId").value = registry.planId || byId("chainlinkPlanId").value || "quest-questionnaire-stimulus-demo-plan";
       byId("chainlinkTriggerButton").value = registry.controllerTriggerButton || byId("chainlinkTriggerButton").value || "auto-unused-non-breath-tracking";
       const targetApp = registry.targetApp || registry.scenario || {};
-      byId("chainlinkScenarioPackage").value = targetApp.package || byId("chainlinkScenarioPackage").value || "com.Viscereality.ViscerealityPeriPersonalSpaceRight";
+      byId("chainlinkScenarioPackage").value = targetApp.package || byId("chainlinkScenarioPackage").value || "org.questquestionnaire.stimulusdemo";
       byId("chainlinkScenarioActivity").value = targetApp.activity || byId("chainlinkScenarioActivity").value || "com.unity3d.player.UnityPlayerGameActivity";
-      byId("chainlinkScenarioLabel").value = targetApp.label || byId("chainlinkScenarioLabel").value || "Peripersonal Space Right orbital scenario";
+      byId("chainlinkScenarioLabel").value = targetApp.label || byId("chainlinkScenarioLabel").value || "Questionnaire Stimulus Builder Demo";
       if (!byId("chainCallerPackage").value && targetApp.package) {
         byId("chainCallerPackage").value = targetApp.package;
       }
@@ -2743,22 +3633,37 @@
           activity: config.triggerQuestionnaireMapping.scenarioActivity || "",
           label: targetApp.label || "",
           sourceApkName: config.triggerQuestionnaireMapping.sourceApkName || "",
+          passiveTriggerWarnings: config.triggerQuestionnaireMapping.passiveTriggerWarnings || [],
           triggers: config.triggerQuestionnaireMapping.triggers.map(trigger => ({
             triggerId: trigger.triggerId,
             label: trigger.label || `Trigger ${trigger.triggerId}`,
             description: "",
-            recommendedMode: trigger.questionnaireMode || "none"
+            recommendedMode: trigger.sourceRecommendedMode || trigger.questionnaireMode || "none",
+            sourceRecommendedMode: trigger.sourceRecommendedMode || "",
+            sourceStudyLogicFields: trigger.sourceStudyLogicFields || []
           }))
         };
+        triggerCatalogWarnings = triggerCatalog.passiveTriggerWarnings || [];
         triggerMappings = config.triggerQuestionnaireMapping.triggers.map((trigger, index) => ({
-          ...defaultTriggerMapping({ triggerId: trigger.triggerId, label: trigger.label, recommendedMode: trigger.questionnaireMode }, index),
-          ...trigger
+          ...defaultTriggerMapping({
+            triggerId: trigger.triggerId,
+            label: trigger.label,
+            recommendedMode: trigger.questionnaireMode,
+            sourceRecommendedMode: trigger.sourceRecommendedMode || "",
+            sourceStudyLogicFields: trigger.sourceStudyLogicFields || []
+          }, index),
+          ...trigger,
+          questionnaireSequence: normalizeQuestionnaireSequence(trigger.questionnaireSequence || [], trigger.questionnaireMode)
         }));
         renderTriggerMappingList();
-        setTriggerCatalogStatus(`Loaded ${triggerMappings.length} trigger mapping${triggerMappings.length === 1 ? "" : "s"} from config.`, "ok");
+        const warningSuffix = triggerCatalogWarnings.length > 0
+          ? ` ${triggerCatalogWarnings.length} passive-trigger warning${triggerCatalogWarnings.length === 1 ? "" : "s"} preserved from config.`
+          : "";
+        setTriggerCatalogStatus(`Loaded ${triggerMappings.length} trigger mapping${triggerMappings.length === 1 ? "" : "s"} from config.${warningSuffix}`, triggerCatalogWarnings.length > 0 ? "" : "ok");
       } else {
         triggerCatalog = null;
         triggerMappings = [];
+        triggerCatalogWarnings = [];
         renderTriggerMappingList();
         setTriggerCatalogStatus("No trigger catalog loaded.", "");
       }
@@ -2781,7 +3686,7 @@
         byId("maiaInline").value = Array.isArray(maia.items) ? JSON.stringify(maia.items, null, 2) : "";
       }
 
-      const slider = byBlockId.get("viscereality");
+      const slider = byBlockId.get("custom_slider");
       if (slider) {
         byId("sliderExpectedCount").value = slider.expectedItemCount || 42;
         byId("sliderMin").value = slider.min ?? 0;
@@ -2794,11 +3699,26 @@
 
       const pictographic = byBlockId.get("pictographic");
       if (pictographic && Array.isArray(pictographic.prompts)) {
-        pictographic.prompts.slice(0, 3).forEach((prompt, index) => {
-          byId(`picId${index}`).value = prompt.id || "";
-          byId(`picFile${index}`).value = prompt.imageFileName || "";
-          byId(`picSource${index}`).value = prompt.source || "";
-        });
+        const hasUploadedImages = pictographic.prompts.some(prompt => prompt.dataUrl);
+        customPictographicPrompts = hasUploadedImages ? pictographic.prompts.map(prompt => ({
+          id: prompt.id || "",
+          imageFileName: prompt.imageFileName || "",
+          source: prompt.source || "",
+          dataUrl: prompt.dataUrl || "",
+          promptEnglish: prompt.promptEnglish || "",
+          promptDeutsch: prompt.promptDeutsch || "",
+          choices: prompt.choices || []
+        })) : null;
+        makePictographicFields();
+        if (!customPictographicPrompts) {
+          pictographic.prompts.slice(0, 3).forEach((prompt, index) => {
+            byId(`picId${index}`).value = prompt.id || "";
+            byId(`picFile${index}`).value = prompt.imageFileName || "";
+            byId(`picSource${index}`).value = prompt.source || "";
+          });
+        } else {
+          setPictographicZipStatus(`Loaded ${customPictographicPrompts.length} pictographic prompt${customPictographicPrompts.length === 1 ? "" : "s"} from config.`, "ok");
+        }
       }
 
       makeBlockList();
@@ -2901,10 +3821,10 @@
 
     function normalizeBlock(value) {
       const key = csvHeaderKey(value);
-      if (["slider", "viscereality", "viscerealityslider"].includes(key)) {
-        return "viscereality";
+      if (["slider", "custom_slider", "customslider"].includes(key)) {
+        return "custom_slider";
       }
-      if (["maia", "maia2"].includes(key)) {
+      if (["maia", "maia2", "likert", "customlikert", "custom_likert"].includes(key)) {
         return "maia2";
       }
       return key;
@@ -2926,6 +3846,232 @@
       return Number.isFinite(raw) ? raw : Number.MAX_SAFE_INTEGER;
     }
 
+    function csvFormatKey(record) {
+      return csvHeaderKey(csvValue(record, ["format", "questionType", "question_type", "responseFormat", "answerFormat", "scale", "scaleType"]));
+    }
+
+    function csvTemplateRows(kind = "slider") {
+      const header = [
+        "questionnaireId",
+        "questionnaireVersion",
+        "appVersion",
+        "block",
+        "questionType",
+        "itemId",
+        "language",
+        "order",
+        "text",
+        "required",
+        "scalePoints",
+        "min",
+        "max",
+        "leftAnchor",
+        "rightAnchor",
+        "choices",
+        "branchingTag"
+      ];
+      const templates = {
+        slider: [
+          header,
+          ["custom-slider-demo", "1.0.0", "1.0.0", "custom_slider", "slider", "vas_001", "English", "1", "I felt aware of my breathing.", "true", "", "0", "100", "NO, not more than usual", "YES, much more than usual", "", ""],
+          ["custom-slider-demo", "1.0.0", "1.0.0", "custom_slider", "slider", "vas_002", "English", "2", "I felt present in the scene.", "true", "", "0", "100", "NO, not more than usual", "YES, much more than usual", "", ""],
+          ["custom-slider-demo", "1.0.0", "1.0.0", "custom_slider", "slider", "vas_001", "Deutsch", "1", "Ich war mir meiner Atmung bewusst.", "true", "", "0", "100", "NEIN, nicht mehr als sonst", "JA, viel mehr als sonst", "", ""],
+          ["custom-slider-demo", "1.0.0", "1.0.0", "custom_slider", "slider", "vas_002", "Deutsch", "2", "Ich fuehlte mich in der Szene praesent.", "true", "", "0", "100", "NEIN, nicht mehr als sonst", "JA, viel mehr als sonst", "", ""]
+        ],
+        demographics: [
+          header,
+          ["custom-demographics-demo", "1.0.0", "1.0.0", "demographics", "textEntry", "name", "English", "1", "Name", "true", "", "", "", "", "", "", "preloaded-demographics"],
+          ["custom-demographics-demo", "1.0.0", "1.0.0", "demographics", "integer", "age", "English", "2", "Age", "true", "", "", "", "", "", "", "preloaded-demographics"],
+          ["custom-demographics-demo", "1.0.0", "1.0.0", "demographics", "singleChoice", "gender", "English", "3", "Gender", "true", "", "", "", "", "", "Female|Male|Diverse|Prefer not to say", "preloaded-demographics"],
+          ["custom-demographics-demo", "1.0.0", "1.0.0", "demographics", "checkbox", "consent", "English", "4", "Consent", "true", "", "", "", "", "", "", "preloaded-demographics"],
+          ["custom-demographics-demo", "1.0.0", "1.0.0", "demographics", "signature", "signature", "English", "5", "Signature", "true", "", "", "", "", "", "", "preloaded-demographics"]
+        ],
+        maia2: [
+          header,
+          ["custom-likert-demo", "1.0.0", "1.0.0", "maia2", "likert", "likert_001", "English", "1", "Replace this with a Likert item.", "true", "6", "0", "5", "Never", "Always", "0=Never|1=Rarely|2=Sometimes|3=Often|4=Very often|5=Always", ""],
+          ["custom-likert-demo", "1.0.0", "1.0.0", "maia2", "likert", "likert_002", "English", "2", "Replace this with another Likert item.", "true", "6", "0", "5", "Never", "Always", "0=Never|1=Rarely|2=Sometimes|3=Often|4=Very often|5=Always", ""]
+        ],
+        likert: [
+          header,
+          ["custom-likert-demo", "1.0.0", "1.0.0", "maia2", "likert", "likert_001", "English", "1", "I felt attentive during the task.", "true", "5", "", "", "Strongly disagree", "Strongly agree", "1=Strongly disagree|2=Disagree|3=Neutral|4=Agree|5=Strongly agree", ""],
+          ["custom-likert-demo", "1.0.0", "1.0.0", "maia2", "likert", "likert_002", "English", "2", "I felt confident about my responses.", "true", "5", "", "", "Strongly disagree", "Strongly agree", "1=Strongly disagree|2=Disagree|3=Neutral|4=Agree|5=Strongly agree", ""]
+        ],
+        multipleChoice: [
+          header,
+          ["custom-choice-demo", "1.0.0", "1.0.0", "custom_choice", "multipleChoice", "choice_001", "English", "1", "Which strategy did you use most?", "true", "", "", "", "", "", "A=Counting|B=Imagery|C=Breathing|D=Other", ""],
+          ["custom-choice-demo", "1.0.0", "1.0.0", "custom_choice", "multipleChoice", "choice_002", "English", "2", "Which condition felt easiest?", "true", "", "", "", "", "", "A=Condition 1|B=Condition 2|C=No difference", ""]
+        ],
+        textEntry: [
+          header,
+          ["custom-text-demo", "1.0.0", "1.0.0", "custom_text", "textEntry", "text_001", "English", "1", "Describe anything unusual you noticed.", "false", "", "", "", "", "", "", ""],
+          ["custom-text-demo", "1.0.0", "1.0.0", "custom_text", "text_002", "English", "2", "Add any comments for the operator.", "false", "", "", "", "", "", "", ""]
+        ],
+        temporalTracer: [
+          header,
+          ["custom-tracer-demo", "1.0.0", "1.0.0", "temporal_tracer", "temporalTracer", "trace_anxiety", "English", "1", "Anxiety", "true", "", "0", "100", "No, not more than usual", "Yes, very much more than usual", "", "audio=anxiety.wav"],
+          ["custom-tracer-demo", "1.0.0", "1.0.0", "temporal_tracer", "temporalTracer", "trace_presence", "English", "2", "Presence", "true", "", "0", "100", "Absent", "Intense", "", "audio=presence.wav"]
+        ]
+      };
+      return templates[kind] || templates.slider;
+    }
+
+    function csvRowsToText(rows) {
+      return rows
+        .map(row => row.map(value => {
+          const text = String(value ?? "");
+          return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, "\"\"")}"` : text;
+        }).join(","))
+        .join("\n") + "\n";
+    }
+
+    function csvTemplateText(kind = "slider") {
+      return csvRowsToText(csvTemplateRows(kind));
+    }
+
+    function maia2PreloadCsvText() {
+      const header = csvTemplateRows("maia2")[0];
+      const choices = "0=Never|1=Rarely|2=Sometimes|3=Often|4=Very often|5=Always";
+      const rows = maia2PreloadItems.map((item, index) => [
+        "quest-questionnaire-maia2",
+        "1.0.0",
+        "1.0.0",
+        "maia2",
+        "likert",
+        `maia2_${String(index + 1).padStart(3, "0")}`,
+        "English",
+        String(index + 1),
+        item,
+        "true",
+        "6",
+        "0",
+        "5",
+        "Never",
+        "Always",
+        choices,
+        "preload=maia2"
+      ]);
+      return csvRowsToText([header, ...rows]);
+    }
+
+    function pictographicZipManifestText() {
+      return [
+        "id,imageFileName,promptEnglish,promptDeutsch,choices",
+        "custom_body_boundaries,prompt_001.png,Choose the image that best describes your body-boundary experience.,Waehlen Sie das Bild aus das Ihre Koerpergrenzen-Erfahrung am besten beschreibt.,A|B|C|D|E|F|G",
+        "custom_self_extension,prompt_002.png,Choose the image that best describes your self-extension experience.,Waehlen Sie das Bild aus das Ihre Selbst-Ausdehnung am besten beschreibt.,A|B|C|D|E|F|G|H",
+        "custom_small_self,prompt_003.png,Choose the image that best describes your small-self experience.,Waehlen Sie das Bild aus das Ihre Kleines-Selbst-Erfahrung am besten beschreibt.,A|B|C|D|E|F|G"
+      ].join("\n") + "\n";
+    }
+
+    function crc32(bytes) {
+      let crc = -1;
+      for (let index = 0; index < bytes.length; index += 1) {
+        crc ^= bytes[index];
+        for (let bit = 0; bit < 8; bit += 1) {
+          crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+        }
+      }
+      return (crc ^ -1) >>> 0;
+    }
+
+    function textBytes(text) {
+      return new TextEncoder().encode(text);
+    }
+
+    function base64Bytes(base64) {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index);
+      }
+      return bytes;
+    }
+
+    function bytesBase64(bytes) {
+      let binary = "";
+      for (let index = 0; index < bytes.length; index += 1) {
+        binary += String.fromCharCode(bytes[index]);
+      }
+      return btoa(binary);
+    }
+
+    function appendUint16(bytes, value) {
+      bytes.push(value & 0xff, (value >>> 8) & 0xff);
+    }
+
+    function appendUint32(bytes, value) {
+      bytes.push(value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff);
+    }
+
+    function appendBytes(bytes, values) {
+      for (let index = 0; index < values.length; index += 1) {
+        bytes.push(values[index]);
+      }
+    }
+
+    function storedZipBlob(files) {
+      const bytes = [];
+      const central = [];
+      files.forEach(file => {
+        const nameBytes = textBytes(file.name);
+        const data = file.bytes;
+        const localOffset = bytes.length;
+        const crc = crc32(data);
+        appendUint32(bytes, 0x04034b50);
+        appendUint16(bytes, 20);
+        appendUint16(bytes, 0);
+        appendUint16(bytes, 0);
+        appendUint16(bytes, 0);
+        appendUint16(bytes, 0);
+        appendUint32(bytes, crc);
+        appendUint32(bytes, data.length);
+        appendUint32(bytes, data.length);
+        appendUint16(bytes, nameBytes.length);
+        appendUint16(bytes, 0);
+        appendBytes(bytes, nameBytes);
+        appendBytes(bytes, data);
+
+        appendUint32(central, 0x02014b50);
+        appendUint16(central, 20);
+        appendUint16(central, 20);
+        appendUint16(central, 0);
+        appendUint16(central, 0);
+        appendUint16(central, 0);
+        appendUint16(central, 0);
+        appendUint32(central, crc);
+        appendUint32(central, data.length);
+        appendUint32(central, data.length);
+        appendUint16(central, nameBytes.length);
+        appendUint16(central, 0);
+        appendUint16(central, 0);
+        appendUint16(central, 0);
+        appendUint16(central, 0);
+        appendUint32(central, 0);
+        appendUint32(central, localOffset);
+        appendBytes(central, nameBytes);
+      });
+      const centralOffset = bytes.length;
+      appendBytes(bytes, central);
+      appendUint32(bytes, 0x06054b50);
+      appendUint16(bytes, 0);
+      appendUint16(bytes, 0);
+      appendUint16(bytes, files.length);
+      appendUint16(bytes, files.length);
+      appendUint32(bytes, central.length);
+      appendUint32(bytes, centralOffset);
+      appendUint16(bytes, 0);
+      return new Blob([new Uint8Array(bytes)], { type: "application/zip" });
+    }
+
+    function pictographicZipTemplateBlob() {
+      const placeholderPng = base64Bytes("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=");
+      return storedZipBlob([
+        { name: "pictographic-manifest.txt", bytes: textBytes(pictographicZipManifestText()) },
+        { name: "prompt_001.png", bytes: placeholderPng },
+        { name: "prompt_002.png", bytes: placeholderPng },
+        { name: "prompt_003.png", bytes: placeholderPng }
+      ]);
+    }
+
     function sortedCsvText(records) {
       return records
         .slice()
@@ -2934,8 +4080,65 @@
         .filter(Boolean);
     }
 
+    function csvBoolean(record, names, fallback = false) {
+      const raw = csvValue(record, names).toLowerCase();
+      if (!raw) {
+        return fallback;
+      }
+      return ["true", "1", "yes", "y", "required"].includes(raw);
+    }
+
+    function participantFieldType(record) {
+      const key = csvFormatKey(record);
+      if (["textentry", "text", "string", "shorttext"].includes(key)) return "text";
+      if (["integer", "number", "numeric"].includes(key)) return "integer";
+      if (["singlechoice", "radio", "dropdown", "choice"].includes(key)) return "singleChoice";
+      if (["checkbox", "boolean", "consent"].includes(key)) return "checkbox";
+      if (["signature", "drawsignature"].includes(key)) return "signature";
+      return key || "text";
+    }
+
+    function participantFieldsFromCsvRecords(records) {
+      return records
+        .slice()
+        .sort((left, right) => csvOrder(left) - csvOrder(right) || left.__index - right.__index)
+        .map((record, index) => {
+          const id = safeFileStem(csvValue(record, ["itemId", "id", "fieldId", "name"]) || `field_${index + 1}`, `field_${index + 1}`);
+          const choices = csvValue(record, ["choices", "options", "values"])
+            .split("|")
+            .map(choice => choice.trim())
+            .filter(Boolean);
+          const field = {
+            id,
+            type: participantFieldType(record),
+            label: csvValue(record, ["text", "itemText", "question", "prompt", "label"]) || id,
+            required: csvBoolean(record, ["required", "isRequired"], false)
+          };
+          if (choices.length > 0) {
+            field.choices = choices;
+          }
+          const min = csvNumber(record, ["min", "minimum"]);
+          const max = csvNumber(record, ["max", "maximum"]);
+          if (min !== null) field.min = min;
+          if (max !== null) field.max = max;
+          const metadata = csvValue(record, ["metadata", "notes"]);
+          if (metadata) {
+            field.metadata = metadata;
+          }
+          return field;
+        });
+    }
+
     function setCsvStatus(text, level = "") {
       const status = byId("csvStatus");
+      status.hidden = !text;
+      status.className = `issue ${level}`;
+      status.textContent = text;
+    }
+
+    function setPictographicZipStatus(text, level = "") {
+      const status = byId("pictographicZipStatus");
+      status.hidden = !text;
       status.className = `issue ${level}`;
       status.textContent = text;
     }
@@ -2973,6 +4176,7 @@
       const englishRows = [];
       const germanRows = [];
       const maiaRows = [];
+      const demographicsRows = [];
       const unsupported = [];
 
       records.forEach(record => {
@@ -2982,7 +4186,13 @@
         }
 
         const block = normalizeBlock(csvValue(record, ["block", "blockId", "questionnaire", "questionnaireBlock"]));
-        if (block === "viscereality") {
+        const format = csvFormatKey(record);
+        if (block === "custom_slider") {
+          const sliderFormats = new Set(["", "slider", "visualanalog", "visualanalogscale", "vas", "0100", "0to100", "numeric", "numericslider", "continuous", "range"]);
+          if (!sliderFormats.has(format)) {
+            unsupported.push(`row ${record.__rowNumber}: unsupported slider format`);
+            return;
+          }
           const language = normalizeLanguage(csvValue(record, ["language", "lang", "locale"]));
           if (language === "English") {
             englishRows.push(record);
@@ -2995,7 +4205,22 @@
         }
 
         if (block === "maia2") {
+          const maiaFormats = new Set(["", "maia2", "maia", "likert", "likert6", "6point", "6pointlikert", "0to5", "05"]);
+          if (!maiaFormats.has(format)) {
+            unsupported.push(`row ${record.__rowNumber}: unsupported Likert format`);
+            return;
+          }
           maiaRows.push(record);
+          return;
+        }
+
+        if (block === "demographics") {
+          const demographicsFormats = new Set(["", "textentry", "text", "string", "shorttext", "integer", "number", "numeric", "singlechoice", "radio", "dropdown", "choice", "checkbox", "boolean", "consent", "signature", "drawsignature"]);
+          if (!demographicsFormats.has(format)) {
+            unsupported.push(`row ${record.__rowNumber}: unsupported demographics field type`);
+            return;
+          }
+          demographicsRows.push(record);
           return;
         }
 
@@ -3051,6 +4276,11 @@
         byId("maiaInline").value = JSON.stringify(maiaItems, null, 2);
       }
 
+      if (demographicsRows.length > 0) {
+        customParticipantFields = participantFieldsFromCsvRecords(demographicsRows);
+        byId("block1ModuleDemographics").checked = true;
+      }
+
       if ((englishItems.length > 0 || germanItems.length > 0) && maiaItems.length === 0) {
         byId("includeMaia").checked = false;
         byId("includePictographic").checked = false;
@@ -3066,22 +4296,98 @@
         warnings.push("Only one slider language was imported.");
       }
       if (maiaItems.length > 0 && maiaItems.length !== 37) {
-        warnings.push("MAIA-2 scoring in v1 expects 37 items.");
+        warnings.push("Established Likert scoring in v1 expects 37 items.");
+      }
+      if (demographicsRows.length > 0) {
+        warnings.push("Custom demographics fields are written to config; the current Quest APK still needs the dynamic demographics runtime pass before arbitrary fields render.");
       }
 
       refresh();
-      const loaded = `${englishItems.length} English slider, ${germanItems.length} Deutsch slider, ${maiaItems.length} MAIA-2`;
+      renderTriggerMappingList();
+      const loaded = `${englishItems.length} English slider, ${germanItems.length} Deutsch slider, ${maiaItems.length} Likert, ${demographicsRows.length} demographics fields`;
       setCsvStatus(warnings.length > 0 ? `${loaded}. ${warnings.join(" ")}` : `${loaded}.`, warnings.length > 0 ? "error" : "ok");
     }
 
-    function downloadJsonFile(fileName, value) {
-      const content = JSON.stringify(value, null, 2);
-      const blob = new Blob([content], { type: "application/json" });
+    function downloadTextFile(fileName, text, mimeType) {
+      const blob = new Blob([text], { type: mimeType || "text/plain" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = fileName;
       link.click();
       URL.revokeObjectURL(link.href);
+    }
+
+    function downloadBlobFile(fileName, blob) {
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function downloadCsvTemplate() {
+      const kind = byId("csvTemplateKind").value || "slider";
+      downloadTextFile(`questionnaire-${safeFileStem(kind)}-template.csv`, csvTemplateText(kind), "text/csv");
+    }
+
+    function downloadPictographicZipTemplate() {
+      downloadBlobFile("questionnaire-pictographic-template.zip", pictographicZipTemplateBlob());
+    }
+
+    async function applyPictographicZipFile(file) {
+      if (!file) {
+        return;
+      }
+      const buffer = await file.arrayBuffer();
+      const entries = zipEntries(buffer);
+      const manifestEntry = entries.find(entry => /pictographic.*\.(txt|csv)$/i.test(entry.name))
+        || entries.find(entry => /\.(txt|csv)$/i.test(entry.name));
+      if (!manifestEntry) {
+        throw new Error("Pictographic ZIP needs a manifest .txt or .csv file.");
+      }
+      const manifestText = new TextDecoder().decode(await readZipEntry(buffer, manifestEntry));
+      const records = csvObjects(parseCsv(manifestText));
+      if (records.length === 0) {
+        throw new Error("Pictographic manifest has no rows.");
+      }
+      const entryByName = new Map(entries.map(entry => [entry.name.toLowerCase().split("/").pop(), entry]));
+      const prompts = [];
+      for (const record of records) {
+        const imageFileName = csvValue(record, ["imageFileName", "image", "png", "file"]).trim();
+        const id = safeFileStem(csvValue(record, ["id", "promptId", "itemId"]) || imageFileName.replace(/\.[^.]+$/, ""), `pictographic_${prompts.length + 1}`);
+        if (!imageFileName || !/\.png$/i.test(imageFileName)) {
+          throw new Error(`Pictographic row ${record.__rowNumber} needs a PNG imageFileName.`);
+        }
+        const imageEntry = entryByName.get(imageFileName.toLowerCase());
+        if (!imageEntry) {
+          throw new Error(`Pictographic ZIP is missing ${imageFileName}.`);
+        }
+        const imageBytes = await readZipEntry(buffer, imageEntry);
+        const choices = (csvValue(record, ["choices", "choiceLabels"]) || "A|B|C|D|E|F|G")
+          .split("|")
+          .map(value => value.trim())
+          .filter(Boolean);
+        prompts.push({
+          id,
+          imageFileName,
+          source: `uploaded://${imageFileName}`,
+          dataUrl: `data:image/png;base64,${bytesBase64(imageBytes)}`,
+          promptEnglish: csvValue(record, ["promptEnglish", "textEnglish", "prompt", "text"]),
+          promptDeutsch: csvValue(record, ["promptDeutsch", "textDeutsch"]),
+          choices
+        });
+      }
+      customPictographicPrompts = prompts;
+      byId("includePictographic").checked = true;
+      blocks = normalizeBlocks(blocks);
+      makePictographicFields();
+      refresh();
+      setPictographicZipStatus(`Loaded ${prompts.length} pictographic prompt${prompts.length === 1 ? "" : "s"} from ${file.name}.`, "ok");
+    }
+
+    function downloadJsonFile(fileName, value) {
+      const content = JSON.stringify(value, null, 2);
+      downloadTextFile(fileName, content, "application/json");
     }
 
     function downloadConfig() {
@@ -3099,7 +4405,7 @@
     function buildChainPlan(config) {
       const registry = config.experimentBlockRegistry || buildExperimentBlockRegistry(config);
       return {
-        schemaVersion: "viscereality.chainlink.plan.v1",
+        schemaVersion: "questquestionnaire.chainlink.plan.v1",
         legacySchemaVersion: "my-questionnaire-2d.chain-plan.v1",
         planKind: "registered-block-sequence",
         experimentId: registry.experimentId,
@@ -3172,13 +4478,22 @@
         byId("navRunnerNumber").textContent = "03";
       }
       if (byId("navRunnerLabel")) {
-        byId("navRunnerLabel").textContent = "Build and load";
+        byId("navRunnerLabel").textContent = "Bake APK";
+      }
+      if (byId("navInstallNumber")) {
+        byId("navInstallNumber").textContent = "04";
       }
       if (byId("runnerStageTitle")) {
-        byId("runnerStageTitle").textContent = "3. Generate and load APK";
+        byId("runnerStageTitle").textContent = "3. Bake questionnaire APK";
       }
       if (byId("runnerStageSubtitle")) {
-        byId("runnerStageSubtitle").textContent = "Generate the questionnaire APK through the local companion, then install it on the connected Quest.";
+        byId("runnerStageSubtitle").textContent = "Generate the configured questionnaire APK through the local companion on this PC.";
+      }
+      if (byId("installStageTitle")) {
+        byId("installStageTitle").textContent = "4. Load APKs onto headset";
+      }
+      if (byId("installStageSubtitle")) {
+        byId("installStageSubtitle").textContent = "Install the staged scenario APK first, then the generated questionnaire APK on the connected Quest.";
       }
       const runnerStage = byId("runner-stage");
       if (runnerStage && typeof runnerStage.removeAttribute === "function") {
@@ -3816,7 +5131,7 @@
     }
 
     function hasTriggerManifest() {
-      return triggerMappings.length > 0;
+      return Boolean(triggerCatalog);
     }
 
     function setDisabledTree(root, disabled) {
@@ -3850,6 +5165,8 @@
         return;
       }
       const unlocked = hasTriggerManifest();
+      updateWorkflowStepNumbers();
+      renderDynamicBlockNavLinks();
       document.querySelectorAll("[data-requires-apk]").forEach(stage => {
         stage.classList.toggle("locked", !unlocked);
         const state = stage.querySelector(".stage-state");
@@ -3879,8 +5196,8 @@
         byId("navApkState").textContent = unlocked ? "Done" : "Required";
       }
       const navIds = isHostedFinalProductPage()
-        ? ["Triggers"]
-        : ["Triggers", "Questionnaires", "Project", "Runner", "Review"];
+        ? ["Triggers", "Install"]
+        : ["Triggers", "Runner", "Install"];
       navIds.forEach(id => setNavState(id, unlocked));
       if (isHostedFinalProductPage()) {
         setNavState("Runner", true);
@@ -4094,6 +5411,29 @@
         await delay(2000);
       }
       throw new Error(`Timed out waiting for APK install job ${runId}.`);
+    }
+
+    async function installApkPathWithApp(apkPath, label) {
+      if (!apkPath) {
+        throw new Error(`${label} path is missing.`);
+      }
+      setAppBackendStatus(`Starting Quest install for ${label}...`, "");
+      const data = await callAppBackend("/api/install-apk", {
+        apk: apkPath,
+        questSerial: byId("workflowQuestSerial").value.trim(),
+        waitSeconds: 0
+      });
+      setAppBackendStatus(installJobText(data), installJobLevel(data));
+      setWorkflowReceiptStatus(data);
+      setAppBackendLog(data);
+      if (data.jobStatus === "running" && (data.runId || data.jobId)) {
+        const finalData = await pollInstallApkJob(data.runId || data.jobId);
+        setAppBackendStatus(installJobText(finalData), installJobLevel(finalData));
+        setWorkflowReceiptStatus(finalData);
+        setAppBackendLog(finalData);
+        return finalData;
+      }
+      return data;
     }
 
     function questReplayJobLevel(data) {
@@ -4507,23 +5847,22 @@
       const wasDisabled = button.disabled;
       button.disabled = true;
       try {
-        const apkPath = lastGeneratedApkPath || expectedGeneratedApkPath();
-        setAppBackendStatus("Starting Quest APK install...", "");
-        setWorkflowReceiptStatus(null);
-        const data = await callAppBackend("/api/install-apk", {
-          apk: apkPath,
-          questSerial: byId("workflowQuestSerial").value.trim(),
-          waitSeconds: 0
-        });
-        setAppBackendStatus(installJobText(data), installJobLevel(data));
-        setWorkflowReceiptStatus(data);
-        setAppBackendLog(data);
-        if (data.jobStatus === "running" && (data.runId || data.jobId)) {
-          const finalData = await pollInstallApkJob(data.runId || data.jobId);
-          setAppBackendStatus(installJobText(finalData), installJobLevel(finalData));
-          setWorkflowReceiptStatus(finalData);
-          setAppBackendLog(finalData);
+        const questionnaireApkPath = lastGeneratedApkPath || expectedGeneratedApkPath();
+        const scenarioApkPath = lastScenarioApkPath || byId("stagedScenarioApkPath").value.trim();
+        if (!scenarioApkPath) {
+          throw new Error("Load a local scenario APK file first so the builder can install both APKs onto the headset. The repository example catalog does not include an installable APK file.");
         }
+        setWorkflowReceiptStatus(null);
+        const scenarioInstall = await installApkPathWithApp(scenarioApkPath, "scenario APK");
+        const questionnaireInstall = await installApkPathWithApp(questionnaireApkPath, "questionnaire APK");
+        setAppBackendStatus("Installed scenario APK and generated questionnaire APK on Quest.", "ok");
+        setWorkflowReceiptStatus(questionnaireInstall);
+        setAppBackendLog({
+          status: "ok",
+          installOrder: ["scenario APK", "questionnaire APK"],
+          scenarioInstall,
+          questionnaireInstall
+        });
       } catch (error) {
         setAppBackendStatus(error.message || String(error), "error");
         setWorkflowReceiptStatus(error.backendData || null);
@@ -4785,7 +6124,28 @@
         }, questReadinessLevel);
 
         const apkPath = lastGeneratedApkPath || expectedGeneratedApkPath();
-        latestData = await runSequenceStep(sequenceLog, "Install APK on Quest", async () => {
+        const scenarioApkPath = lastScenarioApkPath || byId("stagedScenarioApkPath").value.trim();
+        if (scenarioApkPath) {
+          latestData = await runSequenceStep(sequenceLog, "Install scenario APK on Quest", async () => {
+            const data = await callAppBackend("/api/install-apk", {
+              apk: scenarioApkPath,
+              questSerial: serialInput.value.trim(),
+              waitSeconds: 0
+            });
+            if (data.jobStatus === "running" && (data.runId || data.jobId)) {
+              return pollInstallApkJob(data.runId || data.jobId);
+            }
+            return data;
+          }, installJobLevel);
+        } else {
+          appendSequenceStep(sequenceLog, "Install scenario APK on Quest", "warn", {
+            status: "skipped",
+            installStatus: "skipped",
+            message: "No staged scenario APK. Load a local scenario APK file to install both APKs."
+          });
+        }
+
+        latestData = await runSequenceStep(sequenceLog, "Install questionnaire APK on Quest", async () => {
           const data = await callAppBackend("/api/install-apk", {
             apk: apkPath,
             questSerial: serialInput.value.trim(),
@@ -4927,6 +6287,21 @@
     byId("physicalGatePacketAppButton").addEventListener("click", preparePhysicalGatePacketWithApp);
     byId("downloadEvidenceBundleButton").addEventListener("click", downloadEvidenceBundleWithApp);
     byId("questionnaireFirstDefaultsButton").addEventListener("click", () => applyQuestionnaireFirstDefaults());
+    byId("downloadCsvTemplateButton").addEventListener("click", downloadCsvTemplate);
+    byId("downloadPictographicZipTemplateButton").addEventListener("click", downloadPictographicZipTemplate);
+    byId("chainQuestionnaireSequence").addEventListener("change", () => {
+      setStartupQuestionnaireSequence(byId("chainQuestionnaireSequence").value, byId("chainQuestionnaireMode").value.trim() || "none");
+      refresh();
+    });
+    ["block1ModuleDemographics", "block1ModuleMaia2", "block1ModulePictographic", "block1ModuleSlider"].forEach(id => {
+      byId(id).addEventListener("change", () => {
+        const sequence = startupQuestionnaireSequence();
+        byId("chainQuestionnaireSequence").value = sequence.join(",");
+        byId("chainQuestionnaireMode").value = legacyModeForSequence(sequence, "none");
+        renderTriggerMappingList();
+        refresh();
+      });
+    });
     byId("chainStartMode").addEventListener("change", () => {
       if (byId("chainStartMode").value.trim() === "questionnaireFirst") {
         applyQuestionnaireFirstDefaults();
@@ -4971,9 +6346,17 @@
       };
       reader.readAsText(file);
     });
+    byId("loadPictographicZipInput").addEventListener("change", async event => {
+      try {
+        await applyPictographicZipFile(event.target.files[0]);
+      } catch (error) {
+        setPictographicZipStatus(error.message || String(error), "error");
+      }
+    });
 
     document.addEventListener("input", refresh);
     document.addEventListener("change", refresh);
+    setStartupQuestionnaireSequence([], "none");
     makePictographicFields();
     makeBlockList();
     refresh();

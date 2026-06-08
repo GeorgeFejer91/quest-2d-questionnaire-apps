@@ -18,6 +18,16 @@ Use it for:
 
 ## Quest App Architecture
 
+- Open-source naming must follow the repo product brand. Use "Quest 2D
+  Questionnaire Apps" for the repository/product family, "Quest Questionnaire
+  Builder" for the GUI surface, and `org.questquestionnaire.*` for Android
+  package namespaces. Use `quest-questionnaire-*` for generated questionnaire
+  IDs, `questquestionnaire.*` for schema/version tags, `custom_slider` for the
+  generic uploaded slider block, and `slider_q###` for slider export columns.
+  Do not reintroduce legacy project, lab, personal, organization, or unrelated
+  Unity study names into source, docs, package IDs, app labels, examples, or
+  generated defaults. Example stimulus APK placeholders should use neutral
+  names such as `org.questquestionnaire.stimulusdemo`.
 - These apps are native Android 2D panel apps for Meta Horizon OS, not Unity,
   Unreal, OpenXR, or immersive XR apps unless a future project direction
   explicitly changes that.
@@ -25,16 +35,23 @@ Use it for:
   "2D panel app for Meta Horizon OS".
 - Quest app switching should use explicit Android package/activity/action
   contracts and launch extras.
-- For demographics-before-stimulus participant studies, prefer 2D-first
+- For questionnaire-before-stimulus participant studies, prefer 2D-first
   launcher mode as the default front door: the questionnaire APK starts from
-  Meta Home, saves block 1, and `openNext`s into the configured Unity APK.
-  The generated study APK may be config-pinned to one Unity package/activity,
-  but the reusable Android source must stay builder/config driven rather than
-  hard-coded to one Unity app. Keep later trigger/input ownership in Unity.
-- The cleanest demographics-before-video flow is:
-  `2D demographics -> Unity Start experiment gate -> Unity video/stimulus`.
-  In this shape, the first questionnaire is not launched over a running Unity
-  video at all. Unity should consume the demographics completion extras, show a
+  Meta Home, saves configurable block 1, and `openNext`s into the configured
+  Unity APK. The generated study APK may be config-pinned to one Unity
+  package/activity, but the reusable Android source must stay builder/config
+  driven rather than hard-coded to one Unity app. Keep later trigger/input
+  ownership in Unity.
+- Block 1 is not hard-coded to demographics or any other questionnaire.
+  Demographics is a generic participant-field questionnaire type with a
+  downloadable preload/template that users can edit, remove, or replace.
+  Hosted/product mode must not preselect a named instrument or fixed
+  questionnaire in Block 1; the block exists by default, but its elements are
+  user-selected.
+- The cleanest questionnaire-before-video flow is:
+  `2D block 1 -> Unity Start experiment gate -> Unity video/stimulus`. In this
+  shape, the first questionnaire block is not launched over a running Unity
+  video at all. Unity should consume the block-completion extras, show a
   foreground start target, and only begin video after participant/operator
   input inside Unity.
 - Generic Unity demo/stimulus APKs should pass the input-modality guardrail
@@ -43,9 +60,27 @@ Use it for:
   launch dialog unless controller-only input is an explicit study constraint.
 - Background 2D apps, Android shell helpers, and ADB do not own raw controller
   input while a foreground immersive Unity/XR app owns focus.
-- The questionnaire owns questionnaire state and exports. ChainLink or the
-  orchestrator owns experiment order, block numbers, app switching, and metadata
-  propagation.
+- The generated 2D questionnaire APK is the study logic owner. Unity/stimulus
+  APKs must stay passive: they may present stimulus content and emit simple
+  trigger events, but they must not decide questionnaire order, questionnaire
+  type, scoring, participant state, block progression, or export behavior. A
+  Unity demo can prove the workflow with a single end trigger; the
+  questionnaire APK interprets that trigger against its own protocol state and
+  resumes the next configured block.
+- The product path should use one Unity/stimulus APK plus one generated 2D
+  questionnaire APK. The questionnaire APK owns current participant/session
+  state, completed blocks, the next pending block, trigger-to-block mapping,
+  save-before-handoff behavior, and export indexing. Unity may own stimulus
+  timing and the physical moment a trigger fires, but not the study protocol.
+- The V2 runtime sequence is always questionnaire-first: a normal launch starts
+  block 1 in the generated 2D APK, block 1 completion saves state and launches
+  the configured Unity/stimulus APK, the questionnaire APK remains backgrounded
+  while listening for a passive Unity trigger, and the next foreground
+  questionnaire block is chosen by the 2D APK protocol state. Unity never
+  chooses "block 2" or any questionnaire module on return.
+- Prefer `mq.triggerId` as the Unity-to-questionnaire contract. `mq.blockId` and
+  `mq.blockNumber` are optional developer fallbacks for diagnostics or explicit
+  tests, not the normal Unity decision surface.
 
 ## Browser Dashboard vs Local/Native Engine
 
@@ -116,9 +151,58 @@ Hosted mode should hide developer-only pipeline sections marked with
 connector URL/token fields, and Quest detection should be reachable before an
 APK is loaded; only APK-dependent actions such as generating or installing the
 questionnaire APK should remain gated on the trigger manifest.
+The visible product GUI should expose only the user workflow: load/scan the
+scenario APK, build questionnaire elements inside the detected block segments,
+bake the generated questionnaire APK, and load the staged scenario APK plus the
+generated questionnaire APK onto the Quest. Do not expose standalone
+"questionnaire content", "project and return behavior", validation pipeline,
+raw config/JSON, raw routing, block id/save namespace, or review/output stages
+in the product surface. Those controls may remain hidden as developer-only DOM
+or scripts when necessary for tests and internal workflows.
+Block segment count is derived as `1 + scanned passive Unity trigger count`.
+Block 1 always exists after any valid scenario APK/catalog is loaded because
+completion of block 1 launches the loaded Unity/stimulus APK by default. Each
+passive Unity trigger adds exactly one later return block unless the builder
+explicitly supports a future repeat/branching protocol.
+Visible product labels should describe the chain generically, not the current
+demo media. Use `Before experiment/running APK` for Block 1 and `After trigger
+N` for return blocks. Do not expose "before video", "after video", or
+video-specific event IDs in the builder defaults; a real catalog can still use
+a video as its stimulus content while its triggers remain passive IDs.
+Only expose questionnaire element types in the product block dropdown when the
+current builder/runtime can accept their upload template end to end. Template
+ideas for future multiple-choice, text-entry, or temporal-tracer imports may
+remain in hidden developer code, but normal users should see only currently
+usable CSV/ZIP-backed elements.
 Section 1 should also include a user-friendly "Load example APK" fallback that
 loads `example-scenario-apk/questionnaire-trigger-catalog.json` from the repo
 and displays the GitHub folder URL where the example APK and Unity project live.
+In hosted final-product mode, loading any scenario APK/trigger catalog should
+automatically make the generated questionnaire APK the front door:
+`questionnaireFirst`, editable block 1, `openNext` to the scanned Unity
+package. Do not treat Unity trigger metadata as questionnaire decisions. Use a
+stable generic product start id such as `study_start_block_1`; leave manifest
+trigger assignments empty until the builder/user maps questionnaire elements
+to later Unity-triggered return blocks.
+Generated questionnaire-first APKs should also be named for the operator-facing
+sequence in Meta Home and in the first panel heading:
+`Start Experiment | <target APK label>`. Derive `<target APK label>` from the
+scanned trigger catalog/experiment target label, falling back to the target
+package only when no human-readable label exists.
+Questionnaire CSV templates should be type-oriented, inspired by tools such as
+Qualtrics: demographics/participant fields, slider/VAS, Likert, multiple
+choice, text entry, pictographic scales, and temporal tracer dimensions are
+template categories. Named instruments such as MAIA-2 are preloaded
+questionnaire examples/library content under a generic type, not top-level GUI
+questionnaire types or the definition of Likert. Until the APK runtime supports
+a type end to end, the GUI must fail unsupported uploaded type rows loudly
+instead of silently converting them into the wrong questionnaire.
+The builder should prefer downloadable templates and placeholder metafiles over
+bespoke UI for every custom questionnaire type. Users download a CSV, manifest,
+or ZIP placeholder, replace items/assets/parameters locally, reupload it, and
+the GUI generates the matching APK config. Pictographic scales should support a
+ZIP template with placeholder PNG assets plus a text/manifest file that users
+replace before reupload.
 
 The hosted GitHub Pages page is an interface only. It cannot directly install
 packages, read arbitrary local files, run build tools, access hardware, or hold

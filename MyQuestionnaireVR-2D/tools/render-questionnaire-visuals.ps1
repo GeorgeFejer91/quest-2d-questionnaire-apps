@@ -17,8 +17,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$package = "org.viscereality.questionnaires2d"
-$activity = "org.viscereality.questionnaires2d.MainActivity"
+$package = "org.questquestionnaire.questionnaires2d"
+$activity = "org.questquestionnaire.questionnaires2d.MainActivity"
 $deviceExports = "/sdcard/Android/data/$package/files/QuestionnaireExports"
 
 function Resolve-Adb {
@@ -783,7 +783,16 @@ $renderSummary = Get-Content -LiteralPath $renderSummaryPath -Raw | ConvertFrom-
 Update-RenderPngsFromLayouts -RenderSummary $renderSummary -ProjectPath $ProjectPath
 $renderSummary | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $renderSummaryPath -Encoding UTF8
 $expected = $renderSummary.expectedCounts
-if ($expected.maia2 -lt 0 -or $expected.pictographic -lt 0 -or $expected.viscereality -le 0) {
+$sliderCount = if ($expected.PSObject.Properties.Name -contains 'custom_slider') {
+    [int]$expected.custom_slider
+}
+elseif ($expected.PSObject.Properties.Name -contains 'questquestionnaire') {
+    [int]$expected.questquestionnaire
+}
+else {
+    -1
+}
+if ($expected.maia2 -lt 0 -or $expected.pictographic -lt 0 -or $sliderCount -lt 0) {
     throw "Render metadata count mismatch. See $renderSummaryPath"
 }
 

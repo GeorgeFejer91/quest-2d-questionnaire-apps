@@ -1,22 +1,15 @@
 {
   "schemaVersion": "mq.quest_questionnaire_trigger_catalog.v1",
   "catalogVersion": "1.0.0",
-  "scenarioId": "awe-of-the-great-dictator",
-  "package": "org.questionnairebuilder.stimulusdemo",
-  "activity": "org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity",
+  "scenarioId": "quest-questionnaire-stimulus-demo",
+  "package": "org.questquestionnaire.stimulusdemo",
+  "activity": "org.questquestionnaire.stimulusdemo.StimulusUnityPlayerGameActivity",
   "label": "Questionnaire Stimulus Builder Demo",
   "triggers": [
     {
-      "triggerId": "trigger_1_launch_questionnaire",
-      "label": "Trigger 1: before video",
-      "description": "Fired immediately after the Unity APK launches, before the participant watches the video.",
-      "recommendedMode": "demographics"
-    },
-    {
-      "triggerId": "trigger_2_video_complete",
-      "label": "Trigger 2: after video",
-      "description": "Fired automatically when the Awe of the Great Dictator video reaches its end.",
-      "recommendedMode": "temporalTracer"
+      "triggerId": "trigger_1_complete",
+      "label": "After trigger 1",
+      "description": "Fired once by the running APK. The questionnaire APK decides which configured block resumes next."
     }
   ]
 }

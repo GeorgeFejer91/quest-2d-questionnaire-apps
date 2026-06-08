@@ -211,6 +211,10 @@ want another tracer page. Likert questionnaires are long-form elements: many
 items can live inside one questionnaire element with a scrollable participant
 screen, and generated config must preserve whether score options render
 vertically or horizontally under each item.
+In the visible block builder, selected questionnaire elements should render as
+self-contained page cards. The next possible page should be a separate empty
+page card underneath the existing cards, not an add-control row visually
+attached to the current questionnaire page.
 The builder should prefer downloadable templates and placeholder metafiles over
 bespoke UI for every custom questionnaire type. Users download a CSV, manifest,
 or ZIP placeholder, replace items/assets/parameters locally, reupload it, and

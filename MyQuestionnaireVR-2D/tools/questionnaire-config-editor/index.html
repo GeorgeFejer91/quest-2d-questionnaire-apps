@@ -496,6 +496,15 @@
       padding: 10px;
     }
 
+    .questionnaire-empty-page {
+      border-style: dashed;
+      background: #fbfbf8;
+    }
+
+    .questionnaire-empty-page .questionnaire-element-title {
+      color: var(--muted);
+    }
+
     .questionnaire-element-header {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -2489,12 +2498,46 @@
       `;
     }
 
+    function renderQuestionnaireAddSlot(blockKind, index, mapping = null) {
+      const elements = allElementsForBlock(blockKind, index, mapping);
+      const options = elementOptionsForBlock(blockKind, index, mapping);
+      const availableTypes = availableElementTypesForBlock(blockKind, index, mapping);
+      const addDisabled = availableTypes.length === 0 ? " disabled" : "";
+      const nextPageNumber = elements.length + 1;
+      const title = availableTypes.length === 0 ? "All questionnaire pages added" : "New questionnaire page";
+      const detail = availableTypes.length === 0
+        ? "Remove an existing page before adding another questionnaire type."
+        : "Choose a questionnaire type for this page.";
+      return `
+        <div class="questionnaire-element questionnaire-empty-page" data-empty-page-slot="${escapeHtml(blockKind)}" data-index="${index}">
+          <div class="questionnaire-element-header">
+            <div>
+              <div class="questionnaire-element-title">${escapeHtml(title)}</div>
+              <div class="questionnaire-element-meta">
+                <span class="questionnaire-page-chip">Page ${nextPageNumber}</span>
+                <span class="subtle">${escapeHtml(detail)}</span>
+              </div>
+            </div>
+          </div>
+          <div class="questionnaire-element-actions questionnaire-add-row">
+            <select data-add-select="${escapeHtml(blockKind)}" data-index="${index}" aria-label="Questionnaire type for page ${nextPageNumber}"${addDisabled}>
+              ${options}
+            </select>
+            <button type="button" data-action="add-element" data-block-kind="${escapeHtml(blockKind)}" data-index="${index}"${addDisabled}>Add questionnaire page</button>
+          </div>
+        </div>
+      `;
+    }
+
     function renderElementStack(blockKind, index, mapping = null) {
       const elements = allElementsForBlock(blockKind, index, mapping);
       if (elements.length === 0) {
-        return `<div class="issue">No questionnaire elements assigned to this block yet.</div>`;
+        return renderQuestionnaireAddSlot(blockKind, index, mapping);
       }
-      return elements.map((element, elementIndex) => renderQuestionnaireElement(blockKind, index, element, elementIndex, elements.length)).join("");
+      return [
+        ...elements.map((element, elementIndex) => renderQuestionnaireElement(blockKind, index, element, elementIndex, elements.length)),
+        renderQuestionnaireAddSlot(blockKind, index, mapping)
+      ].join("");
     }
 
     function triggerHiddenControls(mapping, index) {
@@ -2515,8 +2558,6 @@
     }
 
     function renderBlockCard({ blockKind, index = 0, title, kicker, subtitle, mapping = null }) {
-      const options = elementOptionsForBlock(blockKind, index, mapping);
-      const addDisabled = availableElementTypesForBlock(blockKind, index, mapping).length === 0 ? " disabled" : "";
       const stepNumber = blockKind === "startup" ? 1 : index + 2;
       const segmentId = blockKind === "startup" ? "block-segment-startup" : `block-segment-trigger-${index}`;
       const subtitleElement = blockKind === "startup"
@@ -2538,12 +2579,6 @@
             <div class="panel">
               <div class="questionnaire-stack">
                 ${renderElementStack(blockKind, index, mapping)}
-              </div>
-              <div class="questionnaire-add-row">
-                <select data-add-select="${escapeHtml(blockKind)}" data-index="${index}" aria-label="Questionnaire type"${addDisabled}>
-                  ${options}
-                </select>
-                <button type="button" data-action="add-element" data-block-kind="${escapeHtml(blockKind)}" data-index="${index}"${addDisabled}>Add questionnaire element</button>
               </div>
             </div>
           </div>

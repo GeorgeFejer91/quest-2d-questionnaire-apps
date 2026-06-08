@@ -445,3 +445,7 @@ Use absolute dates.
   specified, and headset install unlocks after bake plus a staged local
   scenario APK. Bake and install now require visible local progress/status in
   their own sections.
+- Changed the visible block builder so each selected questionnaire element is a
+  self-contained page card, and the add affordance appears as a separate empty
+  next-page card underneath instead of an inline row attached to the current
+  questionnaire.

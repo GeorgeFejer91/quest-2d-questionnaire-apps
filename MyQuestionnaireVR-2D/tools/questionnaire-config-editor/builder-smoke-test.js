@@ -718,6 +718,9 @@ assert(html.includes('id="dynamicBlockNavLinks"'), "Builder should have a dynami
 assert(html.includes('block-segment-startup'), "Block 1 should render as its own HTML segment.");
 assert(html.includes('block-segment-trigger-'), "Scanned Unity triggers should render as later block HTML segments.");
 assert(html.includes('questionnaire-page-chip'), "Questionnaire element cards should visibly mark participant pages.");
+assert(html.includes('questionnaire-empty-page'), "Block builder should render a separate empty card for the next possible questionnaire page.");
+assert(html.includes("New questionnaire page"), "The empty card should label the next possible page clearly.");
+assert(html.includes(">Add questionnaire page</button>"), "The add action should read as adding a separate questionnaire page.");
 assert(html.includes('trigger_1_complete'), "Repository example should use the one-trigger passive completion catalog.");
 assert(html.includes('label: "After trigger 1"'), "Repository example should label the passive return as After trigger 1.");
 assert(html.includes('id="exampleApkPreset"'), "Builder should expose a preloaded demo selector.");
@@ -796,6 +799,7 @@ assert((zeroTriggerHtml.match(/class="block-segment study-block"/g) || []).lengt
 assert(zeroTriggerHtml.includes('id="block-segment-startup"'), "The default Block 1 segment should have a stable anchor.");
 assert(zeroTriggerHtml.includes("<h2>1. Block 1</h2>"), "The default Block 1 segment should be numbered 1 after zero-based APK load.");
 assert(zeroTriggerHtml.includes("Block 1"), "The default Block 1 card should be visible after a zero-trigger APK load.");
+assert(zeroTriggerHtml.includes("New questionnaire page") && zeroTriggerHtml.includes("Page 1"), "An empty Block 1 should show a standalone Page 1 add card.");
 assert(document.getElementById("triggerSummary").textContent.includes("0 passive Unity return triggers"), "Zero-trigger summary should explain that only Block 1 is needed.");
 assert(document.getElementById("runnerStageTitle").textContent === "2. Bake questionnaire APK", "Zero-trigger bake step should be numbered 2.");
 assert(document.getElementById("installStageTitle").textContent === "3. Load APKs onto headset", "Zero-trigger install step should be numbered 3.");
@@ -1013,6 +1017,7 @@ assert(customSequenced.experimentBlockRegistry.blocks[0].extras["mq.questionnair
 assert(customSequenced.experimentBlockRegistry.blocks[0].expectedOutputs.pictographicSelections > 0, "Multi-module trigger block should expect pictographic outputs.");
 assert(customSequenced.experimentBlockRegistry.blocks[0].expectedOutputs.sliderAnswers > 0, "Multi-module trigger block should expect slider outputs.");
 assert(customSequencedBlockHtml.includes("Page 1 of 2") && customSequencedBlockHtml.includes("Page 2 of 2"), "Blocks with multiple questionnaire elements should render distinct participant page cards.");
+assert(customSequencedBlockHtml.includes("questionnaire-empty-page") && customSequencedBlockHtml.includes("Page 3"), "Blocks with two questionnaire pages should render a separate empty Page 3 add card below them.");
 assert(context.__api.qualityReport(customSequenced).status === "pass", "Custom block sequence config should pass quality report.");
 
 document.getElementById("triggerModule1_temporalTracer").checked = true;

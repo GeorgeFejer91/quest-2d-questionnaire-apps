@@ -123,6 +123,10 @@ Workflow constraint:
   one Likert questionnaire element may contain many items in a scrollable
   participant form, and the config/template path must let users choose whether
   score options display vertically or horizontally under each item.
+- In the visible block builder, adding a questionnaire element should create a
+  complete page card. The affordance for adding the next page must render as a
+  separate empty page card underneath, not as a control row appended to the
+  existing questionnaire page card.
 - Prefer template/metafile upload paths over building bespoke UI for every
   questionnaire family in V2. The user should be able to download a CSV,
   manifest, or ZIP with placeholders, replace the values/assets locally, upload

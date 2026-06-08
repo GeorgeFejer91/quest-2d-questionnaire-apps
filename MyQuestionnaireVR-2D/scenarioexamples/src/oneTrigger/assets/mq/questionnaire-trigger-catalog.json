@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "mq.quest_questionnaire_trigger_catalog.v1",
+  "catalogVersion": "1.0.0",
+  "scenarioId": "quest-questionnaire-stimulus-demo",
+  "label": "Aesthetic Chills 1 Trigger Demo",
+  "package": "org.questquestionnaire.stimulusdemo",
+  "activity": "org.questquestionnaire.scenariodemo.ScenarioDemoActivity",
+  "triggers": [
+    {
+      "triggerId": "trigger_1_complete",
+      "label": "After trigger 1",
+      "description": "Passive local demo trigger. The questionnaire APK decides the next configured block."
+    }
+  ]
+}

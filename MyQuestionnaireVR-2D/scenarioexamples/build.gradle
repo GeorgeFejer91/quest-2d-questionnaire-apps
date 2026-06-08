@@ -1,0 +1,52 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'org.questquestionnaire.scenariodemo'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 29
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    flavorDimensions 'demo'
+    productFlavors {
+        oneTrigger {
+            dimension 'demo'
+            applicationId 'org.questquestionnaire.stimulusdemo'
+            resValue 'string', 'app_name', 'Aesthetic Chills 1 Trigger Demo'
+            buildConfigField 'int', 'TRIGGER_COUNT', '1'
+            buildConfigField 'String', 'SCENARIO_ID', '"quest-questionnaire-stimulus-demo"'
+            buildConfigField 'String', 'TRIGGER_SOURCE', '"aesthetic-chills-1-trigger-demo"'
+        }
+        twoTrigger {
+            dimension 'demo'
+            applicationId 'org.questquestionnaire.stimulusdemo2'
+            resValue 'string', 'app_name', 'Passive Trigger Demo 2 Triggers'
+            buildConfigField 'int', 'TRIGGER_COUNT', '2'
+            buildConfigField 'String', 'SCENARIO_ID', '"quest-questionnaire-passive-2-trigger-demo"'
+            buildConfigField 'String', 'TRIGGER_SOURCE', '"passive-2-trigger-demo"'
+        }
+        threeCircle {
+            dimension 'demo'
+            applicationId 'org.questquestionnaire.circletriggerdemo'
+            resValue 'string', 'app_name', 'Three Circle Trigger Demo'
+            buildConfigField 'int', 'TRIGGER_COUNT', '3'
+            buildConfigField 'String', 'SCENARIO_ID', '"quest-questionnaire-three-circle-trigger-demo"'
+            buildConfigField 'String', 'TRIGGER_SOURCE', '"three-circle-trigger-demo"'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

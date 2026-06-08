@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "mq.quest_questionnaire_trigger_catalog.v1",
+  "catalogVersion": "1.0.0",
+  "scenarioId": "quest-questionnaire-three-circle-trigger-demo",
+  "label": "Three Circle Trigger Demo",
+  "package": "org.questquestionnaire.circletriggerdemo",
+  "activity": "org.questquestionnaire.scenariodemo.ScenarioDemoActivity",
+  "triggers": [
+    {
+      "triggerId": "trigger_1_complete",
+      "label": "After trigger 1",
+      "description": "Green circle passive trigger. The questionnaire APK decides the next configured block."
+    },
+    {
+      "triggerId": "trigger_2_complete",
+      "label": "After trigger 2",
+      "description": "Blue circle passive trigger. The questionnaire APK decides the next configured block."
+    },
+    {
+      "triggerId": "trigger_3_complete",
+      "label": "After trigger 3",
+      "description": "Red circle passive trigger. The questionnaire APK decides the next configured block."
+    }
+  ]
+}

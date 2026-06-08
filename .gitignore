@@ -8,6 +8,9 @@
 **/artifacts/
 **/Builds/
 **/QuestionnaireConfigs/generated/
+example-scenario-apk/*.apk
+example-scenario-apk/apk/*.apk
+example-scenario-apk/multi-trigger-demos/*/*.apk
 
 # Unity generated state for the demo scenario project
 QuestionnaireStimulusUnity/Library/

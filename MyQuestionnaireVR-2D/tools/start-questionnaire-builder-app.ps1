@@ -2523,6 +2523,33 @@ function Resolve-RepoRelativeApkPath {
     throw "No local repo example APK was found. Expected one of: $($CandidatePaths -join ', ')"
 }
 
+function Invoke-ExampleScenarioApkBuild {
+    $buildScript = Join-Path $ProjectPath 'tools\build-example-scenario-apks.ps1'
+    if (-not (Test-Path -LiteralPath $buildScript)) {
+        return [ordered]@{
+            attempted = $false
+            exitCode = -1
+            output = "Example APK build script was not found: $buildScript"
+        }
+    }
+
+    $result = Invoke-ProjectPowerShell -Arguments @(
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        $buildScript,
+        '-ProjectPath',
+        $ProjectPath
+    )
+
+    return [ordered]@{
+        attempted = $true
+        exitCode = $result.exitCode
+        output = $result.output
+    }
+}
+
 function Get-ApkTriggerCatalogEntryRank {
     param([string]$Name)
 
@@ -2655,13 +2682,25 @@ function Import-RepoExampleScenarioApk {
         throw "Repo example APK scan needs at least one relative APK path."
     }
 
-    $apkPath = Resolve-RepoRelativeApkPath -CandidatePaths $candidatePaths
+    $build = $null
+    try {
+        $apkPath = Resolve-RepoRelativeApkPath -CandidatePaths $candidatePaths
+    }
+    catch {
+        $initialError = $_.Exception.Message
+        $build = Invoke-ExampleScenarioApkBuild
+        if (-not $build.attempted -or $build.exitCode -ne 0) {
+            throw "$initialError Example APK auto-build did not produce local APKs. $($build.output)"
+        }
+        $apkPath = Resolve-RepoRelativeApkPath -CandidatePaths $candidatePaths
+    }
     $catalog = Read-TriggerCatalogFromApkPath -ApkPath $apkPath
     $stage = Stage-ExistingScenarioApk -ApkPath $apkPath -RunPrefix 'builder-repo-example-apk'
     return [ordered]@{
         status = 'ok'
         schemaVersion = 'questquestionnaire.builder.repo-example-scenario-apk.v1'
         sourceApk = $apkPath
+        exampleApkBuild = $build
         catalog = $catalog
         triggerCount = @($catalog.triggers).Count
         staged = $stage

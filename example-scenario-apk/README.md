@@ -20,7 +20,9 @@ Current files:
   emits `trigger_1_complete`, `trigger_2_complete`, and `trigger_3_complete`
   as passive events and is available as "Three Circle 3 Trigger Demo" in the
   hosted builder.
-- `apk/`: place the finished example scenario APK here when available.
+- `apk/`: generated local example scenario APKs. Recreate them with
+  `MyQuestionnaireVR-2D/tools/build-example-scenario-apks.ps1`; the builder
+  scans these APKs from disk and reads their embedded trigger manifests.
 - `unity-project/`: place the matching Unity project or exported Unity build
   folder here when available.
 
@@ -28,6 +30,17 @@ The hosted builder currently offers three selectable demo preloads: Aesthetic
 Chills 1 Trigger Demo, Passive 2 Trigger Demo, and Three Circle 3 Trigger Demo.
 Each preload creates one configurable Block 1 plus exactly one return block for
 each passive trigger in the selected catalog.
+
+From a source checkout, run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File ..\MyQuestionnaireVR-2D\tools\build-example-scenario-apks.ps1
+```
+
+The local companion also attempts this build once when a preloaded demo is
+selected and the expected APK files are absent. Trigger counts still come from
+the APK's embedded `assets/mq/questionnaire-trigger-catalog.json`; the catalog
+object in the GUI is only a display fallback.
 
 For a rebuildable Unity project, copy the bridge scripts from
 `MyQuestionnaireVR-2D/tools/unity/`. `QuestQuestionnairePassiveTriggerDemo.cs`

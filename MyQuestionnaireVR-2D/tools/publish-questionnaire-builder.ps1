@@ -127,10 +127,25 @@ foreach ($example in $exampleFiles) {
 }
 
 $repoRoot = Split-Path -Parent $projectFull
+$requiredScenarioApks = @(
+    (Join-Path $repoRoot 'example-scenario-apk\apk\aesthetic-chills-1-trigger-demo.apk'),
+    (Join-Path $repoRoot 'example-scenario-apk\apk\passive-2-trigger-demo.apk'),
+    (Join-Path $repoRoot 'example-scenario-apk\apk\three-circle-3-trigger-demo.apk')
+)
+if (($requiredScenarioApks | Where-Object { -not (Test-Path -LiteralPath $_) }).Count -gt 0) {
+    $buildExamplesScript = Join-Path $projectFull 'tools\build-example-scenario-apks.ps1'
+    if (Test-Path -LiteralPath $buildExamplesScript) {
+        & powershell -NoProfile -ExecutionPolicy Bypass -File $buildExamplesScript -ProjectPath $projectFull -RepoRoot $repoRoot | Out-Host
+        if ($LASTEXITCODE -ne 0) {
+            throw "Example scenario APK build failed with exit code $LASTEXITCODE"
+        }
+    }
+}
 $scenarioApkExamples = @(
     [ordered]@{
         fileName = 'aesthetic-chills-1-trigger-demo.apk'
         candidates = @(
+            (Join-Path $repoRoot 'example-scenario-apk\apk\aesthetic-chills-1-trigger-demo.apk'),
             (Join-Path $repoRoot 'example-scenario-apk\aesthetic-chills-1-trigger-demo.apk'),
             (Join-Path $repoRoot 'example-scenario-apk\QuestQuestionnaireStimulusDemo.apk'),
             (Join-Path $repoRoot 'AweGreatDictatorUnity\Builds\QuestQuestionnaireStimulusDemo.apk')
@@ -139,6 +154,7 @@ $scenarioApkExamples = @(
     [ordered]@{
         fileName = 'passive-2-trigger-demo.apk'
         candidates = @(
+            (Join-Path $repoRoot 'example-scenario-apk\apk\passive-2-trigger-demo.apk'),
             (Join-Path $repoRoot 'example-scenario-apk\multi-trigger-demos\2-triggers\quest-questionnaire-stimulus-demo-2-triggers.apk'),
             (Join-Path $repoRoot 'example-scenario-apk\multi-trigger-demos\2-triggers\QuestQuestionnaireStimulusDemo2Triggers.apk')
         )
@@ -146,6 +162,7 @@ $scenarioApkExamples = @(
     [ordered]@{
         fileName = 'three-circle-3-trigger-demo.apk'
         candidates = @(
+            (Join-Path $repoRoot 'example-scenario-apk\apk\three-circle-3-trigger-demo.apk'),
             (Join-Path $repoRoot 'example-scenario-apk\unity-project\three-circle-trigger-demo\Builds\QuestQuestionnaireThreeCircleTriggerDemo.apk'),
             (Join-Path $repoRoot 'example-scenario-apk\unity-project\three-circle-trigger-demo\Builds\three-circle-trigger-demo.apk')
         )

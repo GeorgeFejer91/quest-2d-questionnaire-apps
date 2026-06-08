@@ -111,13 +111,13 @@ public final class ChainLaunchContractTest {
                 + "\"triggerQuestionnaireMapping\":{"
                 + "\"schemaVersion\":\"mq.quest_questionnaire_trigger_mapping.v1\","
                 + "\"triggers\":[{"
-                + "\"triggerId\":\"video_complete\","
+                + "\"triggerId\":\"trigger_1_complete\","
                 + "\"enabled\":true,"
                 + "\"questionnaireMode\":\"full\","
                 + "\"questionnaireSequence\":[\"pictographic\",\"slider\"],"
                 + "\"blockNumber\":\"002\","
-                + "\"blockId\":\"002_video_complete\","
-                + "\"saveNamespace\":\"video_complete\","
+                + "\"blockId\":\"002_trigger_1_complete\","
+                + "\"saveNamespace\":\"trigger_1_complete\","
                 + "\"language\":\"English\","
                 + "\"autoCloseDelayMs\":0"
                 + "}]}"
@@ -129,18 +129,18 @@ public final class ChainLaunchContractTest {
         assertEquals("", launcherContext.blockNumber);
 
         Intent trigger = new Intent(QuestionnaireLaunchContext.ACTION_RUN);
-        trigger.putExtra(QuestionnaireLaunchContext.EXTRA_TRIGGER_ID, "video_complete");
+        trigger.putExtra(QuestionnaireLaunchContext.EXTRA_TRIGGER_ID, "trigger_1_complete");
         QuestionnaireLaunchContext triggerContext = QuestionnaireLaunchContext.fromIntent(trigger, config);
 
         assertTrue(triggerContext.chained);
-        assertEquals("video_complete", triggerContext.triggerId);
+        assertEquals("trigger_1_complete", triggerContext.triggerId);
         assertEquals("pictographic,slider", triggerContext.questionnaireSequenceCsv());
         assertFalse(triggerContext.shouldRunDemographics());
         assertTrue(triggerContext.shouldRunPictographic());
         assertTrue(triggerContext.shouldRunSlider());
         assertEquals("002", triggerContext.blockNumber);
-        assertEquals("002_video_complete", triggerContext.blockId);
-        assertEquals("video_complete", triggerContext.saveNamespace);
+        assertEquals("002_trigger_1_complete", triggerContext.blockId);
+        assertEquals("trigger_1_complete", triggerContext.saveNamespace);
         assertEquals(0L, triggerContext.autoCloseDelayMs);
     }
 

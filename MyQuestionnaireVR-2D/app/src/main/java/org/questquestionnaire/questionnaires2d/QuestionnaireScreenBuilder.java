@@ -109,7 +109,7 @@ final class QuestionnaireScreenBuilder {
     }
 
     MaiaScreen maiaScreen(String question, int index, int total, int selectedScore, boolean nextEnabled) {
-        BaseScreen base = base("MAIA-2", true);
+        BaseScreen base = base("Likert", true);
         body(base.content, String.format(Locale.US, "%d / %d", index + 1, total));
         question(base.content, question);
 

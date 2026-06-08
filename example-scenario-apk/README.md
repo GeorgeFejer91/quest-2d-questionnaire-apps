@@ -5,24 +5,29 @@ This folder is the public example source for the questionnaire builder's
 
 Current files:
 
-- `questionnaire-trigger-catalog.json`: small trigger manifest used by the
-  hosted GUI when a user does not have their own APK yet. The catalog mirrors
-  the V2 stimulus demo: the generated questionnaire APK runs block 1 first,
-  launches the Unity/stimulus APK, and Unity emits one passive
-  `trigger_1_complete` trigger at the end of the running APK. The
-  questionnaire APK owns the decision to
+- `questionnaire-trigger-catalog.json`: the Aesthetic Chills 1 Trigger Demo
+  manifest used by the hosted GUI when a user does not have their own APK yet.
+  The generated questionnaire APK runs block 1 first, launches the
+  Unity/stimulus APK, and Unity emits one passive `trigger_1_complete` trigger
+  at the end of the running APK. The questionnaire APK owns the decision to
   resume block 2.
 - `multi-trigger-demos/`: passive trigger catalog fixtures for simple Unity
-  demos with 2, 3, and 4 trigger events. They are intentionally catalog-only
-  examples so the builder can prove `Block 1 + scanned triggers` behavior
-  without committing Unity APK build artifacts.
+  demos with 2, 3, and 4 trigger events. The hosted selector exposes the
+  2-trigger fixture as "Passive 2 Trigger Demo"; the 4-trigger fixture remains
+  for internal regression coverage rather than the current public demo picker.
+- `unity-project/three-circle-trigger-demo/`: a minimal Unity source project
+  with three scenes: big green circle, big blue circle, and big red circle. It
+  emits `trigger_1_complete`, `trigger_2_complete`, and `trigger_3_complete`
+  as passive events and is available as "Three Circle 3 Trigger Demo" in the
+  hosted builder.
 - `apk/`: place the finished example scenario APK here when available.
 - `unity-project/`: place the matching Unity project or exported Unity build
   folder here when available.
 
-The hosted builder reads the trigger catalog from this folder. The APK and
-Unity project are intentionally placeholders until the example assets are
-provided.
+The hosted builder currently offers three selectable demo preloads: Aesthetic
+Chills 1 Trigger Demo, Passive 2 Trigger Demo, and Three Circle 3 Trigger Demo.
+Each preload creates one configurable Block 1 plus exactly one return block for
+each passive trigger in the selected catalog.
 
 For a rebuildable Unity project, copy the bridge scripts from
 `MyQuestionnaireVR-2D/tools/unity/`. `QuestQuestionnairePassiveTriggerDemo.cs`

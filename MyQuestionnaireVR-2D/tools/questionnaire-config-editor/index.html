@@ -829,8 +829,13 @@
 
         <div class="panel">
           <div class="section-title">
-            <h3>Load example APK</h3>
-            <button id="loadExampleApkButton" type="button">Use repository example</button>
+            <h3>Load preloaded demo</h3>
+            <select id="exampleApkPreset" value="one-trigger-demo" aria-label="Preloaded demo">
+              <option value="one-trigger-demo" selected>Aesthetic Chills 1 Trigger Demo</option>
+              <option value="two-trigger-demo">Passive 2 Trigger Demo</option>
+              <option value="three-circle-trigger-demo">Three Circle 3 Trigger Demo</option>
+            </select>
+            <button id="loadExampleApkButton" type="button">Use selected demo</button>
           </div>
           <div id="exampleApkStatus" class="issue">Example not loaded.</div>
           <p class="subtle">
@@ -1098,7 +1103,7 @@
             </div>
             <label>
               Target APK label
-              <input id="chainlinkScenarioLabel" value="Questionnaire Stimulus Builder Demo">
+              <input id="chainlinkScenarioLabel" value="Aesthetic Chills 1 Trigger Demo">
             </label>
             <div id="experimentBlockRegistryList" class="block-list" style="margin-top: 10px;"></div>
           </div>
@@ -1326,13 +1331,15 @@
     let lastEvidenceData = null;
     let artifactPreviewObjectUrls = [];
     const exampleApkFolderUrl = "https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/tree/main/example-scenario-apk";
+    const twoTriggerDemoFolderUrl = "https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/tree/main/example-scenario-apk/multi-trigger-demos/2-triggers";
+    const threeCircleDemoFolderUrl = "https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/tree/main/example-scenario-apk/unity-project/three-circle-trigger-demo";
     const exampleTriggerCatalog = {
       schemaVersion: "mq.quest_questionnaire_trigger_catalog.v1",
       catalogVersion: "1.0.0",
       scenarioId: "quest-questionnaire-stimulus-demo",
       package: "org.questquestionnaire.stimulusdemo",
       activity: "org.questquestionnaire.stimulusdemo.StimulusUnityPlayerGameActivity",
-      label: "Questionnaire Stimulus Builder Demo",
+      label: "Aesthetic Chills 1 Trigger Demo",
       triggers: [
         {
           triggerId: "trigger_1_complete",
@@ -1341,6 +1348,75 @@
         }
       ]
     };
+    const twoTriggerDemoCatalog = {
+      schemaVersion: "mq.quest_questionnaire_trigger_catalog.v1",
+      catalogVersion: "1.0.0",
+      scenarioId: "quest-questionnaire-stimulus-demo-2-triggers",
+      package: "org.questquestionnaire.stimulusdemo2",
+      activity: "org.questquestionnaire.stimulusdemo2.StimulusUnityPlayerGameActivity",
+      label: "Passive Trigger Demo 2 Triggers",
+      triggers: [
+        {
+          triggerId: "trigger_1_complete",
+          label: "After trigger 1",
+          description: "Passive Unity event 1. The generated questionnaire APK decides which configured block resumes next."
+        },
+        {
+          triggerId: "trigger_2_complete",
+          label: "After trigger 2",
+          description: "Passive Unity event 2. The generated questionnaire APK decides which configured block resumes next."
+        }
+      ]
+    };
+    const threeCircleTriggerCatalog = {
+      schemaVersion: "mq.quest_questionnaire_trigger_catalog.v1",
+      catalogVersion: "1.0.0",
+      scenarioId: "quest-questionnaire-three-circle-trigger-demo",
+      package: "org.questquestionnaire.circletriggerdemo",
+      activity: "com.unity3d.player.UnityPlayerGameActivity",
+      label: "Three Circle Trigger Demo",
+      triggers: [
+        {
+          triggerId: "trigger_1_complete",
+          label: "After trigger 1",
+          description: "Passive event emitted after the green circle scene."
+        },
+        {
+          triggerId: "trigger_2_complete",
+          label: "After trigger 2",
+          description: "Passive event emitted after the blue circle scene."
+        },
+        {
+          triggerId: "trigger_3_complete",
+          label: "After trigger 3",
+          description: "Passive event emitted after the red circle scene."
+        }
+      ]
+    };
+    const exampleCatalogPreloads = {
+      "one-trigger-demo": {
+        folderUrl: exampleApkFolderUrl,
+        sourceName: "aesthetic-chills-1-trigger-demo catalog",
+        loadingText: "Loading Aesthetic Chills 1 Trigger Demo...",
+        loadedText: "Aesthetic Chills 1 Trigger Demo loaded: one passive Unity end trigger creates Block 1 plus Block 2.",
+        catalog: exampleTriggerCatalog
+      },
+      "two-trigger-demo": {
+        folderUrl: twoTriggerDemoFolderUrl,
+        sourceName: "passive-2-trigger-demo catalog",
+        loadingText: "Loading Passive 2 Trigger Demo...",
+        loadedText: "Passive 2 Trigger Demo loaded: two passive triggers create Block 1 plus Blocks 2 and 3.",
+        catalog: twoTriggerDemoCatalog
+      },
+      "three-circle-trigger-demo": {
+        folderUrl: threeCircleDemoFolderUrl,
+        sourceName: "three-circle-3-trigger-demo catalog",
+        loadingText: "Loading Three Circle 3 Trigger Demo...",
+        loadedText: "Three Circle 3 Trigger Demo loaded: three passive triggers create Block 1 plus Blocks 2, 3, and 4.",
+        catalog: threeCircleTriggerCatalog
+      }
+    };
+    const defaultExampleCatalogKey = "one-trigger-demo";
     const exampleTriggerCatalogUrlCandidates = [
       "../example-scenario-apk/questionnaire-trigger-catalog.json",
       "../../../example-scenario-apk/questionnaire-trigger-catalog.json",
@@ -2454,13 +2530,27 @@
       status.textContent = text;
     }
 
+    function selectedExampleCatalogPreload() {
+      const key = byId("exampleApkPreset").value || defaultExampleCatalogKey;
+      return exampleCatalogPreloads[key] || exampleCatalogPreloads[defaultExampleCatalogKey];
+    }
+
+    function updateSelectedExampleApkLink() {
+      const preload = selectedExampleCatalogPreload();
+      const link = byId("exampleApkFolderLink");
+      link.href = preload.folderUrl;
+      link.textContent = preload.folderUrl;
+    }
+
     async function loadExampleTriggerCatalog() {
-      setExampleApkStatus("Loading repository example...", "");
+      const preload = selectedExampleCatalogPreload();
+      setExampleApkStatus(preload.loadingText, "");
       lastScenarioApkName = "";
       setStagedScenarioApkPath("");
-      setStagedScenarioApkStatus("Repository example loaded from trigger catalog only; load a local scenario APK file before installing both APKs.", "warn");
-      applyTriggerCatalog(JSON.parse(JSON.stringify(exampleTriggerCatalog)), "repository example APK");
-      setExampleApkStatus("Repository example loaded: one passive Unity end trigger creates Block 1 plus Block 2.", "ok");
+      updateSelectedExampleApkLink();
+      setStagedScenarioApkStatus("Preloaded demo loaded from trigger catalog only; build or load a matching local scenario APK file before installing both APKs.", "warn");
+      applyTriggerCatalog(JSON.parse(JSON.stringify(preload.catalog)), preload.sourceName);
+      setExampleApkStatus(preload.loadedText, "ok");
     }
 
     function findEndOfCentralDirectory(bytes) {
@@ -3611,7 +3701,7 @@
       const targetApp = registry.targetApp || registry.scenario || {};
       byId("chainlinkScenarioPackage").value = targetApp.package || byId("chainlinkScenarioPackage").value || "org.questquestionnaire.stimulusdemo";
       byId("chainlinkScenarioActivity").value = targetApp.activity || byId("chainlinkScenarioActivity").value || "com.unity3d.player.UnityPlayerGameActivity";
-      byId("chainlinkScenarioLabel").value = targetApp.label || byId("chainlinkScenarioLabel").value || "Questionnaire Stimulus Builder Demo";
+      byId("chainlinkScenarioLabel").value = targetApp.label || byId("chainlinkScenarioLabel").value || "Aesthetic Chills 1 Trigger Demo";
       if (!byId("chainCallerPackage").value && targetApp.package) {
         byId("chainCallerPackage").value = targetApp.package;
       }
@@ -6325,6 +6415,8 @@
       makeExperimentBlockRegistryList();
       refresh();
     });
+    byId("exampleApkPreset").addEventListener("change", updateSelectedExampleApkLink);
+    updateSelectedExampleApkLink();
     byId("loadExampleApkButton").addEventListener("click", loadExampleTriggerCatalog);
     byId("loadScenarioApkInput").addEventListener("change", event => {
       loadTriggerCatalogFile(event.target.files[0]);

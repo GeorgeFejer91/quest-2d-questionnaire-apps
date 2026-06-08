@@ -4,7 +4,7 @@
   "scenarioId": "quest-questionnaire-stimulus-demo",
   "package": "org.questquestionnaire.stimulusdemo",
   "activity": "org.questquestionnaire.stimulusdemo.StimulusUnityPlayerGameActivity",
-  "label": "Questionnaire Stimulus Builder Demo",
+  "label": "Aesthetic Chills 1 Trigger Demo",
   "triggers": [
     {
       "triggerId": "trigger_1_complete",

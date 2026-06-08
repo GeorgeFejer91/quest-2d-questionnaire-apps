@@ -319,6 +319,26 @@ function assertRenderedBlocks(test, triggerCount, label) {
   }
 }
 
+function assertPreloadedDemo(key, expected) {
+  const test = loadEditor();
+  test.document.getElementById("exampleApkPreset").value = key;
+  test.document.getElementById("loadExampleApkButton").click();
+  const config = test.context.__api.buildConfig();
+  const blockHtml = test.document.getElementById("triggerMappingList").innerHTML;
+  assert(config.triggerQuestionnaireMapping.triggers.length === expected.triggerCount, `${expected.label} should expose ${expected.triggerCount} passive trigger mappings.`);
+  assert(blockSegmentCount(blockHtml) === expected.triggerCount + 1, `${expected.label} should render Block 1 plus ${expected.triggerCount} return blocks.`);
+  assert(config.chainDefaults.nextPackage === expected.nextPackage, `${expected.label} should point to the expected Unity package.`);
+  assert(config.appDisplayName === `Start Experiment | ${expected.appLabel}`, `${expected.label} should name the generated APK as the experiment starter.`);
+  assert(test.document.getElementById("exampleApkFolderLink").textContent.includes(expected.folderToken), `${expected.label} should expose the expected repository folder link.`);
+  return {
+    key,
+    triggerCount: config.triggerQuestionnaireMapping.triggers.length,
+    blockSegmentCount: blockSegmentCount(blockHtml),
+    nextPackage: config.chainDefaults.nextPackage,
+    appDisplayName: config.appDisplayName
+  };
+}
+
 function assignSingleModulePerTrigger(test, triggerCount) {
   const modules = ["slider", "pictographic", "demographics", "maia2"];
   for (let index = 0; index < triggerCount; index += 1) {
@@ -585,6 +605,14 @@ assert(html.includes('block-segment-startup'), "Block 1 should render as its own
 assert(html.includes('block-segment-trigger-'), "Scanned Unity triggers should render as later block HTML segments.");
 assert(html.includes('trigger_1_complete'), "Repository example should use the one-trigger passive completion catalog.");
 assert(html.includes('label: "After trigger 1"'), "Repository example should label the passive return as After trigger 1.");
+assert(html.includes('id="exampleApkPreset"'), "Builder should expose a preloaded demo selector.");
+assert(html.includes('Aesthetic Chills 1 Trigger Demo'), "Aesthetic Chills one-trigger demo should be available as a preload.");
+assert(html.includes('Passive 2 Trigger Demo'), "Passive two-trigger demo should be available as a preload.");
+assert(html.includes('Three Circle 3 Trigger Demo'), "Three-circle three-trigger demo should be available as a preload.");
+const visibleDemoOptionCount = (html.match(/<option value="(?:one-trigger-demo|two-trigger-demo|three-circle-trigger-demo)"/g) || []).length;
+assert(visibleDemoOptionCount === 3, "Hosted demo picker should expose exactly three selectable demos.");
+assert(!html.includes('four-trigger-demo'), "Hosted demo picker should not expose the 4-trigger regression fixture as a public demo option.");
+assert(html.includes('org.questquestionnaire.circletriggerdemo'), "Three-circle Unity demo preload should use a product-branded package id.");
 assert(!/before video|after video|Video complete/i.test(html), "Builder source must not expose video-specific trigger labels.");
 assert(html.includes('const startupElementTypes = ["demographics", "likert", "pictographic", "slider"]'), "Visible block types should use generic questionnaire categories.");
 assert(!html.includes('const startupElementTypes = ["demographics", "maia2"'), "MAIA-2 should not be a visible top-level questionnaire type.");
@@ -603,6 +631,29 @@ assert(html.includes('id="downloadPictographicZipTemplateButton"'), "Hosted prod
 assert(html.includes('id="loadPictographicZipInput"'), "Hosted product flow should expose pictographic ZIP upload.");
 assert(html.includes('id="validateWorkflowAppButton" type="button" data-dev-only'), "Validate workflow button should be hidden in hosted product mode.");
 assert(html.includes('id="review-stage" class="stage" data-requires-apk data-dev-only'), "Review pipeline stage should be hidden in hosted product mode.");
+const preloadedDemoResults = [
+  assertPreloadedDemo("one-trigger-demo", {
+    label: "Aesthetic Chills 1 Trigger Demo",
+    appLabel: "Aesthetic Chills 1 Trigger Demo",
+    triggerCount: 1,
+    nextPackage: "org.questquestionnaire.stimulusdemo",
+    folderToken: "example-scenario-apk"
+  }),
+  assertPreloadedDemo("two-trigger-demo", {
+    label: "Passive 2 Trigger Demo",
+    appLabel: "Passive Trigger Demo 2 Triggers",
+    triggerCount: 2,
+    nextPackage: "org.questquestionnaire.stimulusdemo2",
+    folderToken: "multi-trigger-demos/2-triggers"
+  }),
+  assertPreloadedDemo("three-circle-trigger-demo", {
+    label: "Three Circle 3 Trigger Demo",
+    appLabel: "Three Circle Trigger Demo",
+    triggerCount: 3,
+    nextPackage: "org.questquestionnaire.circletriggerdemo",
+    folderToken: "three-circle-trigger-demo"
+  })
+];
 context.location = { protocol: "https:", hostname: "georgefejer91.github.io" };
 context.__api.applyHostedFinalProductMode();
 assert(document.body.classList.contains("hosted-final-product"), "Hosted product mode should set the body class.");
@@ -844,7 +895,7 @@ context.__api.applyTriggerCatalog({
   scenarioId: "quest-questionnaire-stimulus-demo",
   package: "org.questquestionnaire.stimulusdemo",
   activity: "org.questquestionnaire.stimulusdemo.StimulusUnityPlayerGameActivity",
-  label: "Questionnaire Stimulus Builder Demo",
+  label: "Aesthetic Chills 1 Trigger Demo",
   triggers: [
     { triggerId: "trigger_1_complete", label: "After trigger 1" }
   ]
@@ -859,7 +910,7 @@ assert(handoff.chainDefaults.questionnaireMode === "none", "Hosted handoff catal
 assert(handoff.chainDefaults.questionnaireSequence.length === 0, "Hosted handoff catalog should keep editable block 1 empty until the user adds elements.");
 assert(handoff.chainDefaults.triggerId === "study_start_block_1", "Hosted handoff catalog should not treat Unity manifest triggers as block 1 questionnaire decisions.");
 assert(handoff.chainDefaults.nextPackage === "org.questquestionnaire.stimulusdemo", "Hosted handoff catalog should target the Unity package as nextPackage.");
-assert(handoff.appDisplayName === "Start Experiment | Questionnaire Stimulus Builder Demo", "Hosted handoff catalog should name the generated APK as the experiment starter for the Unity demo.");
+assert(handoff.appDisplayName === "Start Experiment | Aesthetic Chills 1 Trigger Demo", "Hosted handoff catalog should name the generated APK as the experiment starter for the Unity demo.");
 assert(handoff.triggerQuestionnaireMapping.triggers.length === 1, "Handoff demo catalog should produce one passive Unity-return trigger mapping.");
 assert(handoff.triggerQuestionnaireMapping.passiveTriggerWarnings.length === 0, "Handoff demo catalog should not encode questionnaire behavior in Unity trigger metadata.");
 assert(handoff.triggerQuestionnaireMapping.triggers[0].triggerId === "trigger_1_complete", "Handoff demo catalog should expose the single passive trigger id.");
@@ -893,7 +944,7 @@ assert(twoDStart.chainDefaults.questionnaireMode === "none", "2D-first preset sh
 assert(twoDStart.chainDefaults.questionnaireSequence.length === 0, "2D-first preset should keep block 1 empty until the user adds elements.");
 assert(twoDStart.chainDefaults.triggerId === "study_start_block_1", "2D-first preset should use a generic block 1 start id.");
 assert(twoDStart.chainDefaults.nextPackage === "org.questquestionnaire.stimulusdemo", "2D-first preset should target the Unity package as nextPackage.");
-assert(twoDStart.appDisplayName === "Start Experiment | Questionnaire Stimulus Builder Demo", "2D-first preset should keep the participant-facing generated APK title.");
+assert(twoDStart.appDisplayName === "Start Experiment | Aesthetic Chills 1 Trigger Demo", "2D-first preset should keep the participant-facing generated APK title.");
 assert(twoDStart.experimentBlockRegistry.blocks.every(block => block.extras && block.extras["mq.finishBehavior"] === "resumeCaller"), "Unity-triggered blocks should still return to Unity in 2D-first mode.");
 assert(twoDStartQuality.status === "pass", "2D-first handoff demo config should pass quality report.");
 
@@ -1074,6 +1125,9 @@ const summary = {
     temporalTracer: unsupportedTemporalTracerError
   },
   duplicateGuardrailStatus: duplicateQuality.status,
+  preloadedDemoTriggerCount: preloadedDemoResults[0].triggerCount,
+  preloadedDemoBlockSegmentCount: preloadedDemoResults[0].blockSegmentCount,
+  preloadedDemoResults,
   multiTriggerGuiStressStatus: "pass",
   multiTriggerGuiStressResults: multiTriggerGuiStressResults.map(result => ({
     triggerCount: result.triggerCount,

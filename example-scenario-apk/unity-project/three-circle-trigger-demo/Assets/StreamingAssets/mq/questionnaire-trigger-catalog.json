@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "mq.quest_questionnaire_trigger_catalog.v1",
+  "catalogVersion": "1.0.0",
+  "scenarioId": "quest-questionnaire-three-circle-trigger-demo",
+  "package": "org.questquestionnaire.circletriggerdemo",
+  "activity": "com.unity3d.player.UnityPlayerGameActivity",
+  "label": "Three Circle Trigger Demo",
+  "triggers": [
+    {
+      "triggerId": "trigger_1_complete",
+      "label": "After trigger 1",
+      "description": "Passive event emitted after the green circle scene."
+    },
+    {
+      "triggerId": "trigger_2_complete",
+      "label": "After trigger 2",
+      "description": "Passive event emitted after the blue circle scene."
+    },
+    {
+      "triggerId": "trigger_3_complete",
+      "label": "After trigger 3",
+      "description": "Passive event emitted after the red circle scene."
+    }
+  ]
+}

@@ -18,6 +18,11 @@ QuestionnaireStimulusUnity/RenderValidation/
 QuestionnaireStimulusUnity/Assets/XR/Temp/
 QuestionnaireStimulusUnity/Assets/XR/UserSimulationSettings/
 QuestionnaireStimulusUnity/Assets/XR/Resources/XRSimulationRuntimeSettings.asset*
+example-scenario-apk/unity-project/three-circle-trigger-demo/Library/
+example-scenario-apk/unity-project/three-circle-trigger-demo/Temp/
+example-scenario-apk/unity-project/three-circle-trigger-demo/Logs/
+example-scenario-apk/unity-project/three-circle-trigger-demo/UserSettings/
+example-scenario-apk/unity-project/three-circle-trigger-demo/Builds/
 
 # Python and editor state
 **/__pycache__/

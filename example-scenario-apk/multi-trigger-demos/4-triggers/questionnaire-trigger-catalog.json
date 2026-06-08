@@ -4,7 +4,7 @@
   "scenarioId": "quest-questionnaire-stimulus-demo-4-triggers",
   "package": "org.questquestionnaire.stimulusdemo4",
   "activity": "org.questquestionnaire.stimulusdemo4.StimulusUnityPlayerGameActivity",
-  "label": "Questionnaire Stimulus Builder Demo 4 Triggers",
+  "label": "Passive Trigger Demo 4 Triggers",
   "triggers": [
     {
       "triggerId": "trigger_1_complete",

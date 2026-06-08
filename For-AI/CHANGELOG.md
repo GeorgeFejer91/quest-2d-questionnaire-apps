@@ -18,6 +18,15 @@ Use absolute dates.
   fixtures for 2, 3, and 4-trigger Unity/stimulus demos. Future builder changes
   must preserve the rule that rendered block segments equal one configurable
   Block 1 plus exactly one later return block per scanned passive trigger.
+- Added the source-level three-circle Unity demo as a hosted-builder preload:
+  green circle -> trigger 1, blue circle -> trigger 2, red circle -> trigger 3.
+  The demo remains passive and product-branded; the builder preload must create
+  Block 1 plus three return blocks without Unity-side questionnaire decisions.
+- Renamed the current one-trigger preload to "Aesthetic Chills 1 Trigger Demo"
+  and fixed the hosted demo picker to exactly three visible choices for now:
+  Aesthetic Chills 1 Trigger Demo, Passive 2 Trigger Demo, and Three Circle 3
+  Trigger Demo. Keep the 4-trigger fixture available for internal regression
+  coverage, not as a public picker option unless the product workflow changes.
 
 ## 2026-06-06
 

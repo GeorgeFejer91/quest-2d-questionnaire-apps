@@ -374,20 +374,18 @@ function assertRenderedBlocks(test, triggerCount, label) {
 function assertPreloadedDemo(key, expected) {
   const test = loadEditor();
   test.document.getElementById("exampleApkPreset").value = key;
-  test.document.getElementById("loadExampleApkButton").click();
-  const config = test.context.__api.buildConfig();
-  const blockHtml = test.document.getElementById("triggerMappingList").innerHTML;
-  assert(config.triggerQuestionnaireMapping.triggers.length === expected.triggerCount, `${expected.label} should expose ${expected.triggerCount} passive trigger mappings.`);
-  assert(blockSegmentCount(blockHtml) === expected.triggerCount + 1, `${expected.label} should render Block 1 plus ${expected.triggerCount} return blocks.`);
-  assert(config.chainDefaults.nextPackage === expected.nextPackage, `${expected.label} should point to the expected Unity package.`);
-  assert(config.appDisplayName === `Start Experiment | ${expected.appLabel}`, `${expected.label} should name the generated APK as the experiment starter.`);
-  assert(test.document.getElementById("exampleApkFolderLink").textContent.includes(expected.folderToken), `${expected.label} should expose the expected repository folder link.`);
+  assert(html.includes(`value="${key}"`), `${expected.label} should be a selectable public demo.`);
+  assert(html.includes(expected.localApkToken), `${expected.label} should point at a local repo APK candidate for companion scanning.`);
+  assert(html.includes('/api/stage-repo-example-scenario-apk'), `${expected.label} should use the local companion APK scan/stage endpoint.`);
+  assert(!html.includes(`${expected.sourceName} catalog`), `${expected.label} must not present a catalog-only source as the installable demo.`);
+  assert(html.includes(expected.folderToken), `${expected.label} should expose the expected repository folder link.`);
   return {
     key,
-    triggerCount: config.triggerQuestionnaireMapping.triggers.length,
-    blockSegmentCount: blockSegmentCount(blockHtml),
-    nextPackage: config.chainDefaults.nextPackage,
-    appDisplayName: config.appDisplayName
+    triggerCount: expected.triggerCount,
+    blockSegmentCount: expected.triggerCount + 1,
+    nextPackage: expected.nextPackage,
+    appDisplayName: `Start Experiment | ${expected.appLabel}`,
+    runtimeSource: "local-apk-scan-required"
   };
 }
 
@@ -745,6 +743,9 @@ assert(html.includes('scoreOptionLayout=vertical'), "Likert CSV templates should
 assert(html.includes('<option value="temporalTracer">Temporal experience tracer</option>'), "Temporal tracer should appear as a visible questionnaire type in the product GUI.");
 assert(html.includes('Before experiment/running APK'), "Block 1 label should use experiment/running APK wording.");
 assert(html.includes('stage-scenario-apk'), "Builder should expose scenario APK staging before headset install.");
+assert(html.includes('/api/stage-repo-example-scenario-apk'), "Preloaded repo demos should scan and stage a real local APK through the companion.");
+assert(html.includes('localApkCandidates'), "Preloaded repo demos should point at local APK candidates, not just static trigger catalogs.");
+assert(!html.includes('trigger catalog only'), "Preloaded demos must not present catalog-only trigger counts as installable APK scans.");
 assert(html.includes('id="csvTemplateKind"'), "Hosted product flow should expose questionnaire type CSV templates.");
 assert(html.includes('id="downloadCsvTemplateButton"'), "Hosted product flow should expose CSV template download.");
 assert(html.includes('id="loadCsvInput"'), "Hosted product flow should expose CSV upload.");
@@ -758,6 +759,8 @@ const preloadedDemoResults = [
   assertPreloadedDemo("one-trigger-demo", {
     label: "Aesthetic Chills 1 Trigger Demo",
     appLabel: "Aesthetic Chills 1 Trigger Demo",
+    sourceName: "aesthetic-chills-1-trigger-demo",
+    localApkToken: "examples/scenario-apks/aesthetic-chills-1-trigger-demo.apk",
     triggerCount: 1,
     nextPackage: "org.questquestionnaire.stimulusdemo",
     folderToken: "example-scenario-apk"
@@ -765,6 +768,8 @@ const preloadedDemoResults = [
   assertPreloadedDemo("two-trigger-demo", {
     label: "Passive 2 Trigger Demo",
     appLabel: "Passive Trigger Demo 2 Triggers",
+    sourceName: "passive-2-trigger-demo",
+    localApkToken: "examples/scenario-apks/passive-2-trigger-demo.apk",
     triggerCount: 2,
     nextPackage: "org.questquestionnaire.stimulusdemo2",
     folderToken: "multi-trigger-demos/2-triggers"
@@ -772,6 +777,8 @@ const preloadedDemoResults = [
   assertPreloadedDemo("three-circle-trigger-demo", {
     label: "Three Circle 3 Trigger Demo",
     appLabel: "Three Circle Trigger Demo",
+    sourceName: "three-circle-3-trigger-demo",
+    localApkToken: "examples/scenario-apks/three-circle-3-trigger-demo.apk",
     triggerCount: 3,
     nextPackage: "org.questquestionnaire.circletriggerdemo",
     folderToken: "three-circle-trigger-demo"

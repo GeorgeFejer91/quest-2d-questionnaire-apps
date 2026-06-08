@@ -54,7 +54,13 @@ $EffectiveAllowedOrigins = @($originCandidates | Where-Object { -not [string]::I
 
 $EditorPath = Join-Path $ProjectPath 'tools\questionnaire-config-editor\index.html'
 if (-not (Test-Path -LiteralPath $EditorPath)) {
-    throw "Questionnaire builder HTML not found: $EditorPath"
+    $packagedEditorPath = Join-Path $ProjectPath 'index.html'
+    if (Test-Path -LiteralPath $packagedEditorPath) {
+        $EditorPath = $packagedEditorPath
+    }
+    else {
+        throw "Questionnaire builder HTML not found: $EditorPath"
+    }
 }
 
 if ([string]::IsNullOrWhiteSpace($PairingToken)) {
@@ -2481,6 +2487,192 @@ function Save-StagedScenarioApkChunk {
     }
 }
 
+function Resolve-RepoRelativeApkPath {
+    param([string[]]$CandidatePaths)
+
+    $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $ProjectPath '..'))
+    $searchRoots = @($ProjectPath, $repoRoot) | Select-Object -Unique
+
+    foreach ($candidate in $CandidatePaths) {
+        if ([string]::IsNullOrWhiteSpace($candidate)) {
+            continue
+        }
+        $relative = ([string]$candidate).Replace('/', [System.IO.Path]::DirectorySeparatorChar)
+        if ([System.IO.Path]::IsPathRooted($relative)) {
+            throw "Repo example APK path must be relative to the repository root."
+        }
+        foreach ($root in $searchRoots) {
+            $rootFull = [System.IO.Path]::GetFullPath($root)
+            $rootPrefix = $rootFull
+            if (-not $rootPrefix.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
+                $rootPrefix += [System.IO.Path]::DirectorySeparatorChar
+            }
+            $fullPath = [System.IO.Path]::GetFullPath((Join-Path $rootFull $relative))
+            if (-not $fullPath.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+                throw "Repo example APK path is outside the allowed local program roots."
+            }
+            if (-not $fullPath.EndsWith('.apk', [System.StringComparison]::OrdinalIgnoreCase)) {
+                throw "Repo example path is not an APK: $candidate"
+            }
+            if (Test-Path -LiteralPath $fullPath) {
+                return $fullPath
+            }
+        }
+    }
+
+    throw "No local repo example APK was found. Expected one of: $($CandidatePaths -join ', ')"
+}
+
+function Get-ApkTriggerCatalogEntryRank {
+    param([string]$Name)
+
+    $normalized = ([string]$Name).Replace('\', '/').TrimStart('/').ToLowerInvariant()
+    $preferred = @(
+        'assets/mq/questionnaire-trigger-catalog.json',
+        'assets/bin/data/streamingassets/mq/questionnaire-trigger-catalog.json',
+        'assets/bin/data/streamingassets/questionnaire-trigger-catalog.json'
+    )
+    $exactIndex = [Array]::IndexOf($preferred, $normalized)
+    if ($exactIndex -ge 0) {
+        return $exactIndex
+    }
+    if ($normalized.EndsWith('/assets/streamingassets/mq/questionnaire-trigger-catalog.json')) {
+        return 100
+    }
+    if ($normalized.EndsWith('/streamingassets/mq/questionnaire-trigger-catalog.json')) {
+        return 110
+    }
+    if ($normalized.EndsWith('/mq/questionnaire-trigger-catalog.json')) {
+        return 120
+    }
+    if ($normalized.EndsWith('/streamingassets/questionnaire-trigger-catalog.json')) {
+        return 130
+    }
+    if ($normalized.EndsWith('/questionnaire-trigger-catalog.json') -or $normalized -eq 'questionnaire-trigger-catalog.json') {
+        return 140
+    }
+    return -1
+}
+
+function Read-TriggerCatalogFromApkPath {
+    param([string]$ApkPath)
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $zip = [System.IO.Compression.ZipFile]::OpenRead($ApkPath)
+    try {
+        $entry = $zip.Entries |
+            ForEach-Object {
+                [pscustomobject]@{
+                    Entry = $_
+                    Rank = Get-ApkTriggerCatalogEntryRank -Name $_.FullName
+                }
+            } |
+            Where-Object { $_.Rank -ge 0 } |
+            Sort-Object Rank |
+            Select-Object -First 1
+        if (-not $entry) {
+            throw "No questionnaire trigger catalog was found inside local APK: $ApkPath"
+        }
+        $reader = [System.IO.StreamReader]::new($entry.Entry.Open(), [System.Text.Encoding]::UTF8)
+        try {
+            $json = $reader.ReadToEnd()
+        }
+        finally {
+            $reader.Dispose()
+        }
+        return $json | ConvertFrom-Json
+    }
+    finally {
+        $zip.Dispose()
+    }
+}
+
+function Stage-ExistingScenarioApk {
+    param(
+        [string]$ApkPath,
+        [string]$RunPrefix = 'builder-repo-example-apk'
+    )
+
+    $safeName = Get-SafeName -Value ([System.IO.Path]::GetFileName($ApkPath))
+    if (-not $safeName.EndsWith('.apk', [System.StringComparison]::OrdinalIgnoreCase)) {
+        $safeName = "$safeName.apk"
+    }
+    $safePrefix = Get-SafeName -Value $RunPrefix
+    $runId = $safePrefix + '-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    $targetDir = Join-Path $ProjectPath ("artifacts\builder-scenario-apks\$runId")
+    New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
+    $targetPath = Join-Path $targetDir $safeName
+    Copy-Item -LiteralPath $ApkPath -Destination $targetPath -Force
+    $item = Get-Item -LiteralPath $targetPath
+    $sha = ''
+    try {
+        $sha = (Get-FileHash -LiteralPath $targetPath -Algorithm SHA256).Hash
+    }
+    catch {
+        $sha = ''
+    }
+
+    $summaryPath = Join-Path $targetDir 'staged-scenario-apk-summary.json'
+    $summary = [ordered]@{
+        status = 'ok'
+        schemaVersion = 'questquestionnaire.builder.staged-scenario-apk.v1'
+        runId = $runId
+        fileName = $safeName
+        sourceApk = $ApkPath
+        apk = $targetPath
+        bytes = $item.Length
+        sha256 = $sha
+        stagedAt = (Get-Date).ToString('o')
+    }
+    $summary | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
+
+    return [ordered]@{
+        status = 'ok'
+        runId = $runId
+        fileName = $safeName
+        sourceApk = $ApkPath
+        apk = $targetPath
+        bytes = $item.Length
+        sha256 = $sha
+        artifactDir = $targetDir
+        summaryPath = $summaryPath
+    }
+}
+
+function Import-RepoExampleScenarioApk {
+    param([object]$Payload)
+
+    $candidatePaths = @()
+    if ($Payload.PSObject.Properties.Name -contains 'candidatePaths' -and $Payload.candidatePaths) {
+        foreach ($candidate in $Payload.candidatePaths) {
+            $candidatePaths += [string]$candidate
+        }
+    }
+    elseif ($Payload.PSObject.Properties.Name -contains 'relativePath') {
+        $candidatePaths += [string]$Payload.relativePath
+    }
+    if ($candidatePaths.Count -eq 0) {
+        throw "Repo example APK scan needs at least one relative APK path."
+    }
+
+    $apkPath = Resolve-RepoRelativeApkPath -CandidatePaths $candidatePaths
+    $catalog = Read-TriggerCatalogFromApkPath -ApkPath $apkPath
+    $stage = Stage-ExistingScenarioApk -ApkPath $apkPath -RunPrefix 'builder-repo-example-apk'
+    return [ordered]@{
+        status = 'ok'
+        schemaVersion = 'questquestionnaire.builder.repo-example-scenario-apk.v1'
+        sourceApk = $apkPath
+        catalog = $catalog
+        triggerCount = @($catalog.triggers).Count
+        staged = $stage
+        fileName = $stage.fileName
+        apk = $stage.apk
+        bytes = $stage.bytes
+        sha256 = $stage.sha256
+        summaryPath = $stage.summaryPath
+    }
+}
+
 function Resolve-NodeCandidate {
     $candidates = New-Object 'System.Collections.Generic.List[string]'
     $command = Get-Command node -ErrorAction SilentlyContinue
@@ -2790,6 +2982,7 @@ function New-StatusPayload {
             'quest-readiness',
             'stage-scenario-apk',
             'stage-scenario-apk-chunk',
+            'stage-repo-example-scenario-apk',
             'install-apk',
             'install-apk-job-status',
             'quest-replay',
@@ -3001,6 +3194,14 @@ function Handle-Request {
         Assert-OriginAndToken -Request $request
         $payload = Receive-JsonPayload -Request $request
         $result = Save-StagedScenarioApkChunk -Payload $payload
+        Write-JsonResponse -Context $Context -StatusCode 200 -Value $result
+        return
+    }
+
+    if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/stage-repo-example-scenario-apk') {
+        Assert-OriginAndToken -Request $request
+        $payload = Receive-JsonPayload -Request $request
+        $result = Import-RepoExampleScenarioApk -Payload $payload
         Write-JsonResponse -Context $Context -StatusCode 200 -Value $result
         return
     }

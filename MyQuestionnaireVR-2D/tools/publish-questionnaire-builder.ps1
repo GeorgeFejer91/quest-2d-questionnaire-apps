@@ -85,10 +85,12 @@ if (Test-Path -LiteralPath $packageDir) {
 }
 
 $examplesDir = Join-Path $packageDir 'examples'
+$scenarioApksDir = Join-Path $examplesDir 'scenario-apks'
 $schemasDir = Join-Path $packageDir 'schemas'
 $unityDir = Join-Path $packageDir 'unity'
 $toolsDir = Join-Path $packageDir 'tools'
 New-Item -ItemType Directory -Force -Path $examplesDir | Out-Null
+New-Item -ItemType Directory -Force -Path $scenarioApksDir | Out-Null
 New-Item -ItemType Directory -Force -Path $schemasDir | Out-Null
 New-Item -ItemType Directory -Force -Path $unityDir | Out-Null
 New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
@@ -121,6 +123,38 @@ $exampleFiles = @(
 foreach ($example in $exampleFiles) {
     if (Test-Path -LiteralPath $example) {
         Copy-Item -LiteralPath $example -Destination (Join-Path $examplesDir ([System.IO.Path]::GetFileName($example))) -Force
+    }
+}
+
+$repoRoot = Split-Path -Parent $projectFull
+$scenarioApkExamples = @(
+    [ordered]@{
+        fileName = 'aesthetic-chills-1-trigger-demo.apk'
+        candidates = @(
+            (Join-Path $repoRoot 'example-scenario-apk\aesthetic-chills-1-trigger-demo.apk'),
+            (Join-Path $repoRoot 'example-scenario-apk\QuestQuestionnaireStimulusDemo.apk'),
+            (Join-Path $repoRoot 'AweGreatDictatorUnity\Builds\QuestQuestionnaireStimulusDemo.apk')
+        )
+    },
+    [ordered]@{
+        fileName = 'passive-2-trigger-demo.apk'
+        candidates = @(
+            (Join-Path $repoRoot 'example-scenario-apk\multi-trigger-demos\2-triggers\quest-questionnaire-stimulus-demo-2-triggers.apk'),
+            (Join-Path $repoRoot 'example-scenario-apk\multi-trigger-demos\2-triggers\QuestQuestionnaireStimulusDemo2Triggers.apk')
+        )
+    },
+    [ordered]@{
+        fileName = 'three-circle-3-trigger-demo.apk'
+        candidates = @(
+            (Join-Path $repoRoot 'example-scenario-apk\unity-project\three-circle-trigger-demo\Builds\QuestQuestionnaireThreeCircleTriggerDemo.apk'),
+            (Join-Path $repoRoot 'example-scenario-apk\unity-project\three-circle-trigger-demo\Builds\three-circle-trigger-demo.apk')
+        )
+    }
+)
+foreach ($scenarioApk in $scenarioApkExamples) {
+    $source = $scenarioApk.candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+    if ($source) {
+        Copy-Item -LiteralPath $source -Destination (Join-Path $scenarioApksDir $scenarioApk.fileName) -Force
     }
 }
 
@@ -204,6 +238,8 @@ Start-QuestionnaireBuilderOnlineConnector.cmd. It opens the connected local
 builder page served by the companion on 127.0.0.1:8776. The hosted page is
 static; use the connected local page when the browser blocks hosted-to-loopback
 API calls.
+Preloaded demos are scanned from local APK files under examples\scenario-apks
+when those APKs are bundled with this package.
 
 The builder runs local quality guardrails for headset questionnaire use:
 language item-count parity, participant burden, duplicate items, long wording,

@@ -190,8 +190,13 @@ ideas for future multiple-choice, text-entry, or temporal-tracer imports may
 remain in hidden developer code, but normal users should see only currently
 usable CSV/ZIP-backed elements.
 Section 1 should also include a user-friendly "Load example APK" fallback that
-loads `example-scenario-apk/questionnaire-trigger-catalog.json` from the repo
-and displays the GitHub folder URL where the example APK and Unity project live.
+points at local packaged example APK candidates and displays the GitHub folder
+URL where the example APK and Unity project live.
+When the local companion is connected, preloaded/repo examples must scan and
+stage an actual local example APK from the user's downloaded repo/program. The
+GUI must derive trigger count from the embedded trigger catalog inside that APK,
+not from a hardcoded GitHub/raw JSON catalog. Catalog-only previews are
+non-installable and must not unlock the Quest install path.
 In hosted final-product mode, loading any scenario APK/trigger catalog should
 automatically make the generated questionnaire APK the front door:
 `questionnaireFirst`, editable block 1, `openNext` to the scanned Unity

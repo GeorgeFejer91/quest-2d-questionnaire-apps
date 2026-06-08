@@ -931,13 +931,13 @@
 
         <div class="panel">
           <div class="section-title">
-            <h3>Load preloaded demo</h3>
+            <h3>Load preloaded demo APK</h3>
             <select id="exampleApkPreset" value="one-trigger-demo" aria-label="Preloaded demo">
               <option value="one-trigger-demo" selected>Aesthetic Chills 1 Trigger Demo</option>
               <option value="two-trigger-demo">Passive 2 Trigger Demo</option>
               <option value="three-circle-trigger-demo">Three Circle 3 Trigger Demo</option>
             </select>
-            <button id="loadExampleApkButton" type="button">Use selected demo</button>
+            <button id="loadExampleApkButton" type="button">Scan selected demo APK</button>
           </div>
           <div id="exampleApkStatus" class="issue">Example not loaded.</div>
           <p class="subtle">
@@ -1525,23 +1525,39 @@
     const exampleCatalogPreloads = {
       "one-trigger-demo": {
         folderUrl: exampleApkFolderUrl,
-        sourceName: "aesthetic-chills-1-trigger-demo catalog",
-        loadingText: "Loading Aesthetic Chills 1 Trigger Demo...",
-        loadedText: "Aesthetic Chills 1 Trigger Demo loaded: one passive Unity end trigger creates Block 1 plus Block 2.",
+        sourceName: "aesthetic-chills-1-trigger-demo APK",
+        loadingText: "Scanning local Aesthetic Chills 1 Trigger Demo APK...",
+        loadedText: "Aesthetic Chills 1 Trigger Demo APK scanned and staged for headset install.",
+        localApkCandidates: [
+          "examples/scenario-apks/aesthetic-chills-1-trigger-demo.apk",
+          "example-scenario-apk/QuestQuestionnaireStimulusDemo.apk",
+          "example-scenario-apk/aesthetic-chills-1-trigger-demo.apk",
+          "AweGreatDictatorUnity/Builds/QuestQuestionnaireStimulusDemo.apk"
+        ],
         catalog: exampleTriggerCatalog
       },
       "two-trigger-demo": {
         folderUrl: twoTriggerDemoFolderUrl,
-        sourceName: "passive-2-trigger-demo catalog",
-        loadingText: "Loading Passive 2 Trigger Demo...",
-        loadedText: "Passive 2 Trigger Demo loaded: two passive triggers create Block 1 plus Blocks 2 and 3.",
+        sourceName: "passive-2-trigger-demo APK",
+        loadingText: "Scanning local Passive 2 Trigger Demo APK...",
+        loadedText: "Passive 2 Trigger Demo APK scanned and staged for headset install.",
+        localApkCandidates: [
+          "examples/scenario-apks/passive-2-trigger-demo.apk",
+          "example-scenario-apk/multi-trigger-demos/2-triggers/quest-questionnaire-stimulus-demo-2-triggers.apk",
+          "example-scenario-apk/multi-trigger-demos/2-triggers/QuestQuestionnaireStimulusDemo2Triggers.apk"
+        ],
         catalog: twoTriggerDemoCatalog
       },
       "three-circle-trigger-demo": {
         folderUrl: threeCircleDemoFolderUrl,
-        sourceName: "three-circle-3-trigger-demo catalog",
-        loadingText: "Loading Three Circle 3 Trigger Demo...",
-        loadedText: "Three Circle 3 Trigger Demo loaded: three passive triggers create Block 1 plus Blocks 2, 3, and 4.",
+        sourceName: "three-circle-3-trigger-demo APK",
+        loadingText: "Scanning local Three Circle 3 Trigger Demo APK...",
+        loadedText: "Three Circle 3 Trigger Demo APK scanned and staged for headset install.",
+        localApkCandidates: [
+          "examples/scenario-apks/three-circle-3-trigger-demo.apk",
+          "example-scenario-apk/unity-project/three-circle-trigger-demo/Builds/QuestQuestionnaireThreeCircleTriggerDemo.apk",
+          "example-scenario-apk/unity-project/three-circle-trigger-demo/Builds/three-circle-trigger-demo.apk"
+        ],
         catalog: threeCircleTriggerCatalog
       }
     };
@@ -1571,6 +1587,7 @@
       { id: "generate-apk", label: "APK generation" },
       { id: "generate-apk-receipt", label: "APK generation receipts" },
       { id: "stage-scenario-apk", label: "scenario APK staging" },
+      { id: "stage-repo-example-scenario-apk", label: "repo example APK scan/stage" },
       { id: "install-apk", label: "Quest APK install" },
       { id: "install-apk-job-status", label: "Quest install job status" },
       { id: "quest-readiness", label: "Quest detection" },
@@ -2780,9 +2797,27 @@
       lastScenarioApkName = "";
       setStagedScenarioApkPath("");
       updateSelectedExampleApkLink();
-      setStagedScenarioApkStatus("Preloaded demo loaded from trigger catalog only; build or load a matching local scenario APK file before installing both APKs.", "warn");
-      applyTriggerCatalog(JSON.parse(JSON.stringify(preload.catalog)), preload.sourceName);
-      setExampleApkStatus(preload.loadedText, "ok");
+      setStagedScenarioApkStatus("Scanning a local repo example APK and staging that same APK for headset install...", "");
+      try {
+        const data = await callAppBackend("/api/stage-repo-example-scenario-apk", {
+          exampleKey: byId("exampleApkPreset").value || defaultExampleCatalogKey,
+          candidatePaths: preload.localApkCandidates || []
+        });
+        if (!data.catalog) {
+          throw new Error("The local example APK scan did not return an embedded trigger catalog.");
+        }
+        lastScenarioApkName = data.fileName || "";
+        setStagedScenarioApkPath(data.apk || data.staged?.apk || "");
+        applyTriggerCatalog(data.catalog, data.sourceApk || preload.sourceName);
+        const triggerCount = Array.isArray(data.catalog.triggers) ? data.catalog.triggers.length : Number(data.triggerCount || 0);
+        setStagedScenarioApkStatus(`Local repo APK staged for headset install: ${data.fileName || data.sourceApk}.`, "ok");
+        setExampleApkStatus(`${preload.loadedText} Scanned ${triggerCount} trigger${triggerCount === 1 ? "" : "s"} from ${data.sourceApk || "the local APK"}.`, "ok");
+      } catch (error) {
+        const message = error.message || String(error);
+        setStagedScenarioApkPath("");
+        setStagedScenarioApkStatus(`Local repo example APK is required before headset install. ${message}`, "error");
+        setExampleApkStatus(`Could not scan a local demo APK. ${message}`, "error");
+      }
     }
 
     function findEndOfCentralDirectory(bytes) {

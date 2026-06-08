@@ -146,7 +146,12 @@ Workflow constraint:
   software package and Windows launchers, because the hosted GUI needs that
   local companion for trusted PC actions.
 - Section 1 should include a user-friendly "Load example APK" fallback with the
-  GitHub folder URL for `example-scenario-apk/`.
+  GitHub folder URL for `example-scenario-apk/` and local packaged APK
+  candidates. When the local companion is connected, preloaded examples must
+  scan and stage an actual local APK from the downloaded repo/program; trigger
+  counts must come from the APK's embedded trigger catalog, not a hardcoded
+  GitHub/raw JSON catalog. Catalog-only previews are non-installable and must
+  not unlock Quest install.
 - Device-state helpers in developer runners, such as `Wake before Quest
   verification`, must be explicit opt-in controls, disabled by default, and
   hidden from the hosted final-product path unless they become a user-facing

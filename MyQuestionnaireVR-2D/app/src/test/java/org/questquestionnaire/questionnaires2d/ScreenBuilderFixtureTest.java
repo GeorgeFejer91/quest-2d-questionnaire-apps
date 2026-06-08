@@ -70,6 +70,14 @@ public final class ScreenBuilderFixtureTest {
                 QuestionnaireScreenBuilder.MaiaScreen maiaScreen = builder.maiaScreen(maia.get(0), 0, maia.size(), 4, true);
                 assertEquals(View.VISIBLE, maiaScreen.root.getVisibility());
                 assertEquals(6, maiaScreen.scores.getChildCount());
+                int[] selectedScores = new int[maia.size()];
+                for (int i = 0; i < selectedScores.length; i++) {
+                    selectedScores[i] = i % 6;
+                }
+                QuestionnaireScreenBuilder.LikertFormScreen likertForm = builder.maiaFormScreen(maia, selectedScores, "horizontal", true);
+                assertEquals(maia.size(), likertForm.scoreGroups.size());
+                assertEquals(6, likertForm.scoreGroups.get(0).getChildCount());
+                assertTrue(likertForm.next.isEnabled());
             }
             if (!prompts.isEmpty()) {
                 QuestionnaireScreenBuilder.PictographicScreen pictographicScreen = builder.pictographicScreen(

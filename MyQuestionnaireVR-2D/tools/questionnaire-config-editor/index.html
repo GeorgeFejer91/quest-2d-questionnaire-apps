@@ -436,6 +436,28 @@
       font-weight: 700;
     }
 
+    .questionnaire-element-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .questionnaire-page-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #b9d8d2;
+      border-radius: 999px;
+      background: #e8f5f2;
+      color: var(--accent-strong);
+      font-size: 12px;
+      font-weight: 800;
+      min-height: 24px;
+      padding: 2px 9px;
+      white-space: nowrap;
+    }
+
     .questionnaire-element-actions {
       display: grid;
       grid-template-columns: 1fr;
@@ -917,6 +939,13 @@
               <label>
                 Expected item count
                 <input id="maiaExpectedCount" type="number" min="1" step="1" value="37">
+              </label>
+              <label>
+                Score option layout
+                <select id="maiaScoreOptionLayout">
+                  <option value="vertical" selected>Vertical under each item</option>
+                  <option value="horizontal">Horizontal under each item</option>
+                </select>
               </label>
             </div>
             <label style="margin-top: 12px;">
@@ -1515,7 +1544,7 @@
       },
       likert: {
         label: "Likert",
-        detail: "Generic Likert items with optional established-instrument preloads.",
+        detail: "Multiple Likert items run as one scrollable long form with configurable score option layout.",
         templateKind: "likert",
         uploadType: "csv",
         preloadOptions: [["maia2", "Established Likert preload"]]
@@ -1642,6 +1671,16 @@
     function numberValue(id, fallback) {
       const value = Number(byId(id).value);
       return Number.isFinite(value) ? value : fallback;
+    }
+
+    function normalizeLikertScoreOptionLayout(value) {
+      const key = String(value || "").trim().toLowerCase().replace(/[\s_-]+/g, "");
+      return ["horizontal", "inline", "row", "rowscoreoptions"].includes(key) ? "horizontal" : "vertical";
+    }
+
+    function likertScoreOptionLayout() {
+      const control = byId("maiaScoreOptionLayout");
+      return normalizeLikertScoreOptionLayout(control ? control.value : "vertical");
     }
 
     function normalizeQuestionnaireSequence(value, fallbackMode = "") {
@@ -2138,6 +2177,9 @@
     }
 
     function elementDefinition(type) {
+      if (type === "maia2") {
+        return questionnaireElementDefinitions.likert;
+      }
       return questionnaireElementDefinitions[type] || {
         label: questionnaireModeLabel(type),
         detail: "",
@@ -2151,8 +2193,19 @@
       return type === "likert" ? "maia2" : type;
     }
 
-    function elementOptionsForBlock(blockKind) {
+    function availableElementTypesForBlock(blockKind, index, mapping = null) {
       const types = blockKind === "startup" ? startupElementTypes : triggerElementTypes;
+      const selected = new Set(allElementsForBlock(blockKind, index, mapping)
+        .filter(element => !element.templateOnly)
+        .map(element => runtimeElementType(element.type)));
+      return types.filter(type => !selected.has(runtimeElementType(type)));
+    }
+
+    function elementOptionsForBlock(blockKind, index, mapping = null) {
+      const types = availableElementTypesForBlock(blockKind, index, mapping);
+      if (types.length === 0) {
+        return `<option value="" disabled selected>All questionnaire types added</option>`;
+      }
       return types
         .map(type => `<option value="${escapeHtml(type)}">${escapeHtml(elementDefinition(type).label)}</option>`)
         .join("");
@@ -2222,6 +2275,9 @@
     }
 
     function addQuestionnaireElement(blockKind, index, type) {
+      if (!type) {
+        return;
+      }
       const runtimeType = runtimeElementType(type);
       setElementSelected(blockKind, index, runtimeType, true);
       if (runtimeType === "maia2") {
@@ -2304,7 +2360,23 @@
       `;
     }
 
-    function renderQuestionnaireElement(blockKind, index, element) {
+    function elementParameterControls(type) {
+      if (runtimeElementType(type) !== "maia2") {
+        return "";
+      }
+      const layout = likertScoreOptionLayout();
+      return `
+        <label>
+          Score option layout
+          <select data-action="likert-score-layout" aria-label="Likert score option layout">
+            <option value="vertical"${layout === "vertical" ? " selected" : ""}>Vertical under each item</option>
+            <option value="horizontal"${layout === "horizontal" ? " selected" : ""}>Horizontal under each item</option>
+          </select>
+        </label>
+      `;
+    }
+
+    function renderQuestionnaireElement(blockKind, index, element, pageIndex = 0, totalPages = 1) {
       const definition = elementDefinition(element.type);
       const templateNote = element.templateOnly ? "Template only until APK runtime support is added." : definition.detail;
       return `
@@ -2312,13 +2384,17 @@
           <div class="questionnaire-element-header">
             <div>
               <div class="questionnaire-element-title">${escapeHtml(definition.label)}</div>
-              <div class="subtle">${escapeHtml(templateNote)}</div>
+              <div class="questionnaire-element-meta">
+                <span class="questionnaire-page-chip">Page ${pageIndex + 1}${totalPages > 1 ? ` of ${totalPages}` : ""}</span>
+                <span class="subtle">${escapeHtml(templateNote)}</span>
+              </div>
             </div>
             <button type="button" data-action="remove-element" data-block-kind="${escapeHtml(blockKind)}" data-index="${index}" data-type="${escapeHtml(element.type)}" data-element-id="${escapeHtml(element.id)}" data-template-only="${element.templateOnly ? "true" : "false"}">Remove</button>
           </div>
           <div class="questionnaire-element-actions">
             <button type="button" data-action="download-template" data-type="${escapeHtml(element.type)}">Download template</button>
             ${elementPreloadControls(element.type)}
+            ${elementParameterControls(element.type)}
             <button type="button" data-action="upload-element" data-type="${escapeHtml(element.type)}">${definition.uploadType === "zip" ? "Upload ZIP" : "Upload CSV"}</button>
           </div>
         </div>
@@ -2330,7 +2406,7 @@
       if (elements.length === 0) {
         return `<div class="issue">No questionnaire elements assigned to this block yet.</div>`;
       }
-      return elements.map(element => renderQuestionnaireElement(blockKind, index, element)).join("");
+      return elements.map((element, elementIndex) => renderQuestionnaireElement(blockKind, index, element, elementIndex, elements.length)).join("");
     }
 
     function triggerHiddenControls(mapping, index) {
@@ -2351,7 +2427,8 @@
     }
 
     function renderBlockCard({ blockKind, index = 0, title, kicker, subtitle, mapping = null }) {
-      const options = elementOptionsForBlock(blockKind);
+      const options = elementOptionsForBlock(blockKind, index, mapping);
+      const addDisabled = availableElementTypesForBlock(blockKind, index, mapping).length === 0 ? " disabled" : "";
       const stepNumber = blockKind === "startup" ? 2 : index + 3;
       const segmentId = blockKind === "startup" ? "block-segment-startup" : `block-segment-trigger-${index}`;
       const subtitleElement = blockKind === "startup"
@@ -2374,10 +2451,10 @@
                 ${renderElementStack(blockKind, index, mapping)}
               </div>
               <div class="questionnaire-add-row">
-                <select data-add-select="${escapeHtml(blockKind)}" data-index="${index}" aria-label="Questionnaire type">
+                <select data-add-select="${escapeHtml(blockKind)}" data-index="${index}" aria-label="Questionnaire type"${addDisabled}>
                   ${options}
                 </select>
-                <button type="button" data-action="add-element" data-block-kind="${escapeHtml(blockKind)}" data-index="${index}">Add questionnaire element</button>
+                <button type="button" data-action="add-element" data-block-kind="${escapeHtml(blockKind)}" data-index="${index}"${addDisabled}>Add questionnaire element</button>
               </div>
             </div>
           </div>
@@ -2416,6 +2493,12 @@
       });
       host.querySelectorAll('[data-action="upload-element"]').forEach(button => {
         button.addEventListener("click", () => chooseUploadForElement(button.dataset.type));
+      });
+      host.querySelectorAll('[data-action="likert-score-layout"]').forEach(select => {
+        select.addEventListener("change", () => {
+          byId("maiaScoreOptionLayout").value = normalizeLikertScoreOptionLayout(select.value);
+          refreshBlockBuilderAfterEdit();
+        });
       });
     }
 
@@ -3101,6 +3184,8 @@
         max: 5,
         wholeNumbers: true,
         anchors: { left: "Never", right: "Always" },
+        presentationMode: "longForm",
+        scoreOptionLayout: likertScoreOptionLayout(),
         scoreGroups
       };
 
@@ -3524,6 +3609,12 @@
       if (maia && Array.isArray(maia.items) && maia.items.length !== maia.expectedItemCount) {
         issues.push({ level: "error", text: `Likert inline count is ${maia.items.length}; expected ${maia.expectedItemCount}.` });
       }
+      if (maia) {
+        const rawLikertLayout = String(maia.scoreOptionLayout || "vertical").trim().toLowerCase();
+        if (!["vertical", "horizontal", "inline", "row"].includes(rawLikertLayout)) {
+          issues.push({ level: "error", text: "Likert score option layout must be vertical or horizontal." });
+        }
+      }
 
       const slider = config.blocks.find(block => block.id === "custom_slider");
       if (slider) {
@@ -3943,6 +4034,7 @@
       if (maia) {
         byId("maiaSource").value = maia.source || "Assets/StreamingAssets/MAIA2_Questions.json";
         byId("maiaExpectedCount").value = maia.expectedItemCount || 37;
+        byId("maiaScoreOptionLayout").value = normalizeLikertScoreOptionLayout(maia.scoreOptionLayout || maia.optionLayout || maia.scoreLayout || "vertical");
         byId("maiaInline").value = Array.isArray(maia.items) ? JSON.stringify(maia.items, null, 2) : "";
       }
 
@@ -4099,6 +4191,21 @@
       return Number.isFinite(value) ? value : null;
     }
 
+    function likertScoreLayoutFromCsvRecords(records) {
+      for (const record of records) {
+        const direct = csvValue(record, ["scoreOptionLayout", "optionLayout", "scoreLayout", "layout", "orientation"]);
+        if (direct) {
+          return normalizeLikertScoreOptionLayout(direct);
+        }
+        const tag = csvValue(record, ["branchingTag", "metadata", "meta"]);
+        const match = tag.match(/(?:scoreOptionLayout|optionLayout|scoreLayout|layout|orientation)\s*=\s*([a-zA-Z_-]+)/);
+        if (match) {
+          return normalizeLikertScoreOptionLayout(match[1]);
+        }
+      }
+      return "";
+    }
+
     function normalizeBlock(value) {
       const key = csvHeaderKey(value);
       if (["slider", "custom_slider", "customslider"].includes(key)) {
@@ -4184,13 +4291,13 @@
         ],
         maia2: [
           header,
-          ["custom-likert-demo", "1.0.0", "1.0.0", "maia2", "likert", "likert_001", "English", "1", "Replace this with a Likert item.", "true", "6", "0", "5", "Never", "Always", "0=Never|1=Rarely|2=Sometimes|3=Often|4=Very often|5=Always", ""],
-          ["custom-likert-demo", "1.0.0", "1.0.0", "maia2", "likert", "likert_002", "English", "2", "Replace this with another Likert item.", "true", "6", "0", "5", "Never", "Always", "0=Never|1=Rarely|2=Sometimes|3=Often|4=Very often|5=Always", ""]
+          ["custom-likert-demo", "1.0.0", "1.0.0", "maia2", "likert", "likert_001", "English", "1", "Replace this with a Likert item.", "true", "6", "0", "5", "Never", "Always", "0=Never|1=Rarely|2=Sometimes|3=Often|4=Very often|5=Always", "scoreOptionLayout=vertical"],
+          ["custom-likert-demo", "1.0.0", "1.0.0", "maia2", "likert", "likert_002", "English", "2", "Replace this with another Likert item.", "true", "6", "0", "5", "Never", "Always", "0=Never|1=Rarely|2=Sometimes|3=Often|4=Very often|5=Always", "scoreOptionLayout=vertical"]
         ],
         likert: [
           header,
-          ["custom-likert-demo", "1.0.0", "1.0.0", "maia2", "likert", "likert_001", "English", "1", "I felt attentive during the task.", "true", "5", "", "", "Strongly disagree", "Strongly agree", "1=Strongly disagree|2=Disagree|3=Neutral|4=Agree|5=Strongly agree", ""],
-          ["custom-likert-demo", "1.0.0", "1.0.0", "maia2", "likert", "likert_002", "English", "2", "I felt confident about my responses.", "true", "5", "", "", "Strongly disagree", "Strongly agree", "1=Strongly disagree|2=Disagree|3=Neutral|4=Agree|5=Strongly agree", ""]
+          ["custom-likert-demo", "1.0.0", "1.0.0", "maia2", "likert", "likert_001", "English", "1", "I felt attentive during the task.", "true", "5", "", "", "Strongly disagree", "Strongly agree", "1=Strongly disagree|2=Disagree|3=Neutral|4=Agree|5=Strongly agree", "scoreOptionLayout=vertical"],
+          ["custom-likert-demo", "1.0.0", "1.0.0", "maia2", "likert", "likert_002", "English", "2", "I felt confident about my responses.", "true", "5", "", "", "Strongly disagree", "Strongly agree", "1=Strongly disagree|2=Disagree|3=Neutral|4=Agree|5=Strongly agree", "scoreOptionLayout=vertical"]
         ],
         multipleChoice: [
           header,
@@ -4244,7 +4351,7 @@
         "Never",
         "Always",
         choices,
-        "preload=maia2"
+        "preload=maia2;scoreOptionLayout=vertical"
       ]);
       return csvRowsToText([header, ...rows]);
     }
@@ -4633,6 +4740,7 @@
       if (maiaItems.length > 0) {
         byId("includeMaia").checked = true;
         byId("maiaExpectedCount").value = maiaItems.length;
+        byId("maiaScoreOptionLayout").value = likertScoreLayoutFromCsvRecords(maiaRows) || "vertical";
         byId("maiaInline").value = JSON.stringify(maiaItems, null, 2);
       }
 

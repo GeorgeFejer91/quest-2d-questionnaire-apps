@@ -68,6 +68,7 @@ public final class MainActivity extends Activity {
     private QuestionnaireScreenBuilder.LanguageScreen activeLanguageScreen;
     private QuestionnaireScreenBuilder.DemographicsScreen activeDemographicsScreen;
     private QuestionnaireScreenBuilder.MaiaScreen activeMaiaScreen;
+    private QuestionnaireScreenBuilder.LikertFormScreen activeLikertFormScreen;
     private QuestionnaireScreenBuilder.PictographicScreen activePictographicScreen;
     private QuestionnaireScreenBuilder.SliderScreen activeSliderScreen;
     private QuestionnaireScreenBuilder.TemporalTraceScreen activeTemporalTraceScreen;
@@ -237,11 +238,21 @@ public final class MainActivity extends Activity {
         }
 
         while ("maia".equals(currentScreen)) {
-            int score = AutoSessionRunner.valueAt(plan.maiaScores, currentMaiaIndex, currentMaiaIndex % 6, 0, 5);
-            RadioButton choice = (RadioButton) activeMaiaScreen.scores.getChildAt(score);
-            logReplayCommand("TriggerSelect", "maia2-" + (currentMaiaIndex + 1) + "-score-" + score);
-            choice.performClick();
-            activeMaiaScreen.next.performClick();
+            if (activeLikertFormScreen != null) {
+                for (int index = 0; index < activeLikertFormScreen.scoreGroups.size(); index++) {
+                    int score = AutoSessionRunner.valueAt(plan.maiaScores, index, index % 6, 0, 5);
+                    RadioButton choice = (RadioButton) activeLikertFormScreen.scoreGroups.get(index).getChildAt(score);
+                    logReplayCommand("TriggerSelect", "maia2-" + (index + 1) + "-score-" + score);
+                    choice.performClick();
+                }
+                activeLikertFormScreen.next.performClick();
+            } else {
+                int score = AutoSessionRunner.valueAt(plan.maiaScores, currentMaiaIndex, currentMaiaIndex % 6, 0, 5);
+                RadioButton choice = (RadioButton) activeMaiaScreen.scores.getChildAt(score);
+                logReplayCommand("TriggerSelect", "maia2-" + (currentMaiaIndex + 1) + "-score-" + score);
+                choice.performClick();
+                activeMaiaScreen.next.performClick();
+            }
         }
 
         while ("pictographic".equals(currentScreen)) {
@@ -489,54 +500,52 @@ public final class MainActivity extends Activity {
         return screen;
     }
 
-    private QuestionnaireScreenBuilder.MaiaScreen showMaiaQuestion() {
+    private QuestionnaireScreenBuilder.LikertFormScreen showMaiaQuestion() {
         if (maiaQuestions.isEmpty()) {
             showAfterMaia();
             return null;
         }
 
         currentScreen = "maia";
-        QuestionnaireScreenBuilder.MaiaScreen screen = screenBuilder.maiaScreen(
-            maiaQuestions.get(currentMaiaIndex),
-            currentMaiaIndex,
-            maiaQuestions.size(),
-            -1,
-            false);
-        activeMaiaScreen = screen;
+        currentMaiaIndex = 0;
+        activeMaiaScreen = null;
+        QuestionnaireScreenBuilder.LikertFormScreen screen = screenBuilder.maiaFormScreen(
+            maiaQuestions,
+            maiaSelectedScores(),
+            likertScoreOptionLayout(),
+            allMaiaQuestionsAnswered());
+        activeLikertFormScreen = screen;
         if (screen.backButton != null) {
             screen.backButton.setOnClickListener(v -> {
                 logUiInput("Back", "maia-visible-back");
                 handleBack();
             });
         }
-        screen.scores.setOnCheckedChangeListener((group, checkedId) -> {
-            int score = group.indexOfChild(findViewById(checkedId));
-            if (score >= 0) {
-                logUiInput("RadioSelect", "maia2-" + (currentMaiaIndex + 1) + "-score-" + score);
-            }
-            screen.next.setEnabled(checkedId != View.NO_ID);
-        });
+        for (int index = 0; index < screen.scoreGroups.size(); index++) {
+            final int answerIndex = index;
+            RadioGroup group = screen.scoreGroups.get(index);
+            group.setOnCheckedChangeListener((radioGroup, checkedId) -> {
+                int score = radioGroup.indexOfChild(findViewById(checkedId));
+                if (score >= 0) {
+                    logUiInput("RadioSelect", "maia2-" + (answerIndex + 1) + "-score-" + score);
+                    recordMaiaAnswer(answerIndex, score);
+                    updateDraftQuietly("maia2-" + (answerIndex + 1));
+                }
+                screen.next.setEnabled(allMaiaQuestionsAnswered());
+            });
+        }
         screen.next.setOnClickListener(v -> {
             logUiInput("Activate", "maia-next");
-            int score = screen.scores.indexOfChild(findViewById(screen.scores.getCheckedRadioButtonId()));
-            trimMaiaAnswersTo(currentMaiaIndex);
-            QuestionnaireData.Maia2Answer answer = new QuestionnaireData.Maia2Answer();
-            answer.order = currentMaiaIndex + 1;
-            answer.itemText = maiaQuestions.get(currentMaiaIndex);
-            answer.score = Math.max(0, score);
-            answer.responseTimestampUtc = TimeUtil.utcIsoNowMillis();
-            answer.responseTimestampUnixMs = TimeUtil.unixMillisNow();
-            maia2Answers.add(answer);
-            updateDraftQuietly("maia2-" + (currentMaiaIndex + 1));
-            currentMaiaIndex++;
-            if (currentMaiaIndex >= maiaQuestions.size()) {
-                showAfterMaia();
-            } else {
-                showMaiaQuestion();
+            if (!allMaiaQuestionsAnswered()) {
+                screen.next.setEnabled(false);
+                return;
             }
+            currentMaiaIndex = maiaQuestions.size();
+            updateDraftQuietly("maia2-complete");
+            showAfterMaia();
         });
         setContentView(screen.root);
-        logVisualStage("maia2", currentMaiaIndex == 0 ? "maia2-first" : "maia2-" + (currentMaiaIndex + 1));
+        logVisualStage("maia2", "maia2-form");
         return screen;
     }
 
@@ -967,6 +976,7 @@ public final class MainActivity extends Activity {
         activeLanguageScreen = null;
         activeDemographicsScreen = null;
         activeMaiaScreen = null;
+        activeLikertFormScreen = null;
         activePictographicScreen = null;
         activeSliderScreen = null;
         activeTemporalTraceScreen = null;
@@ -1162,13 +1172,7 @@ public final class MainActivity extends Activity {
         }
 
         if ("maia".equals(currentScreen)) {
-            if (currentMaiaIndex > 0) {
-                currentMaiaIndex--;
-                trimMaiaAnswersTo(currentMaiaIndex);
-                showMaiaQuestion();
-            } else {
-                showPreviousConfiguredModule(QuestionnaireLaunchContext.MODULE_MAIA2);
-            }
+            showPreviousConfiguredModule(QuestionnaireLaunchContext.MODULE_MAIA2);
             return;
         }
 
@@ -1217,8 +1221,7 @@ public final class MainActivity extends Activity {
         }
 
         if (QuestionnaireLaunchContext.MODULE_MAIA2.equals(previousModule) && !maiaQuestions.isEmpty()) {
-            currentMaiaIndex = Math.max(0, maiaQuestions.size() - 1);
-            trimMaiaAnswersTo(currentMaiaIndex);
+            currentMaiaIndex = 0;
             showMaiaQuestion();
             return;
         }
@@ -1281,6 +1284,70 @@ public final class MainActivity extends Activity {
             return !temporalDimensionsForLanguage().isEmpty();
         }
         return false;
+    }
+
+    private String likertScoreOptionLayout() {
+        QuestionnaireData.RuntimeBlock block = runtimeConfig != null ? runtimeConfig.findBlock("maia2") : null;
+        return block != null ? block.scoreOptionLayout : "vertical";
+    }
+
+    private int[] maiaSelectedScores() {
+        int[] scores = new int[maiaQuestions.size()];
+        for (int i = 0; i < scores.length; i++) {
+            scores[i] = existingMaiaScore(i);
+        }
+        return scores;
+    }
+
+    private int existingMaiaScore(int index) {
+        int order = index + 1;
+        for (QuestionnaireData.Maia2Answer answer : maia2Answers) {
+            if (answer.order == order) {
+                return answer.score;
+            }
+        }
+        return -1;
+    }
+
+    private void recordMaiaAnswer(int index, int score) {
+        QuestionnaireData.Maia2Answer answer = new QuestionnaireData.Maia2Answer();
+        answer.order = index + 1;
+        answer.itemText = maiaQuestions.get(index);
+        answer.score = Math.max(0, score);
+        answer.responseTimestampUtc = TimeUtil.utcIsoNowMillis();
+        answer.responseTimestampUnixMs = TimeUtil.unixMillisNow();
+
+        for (int i = 0; i < maia2Answers.size(); i++) {
+            if (maia2Answers.get(i).order == answer.order) {
+                maia2Answers.set(i, answer);
+                sortMaiaAnswers();
+                return;
+            }
+        }
+        maia2Answers.add(answer);
+        sortMaiaAnswers();
+    }
+
+    private void sortMaiaAnswers() {
+        maia2Answers.sort((left, right) -> Integer.compare(left.order, right.order));
+    }
+
+    private boolean allMaiaQuestionsAnswered() {
+        if (maiaQuestions.isEmpty()) {
+            return true;
+        }
+        boolean[] answered = new boolean[maiaQuestions.size()];
+        for (QuestionnaireData.Maia2Answer answer : maia2Answers) {
+            if (answer.order >= 1 && answer.order <= answered.length && answer.score >= 0) {
+                answered[answer.order - 1] = true;
+            }
+        }
+        for (boolean itemAnswered : answered) {
+            if (!itemAnswered) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void trimMaiaAnswersTo(int count) {

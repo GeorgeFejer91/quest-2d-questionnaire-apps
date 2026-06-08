@@ -110,6 +110,12 @@ Workflow constraint:
   entry, pictographic scales, and temporal tracer dimensions. Unsupported
   uploaded types must produce clear errors until the generated APK runtime and
   exporter support them end to end.
+- Model questionnaire element pages according to their runtime shape.
+  Self-contained modules such as temporal experience tracers need separately
+  configured units when the user wants another tracer page. Likert is different:
+  one Likert questionnaire element may contain many items in a scrollable
+  participant form, and the config/template path must let users choose whether
+  score options display vertically or horizontally under each item.
 - Prefer template/metafile upload paths over building bespoke UI for every
   questionnaire family in V2. The user should be able to download a CSV,
   manifest, or ZIP with placeholders, replace the values/assets locally, upload

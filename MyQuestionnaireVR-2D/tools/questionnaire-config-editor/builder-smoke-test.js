@@ -667,6 +667,7 @@ assert(!html.includes("<summary>Routing</summary>"), "Block cards should not exp
 assert(html.includes('id="dynamicBlockNavLinks"'), "Builder should have a dynamic nav outlet for scanned return blocks.");
 assert(html.includes('block-segment-startup'), "Block 1 should render as its own HTML segment.");
 assert(html.includes('block-segment-trigger-'), "Scanned Unity triggers should render as later block HTML segments.");
+assert(html.includes('questionnaire-page-chip'), "Questionnaire element cards should visibly mark participant pages.");
 assert(html.includes('trigger_1_complete'), "Repository example should use the one-trigger passive completion catalog.");
 assert(html.includes('label: "After trigger 1"'), "Repository example should label the passive return as After trigger 1.");
 assert(html.includes('id="exampleApkPreset"'), "Builder should expose a preloaded demo selector.");
@@ -683,6 +684,8 @@ assert(!html.includes('const startupElementTypes = ["demographics", "maia2"'), "
 assert(!html.includes('<h3>MAIA-2</h3>'), "MAIA-2 should not appear as a standalone questionnaire panel heading.");
 assert(!html.includes('>MAIA-2</button>'), "MAIA-2 should not appear as a standalone questionnaire button.");
 assert(!html.includes('Likert MAIA-2 preload'), "MAIA-2 should not appear as a visible top-level Likert option.");
+assert(html.includes('id="maiaScoreOptionLayout"'), "Likert blocks should expose a score option layout setting.");
+assert(html.includes('scoreOptionLayout=vertical'), "Likert CSV templates should show the score option layout metadata parameter.");
 assert(html.includes('<option value="temporalTracer">Temporal experience tracer</option>'), "Temporal tracer should appear as a visible questionnaire type in the product GUI.");
 assert(html.includes('Before experiment/running APK'), "Block 1 label should use experiment/running APK wording.");
 assert(html.includes('stage-scenario-apk'), "Builder should expose scenario APK staging before headset install.");
@@ -943,14 +946,20 @@ assert(context.__api.qualityReport(assignedTriggered).status === "pass", "Assign
 
 document.getElementById("block1ModuleMaia2").checked = true;
 document.getElementById("triggerModule0_slider").checked = true;
+document.getElementById("maiaScoreOptionLayout").value = "horizontal";
 context.__api.refresh();
 const customSequenced = context.__api.buildConfig();
+context.__api.loadConfig(customSequenced);
+const customSequencedBlockHtml = document.getElementById("triggerMappingList").innerHTML;
 assert(customSequenced.chainDefaults.questionnaireSequence.join(",") === "maia2", "GUI should add the runtime Likert block only when the user selects the Likert element.");
 assert(customSequenced.chainDefaults.questionnaireMode === "maia2", "A selected Likert preload should be represented as a Likert questionnaire block, not a default baseline.");
+assert(customSequenced.blocks.find(block => block.id === "maia2").presentationMode === "longForm", "Likert config should use the long-form presentation mode.");
+assert(customSequenced.blocks.find(block => block.id === "maia2").scoreOptionLayout === "horizontal", "Likert score option layout should be saved to generated config.");
 assert(customSequenced.triggerQuestionnaireMapping.triggers[0].questionnaireSequence.join(",") === "pictographic,slider", "GUI should add multiple modules to a Unity-return block.");
 assert(customSequenced.experimentBlockRegistry.blocks[0].extras["mq.questionnaireSequence"] === "pictographic,slider", "Registry should pass the multi-module sequence extra to the 2D APK.");
 assert(customSequenced.experimentBlockRegistry.blocks[0].expectedOutputs.pictographicSelections > 0, "Multi-module trigger block should expect pictographic outputs.");
 assert(customSequenced.experimentBlockRegistry.blocks[0].expectedOutputs.sliderAnswers > 0, "Multi-module trigger block should expect slider outputs.");
+assert(customSequencedBlockHtml.includes("Page 1 of 2") && customSequencedBlockHtml.includes("Page 2 of 2"), "Blocks with multiple questionnaire elements should render distinct participant page cards.");
 assert(context.__api.qualityReport(customSequenced).status === "pass", "Custom block sequence config should pass quality report.");
 
 document.getElementById("triggerModule1_temporalTracer").checked = true;
@@ -1153,6 +1162,8 @@ const likertImportedBlock = likertImportedConfig.blocks.find(block => block.id =
 assert(likertImportedConfig.questionnaireId === "custom-likert-demo", "Generic Likert CSV should import as a custom questionnaire.");
 assert(likertImportedBlock && likertImportedBlock.expectedItemCount === 2, "Generic Likert CSV should set the imported Likert item count.");
 assert(likertImportedBlock.items.length === 2, "Generic Likert CSV should populate inline Likert items.");
+assert(likertImportedBlock.presentationMode === "longForm", "Imported Likert config should preserve long-form presentation mode.");
+assert(likertImportedBlock.scoreOptionLayout === "vertical", "Imported Likert template should set a vertical score option layout by default.");
 assert(likertImport.context.__api.qualityReport(likertImportedConfig).status === "pass", "Generic Likert CSV import should pass quality guardrails.");
 const temporalImport = loadEditor();
 applyCsvStressTriggerCatalog(temporalImport);

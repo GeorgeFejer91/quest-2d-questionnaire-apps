@@ -6,6 +6,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 final class QuestionnaireData {
     private QuestionnaireData() {
@@ -128,6 +129,8 @@ final class QuestionnaireData {
         int min;
         int max;
         boolean wholeNumbers;
+        String presentationMode = "";
+        String scoreOptionLayout = "vertical";
         RuntimeAnchorSettings anchors;
         final List<RuntimeLanguageSource> languageSources = new ArrayList<>();
         final List<RuntimePictographicPrompt> prompts = new ArrayList<>();
@@ -144,6 +147,10 @@ final class QuestionnaireData {
             block.min = json.optInt("min", 0);
             block.max = json.optInt("max", 0);
             block.wholeNumbers = json.optBoolean("wholeNumbers", false);
+            block.presentationMode = json.optString("presentationMode", "");
+            block.scoreOptionLayout = normalizeScoreOptionLayout(
+                json.optString("scoreOptionLayout", json.optString("optionLayout", json.optString("scoreLayout", "vertical")))
+            );
 
             JSONObject anchorsJson = json.optJSONObject("anchors");
             if (anchorsJson != null) {
@@ -231,6 +238,14 @@ final class QuestionnaireData {
             }
 
             return block;
+        }
+
+        private static String normalizeScoreOptionLayout(String value) {
+            String cleaned = value == null ? "" : value.trim().toLowerCase(Locale.US).replaceAll("[\\s_-]+", "");
+            if ("horizontal".equals(cleaned) || "inline".equals(cleaned) || "row".equals(cleaned)) {
+                return "horizontal";
+            }
+            return "vertical";
         }
     }
 

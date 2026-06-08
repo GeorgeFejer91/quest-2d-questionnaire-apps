@@ -309,6 +309,8 @@ foreach ($block in @($config.blocks)) {
         min = if ($null -ne $block.min) { [int]$block.min } else { 0 }
         max = if ($null -ne $block.max) { [int]$block.max } else { 0 }
         wholeNumbers = [bool]$block.wholeNumbers
+        presentationMode = if ($block.presentationMode) { $block.presentationMode } else { '' }
+        scoreOptionLayout = if ($block.scoreOptionLayout) { $block.scoreOptionLayout } else { 'vertical' }
         anchors = $anchors
         languageSources = $languageSources
         prompts = $prompts

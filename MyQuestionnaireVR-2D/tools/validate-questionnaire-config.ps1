@@ -279,6 +279,13 @@ foreach ($block in $blocks) {
             if ($block.id -eq 'maia2' -and @($block.scoreGroups).Count -ne 8) {
                 Add-ConfigError "MAIA-2 block should define 8 score groups."
             }
+
+            if ($block.PSObject.Properties.Name -contains 'scoreOptionLayout') {
+                $layout = [string]$block.scoreOptionLayout
+                if ($layout -and $layout -notin @('vertical', 'horizontal')) {
+                    Add-ConfigError "Likert block $($block.id) scoreOptionLayout must be vertical or horizontal."
+                }
+            }
         }
         'pictographic' {
             if (@($block.prompts).Count -lt 1) {

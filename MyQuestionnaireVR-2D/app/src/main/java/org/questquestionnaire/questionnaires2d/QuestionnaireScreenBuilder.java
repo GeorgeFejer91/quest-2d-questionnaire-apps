@@ -17,6 +17,7 @@ import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -109,23 +110,15 @@ final class QuestionnaireScreenBuilder {
     }
 
     MaiaScreen maiaScreen(String question, int index, int total, int selectedScore, boolean nextEnabled) {
+        return maiaScreen(question, index, total, selectedScore, nextEnabled, "vertical");
+    }
+
+    MaiaScreen maiaScreen(String question, int index, int total, int selectedScore, boolean nextEnabled, String scoreOptionLayout) {
         BaseScreen base = base("Likert", true);
         body(base.content, String.format(Locale.US, "%d / %d", index + 1, total));
         question(base.content, question);
 
-        RadioGroup scores = new RadioGroup(context);
-        scores.setContentDescription("maia.score");
-        scores.setOrientation(RadioGroup.VERTICAL);
-        String[] labels = {"0 Never", "1", "2", "3", "4", "5 Always"};
-        for (int i = 0; i <= 5; i++) {
-            RadioButton radio = radio(labels[i]);
-            radio.setContentDescription("maia.score." + i);
-            radio.setLayoutParams(new RadioGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            scores.addView(radio);
-            if (i == selectedScore) {
-                radio.setChecked(true);
-            }
-        }
+        RadioGroup scores = likertScoreGroup("maia.score", selectedScore, scoreOptionLayout);
         base.content.addView(scores);
 
         Button next = button(index == total - 1 ? "Continue" : "Next", true);
@@ -133,6 +126,71 @@ final class QuestionnaireScreenBuilder {
         next.setEnabled(nextEnabled);
         base.footer.addView(next, footerButtonLayout(false));
         return new MaiaScreen(base.root, base.backButton, scores, next);
+    }
+
+    LikertFormScreen maiaFormScreen(List<String> questions, int[] selectedScores, String scoreOptionLayout, boolean nextEnabled) {
+        BaseScreen base = base("Likert", true);
+        body(base.content, String.format(Locale.US, "%d items", questions.size()));
+
+        List<RadioGroup> scoreGroups = new ArrayList<>();
+        for (int index = 0; index < questions.size(); index++) {
+            TextView prompt = label(String.format(Locale.US, "%d. %s", index + 1, questions.get(index)));
+            prompt.setContentDescription("maia.question." + index);
+            prompt.setTextColor(TEXT);
+            prompt.setTextSize(22);
+            prompt.setPadding(0, dp(16), 0, dp(8));
+            base.content.addView(prompt);
+
+            int selectedScore = selectedScores != null && index < selectedScores.length ? selectedScores[index] : -1;
+            RadioGroup scores = likertScoreGroup("maia.score." + index, selectedScore, scoreOptionLayout);
+            base.content.addView(scores);
+            scoreGroups.add(scores);
+        }
+
+        Button next = button("Continue", true);
+        next.setContentDescription("maia.next");
+        next.setEnabled(nextEnabled);
+        base.footer.addView(next, footerButtonLayout(false));
+        return new LikertFormScreen(base.root, base.backButton, scoreGroups, next);
+    }
+
+    private RadioGroup likertScoreGroup(String contentDescriptionPrefix, int selectedScore, String scoreOptionLayout) {
+        boolean horizontal = isHorizontalScoreLayout(scoreOptionLayout);
+        RadioGroup scores = new RadioGroup(context);
+        scores.setContentDescription(contentDescriptionPrefix);
+        scores.setOrientation(horizontal ? RadioGroup.HORIZONTAL : RadioGroup.VERTICAL);
+        if (horizontal) {
+            scores.setGravity(Gravity.CENTER_VERTICAL);
+        }
+
+        String[] labels = horizontal
+            ? new String[]{"0\nNever", "1", "2", "3", "4", "5\nAlways"}
+            : new String[]{"0 Never", "1", "2", "3", "4", "5 Always"};
+        for (int i = 0; i <= 5; i++) {
+            RadioButton radio = radio(labels[i]);
+            radio.setContentDescription(contentDescriptionPrefix + "." + i);
+            if (horizontal) {
+                radio.setGravity(Gravity.CENTER);
+                radio.setTextSize(16);
+                radio.setPadding(0, 0, 0, 0);
+                radio.setLayoutParams(new RadioGroup.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            } else {
+                radio.setLayoutParams(new RadioGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            }
+            scores.addView(radio);
+            if (i == selectedScore) {
+                radio.setChecked(true);
+            }
+        }
+        return scores;
+    }
+
+    private static boolean isHorizontalScoreLayout(String value) {
+        if (value == null) {
+            return false;
+        }
+        String cleaned = value.trim().toLowerCase(Locale.US).replaceAll("[\\s_-]+", "");
+        return "horizontal".equals(cleaned) || "inline".equals(cleaned) || "row".equals(cleaned);
     }
 
     PictographicScreen pictographicScreen(
@@ -509,6 +567,20 @@ final class QuestionnaireScreenBuilder {
             this.root = root;
             this.backButton = backButton;
             this.scores = scores;
+            this.next = next;
+        }
+    }
+
+    static final class LikertFormScreen {
+        final LinearLayout root;
+        final Button backButton;
+        final List<RadioGroup> scoreGroups;
+        final Button next;
+
+        LikertFormScreen(LinearLayout root, Button backButton, List<RadioGroup> scoreGroups, Button next) {
+            this.root = root;
+            this.backButton = backButton;
+            this.scoreGroups = scoreGroups;
             this.next = next;
         }
     }

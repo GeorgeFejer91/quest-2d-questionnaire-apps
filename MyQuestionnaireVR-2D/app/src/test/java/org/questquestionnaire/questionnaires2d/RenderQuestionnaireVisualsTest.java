@@ -92,7 +92,11 @@ public final class RenderQuestionnaireVisualsTest {
 
                 renders.put(renderOne(output, dimension, "demographics", "demographics", language, builder.demographicsScreen(uiText, demographics).root));
                 if (!maia.isEmpty()) {
-                    renders.put(renderOne(output, dimension, "maia2-first", "maia", language, builder.maiaScreen(maia.get(0), 0, maia.size(), 4, true).root));
+                    int[] selectedScores = new int[maia.size()];
+                    for (int i = 0; i < selectedScores.length; i++) {
+                        selectedScores[i] = i % 6;
+                    }
+                    renders.put(renderOne(output, dimension, "maia2-form", "maia", language, builder.maiaFormScreen(maia, selectedScores, maiaBlock.scoreOptionLayout, true).root));
                 }
                 if (!prompts.isEmpty()) {
                     renders.put(renderOne(
@@ -587,7 +591,9 @@ public final class RenderQuestionnaireVisualsTest {
 
         Rect bounds = boundsInRoot(root, view);
         Rect visibleBounds = visibleBoundsInRoot(root, view);
-        if (bounds.left < 0 || bounds.top < 0 || bounds.right > root.getWidth() || bounds.bottom > root.getHeight()) {
+        boolean horizontallyClipped = bounds.left < 0 || bounds.right > root.getWidth();
+        boolean verticallyClipped = bounds.top < 0 || bounds.bottom > root.getHeight();
+        if (horizontallyClipped || (verticallyClipped && !isInsideScrollView(view))) {
             result.warnings.put("view clipped: " + describe(view) + " bounds=" + bounds.toShortString());
         }
 
@@ -604,7 +610,7 @@ public final class RenderQuestionnaireVisualsTest {
             checkTextFit((TextView) view, result);
         }
 
-        if (("demographics".equals(stage) || "maia2-first".equals(stage) || "pictographic".equals(stage)) &&
+        if (("demographics".equals(stage) || "maia2-form".equals(stage) || "pictographic".equals(stage)) &&
             view instanceof CompoundButton && ((CompoundButton) view).isChecked()) {
             result.passes.put("selected state visible: " + describe(view));
         }
@@ -624,6 +630,18 @@ public final class RenderQuestionnaireVisualsTest {
                 collectChecks(stage, root, group.getChildAt(i), interactive, result);
             }
         }
+    }
+
+    private boolean isInsideScrollView(View view) {
+        View current = view;
+        while (current.getParent() instanceof View) {
+            View parent = (View) current.getParent();
+            if (parent instanceof ScrollView) {
+                return true;
+            }
+            current = parent;
+        }
+        return false;
     }
 
     private void checkTextFit(TextView textView, CheckResult result) {

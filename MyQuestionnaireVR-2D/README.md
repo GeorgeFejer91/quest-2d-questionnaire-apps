@@ -98,10 +98,14 @@ The hosted product flow exposes CSV upload and downloadable type templates in
 the trigger/block step. Treat these like Qualtrics-style starting sheets:
 slider/VAS, Likert, multiple choice, text entry, and temporal tracer dimensions
 are question-type templates. MAIA-2 is a preloaded named questionnaire example,
-not the definition of generic Likert. The current APK runtime can build and
-render arbitrary uploaded slider/VAS item sets; other uploaded question types
-are template/protocol preloads until the APK runtime and exporter support them
-end to end, and unsupported rows should fail loudly.
+not the definition of generic Likert. Likert templates can contain many items
+inside one scrollable participant form, with score options rendered vertically
+or horizontally under each item. Self-contained elements such as temporal
+experience tracer dimensions are configured as individual units when another
+tracer page is needed. The current APK runtime can build and render arbitrary
+uploaded slider/VAS, Likert, pictographic, and temporal tracer item sets;
+unsupported rows should fail loudly until their runtime/exporter support is
+end to end.
 The generated 2D questionnaire APK is the study logic owner: it owns block
 order, participant/session state, trigger interpretation, exports, and the
 next pending questionnaire block. Unity APKs should stay passive and emit

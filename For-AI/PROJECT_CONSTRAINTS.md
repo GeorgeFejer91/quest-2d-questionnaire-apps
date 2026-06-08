@@ -197,6 +197,13 @@ questionnaire examples/library content under a generic type, not top-level GUI
 questionnaire types or the definition of Likert. Until the APK runtime supports
 a type end to end, the GUI must fail unsupported uploaded type rows loudly
 instead of silently converting them into the wrong questionnaire.
+Model questionnaire elements according to their runtime shape. Self-contained
+elements such as temporal experience tracer dimensions are configured as
+individual units with their own parameters; users add another unit when they
+want another tracer page. Likert questionnaires are long-form elements: many
+items can live inside one questionnaire element with a scrollable participant
+screen, and generated config must preserve whether score options render
+vertically or horizontally under each item.
 The builder should prefer downloadable templates and placeholder metafiles over
 bespoke UI for every custom questionnaire type. Users download a CSV, manifest,
 or ZIP placeholder, replace items/assets/parameters locally, reupload it, and

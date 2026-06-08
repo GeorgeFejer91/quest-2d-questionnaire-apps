@@ -3,17 +3,17 @@ using UnityEngine;
 
 public static class QuestQuestionnaireChainBridge
 {
-    public const string QuestionnairePackage = "org.viscereality.questionnaires2d";
-    public const string QuestionnaireActivity = "org.viscereality.questionnaires2d.MainActivity";
-    public const string TemporalTracerPackage = "org.viscereality.temporaltracer2d";
-    public const string TemporalTracerActivity = "org.viscereality.temporaltracer2d.MainActivity";
-    public const string BrokerActivity = "org.viscereality.questionnaires2d.QuestChainBrokerActivity";
-    public const string ChainLinkPackage = "org.viscereality.chainlink";
-    public const string ChainLinkActivity = "org.viscereality.chainlink.ChainLinkActivity";
-    public const string RunAction = "org.viscereality.questionnaires2d.RUN";
-    public const string TemporalTracerRunAction = "org.viscereality.temporaltracer2d.RUN";
-    public const string BrokerAction = "org.viscereality.questionnaires2d.BROKER";
-    public const string ChainLinkCommandAction = "org.viscereality.chainlink.COMMAND";
+    public const string QuestionnairePackage = "org.questquestionnaire.questionnaires2d";
+    public const string QuestionnaireActivity = "org.questquestionnaire.questionnaires2d.MainActivity";
+    public const string TemporalTracerPackage = "org.questquestionnaire.temporaltracer2d";
+    public const string TemporalTracerActivity = "org.questquestionnaire.temporaltracer2d.MainActivity";
+    public const string BrokerActivity = "org.questquestionnaire.questionnaires2d.QuestChainBrokerActivity";
+    public const string ChainLinkPackage = "org.questquestionnaire.chainlink";
+    public const string ChainLinkActivity = "org.questquestionnaire.chainlink.ChainLinkActivity";
+    public const string RunAction = "org.questquestionnaire.questionnaires2d.RUN";
+    public const string TemporalTracerRunAction = "org.questquestionnaire.temporaltracer2d.RUN";
+    public const string BrokerAction = "org.questquestionnaire.questionnaires2d.BROKER";
+    public const string ChainLinkCommandAction = "org.questquestionnaire.chainlink.COMMAND";
     public const string BrokerActionExtra = "mq.brokerAction";
     public const string BrokerPackageExtra = "mq.brokerPackage";
     public const string BrokerActivityExtra = "mq.brokerActivity";
@@ -32,6 +32,15 @@ public static class QuestQuestionnaireChainBridge
     public static void LaunchQuestionnaire(Dictionary<string, string> extras)
     {
         LaunchPanel(QuestionnairePackage, QuestionnaireActivity, RunAction, extras);
+    }
+
+    public static void LaunchQuestionnaireTrigger(string triggerId, Dictionary<string, string> extras = null)
+    {
+        var allExtras = extras == null
+            ? new Dictionary<string, string>()
+            : new Dictionary<string, string>(extras);
+        allExtras["mq.triggerId"] = triggerId ?? "";
+        LaunchQuestionnaire(allExtras);
     }
 
     public static void LaunchTemporalTracer(Dictionary<string, string> extras)

@@ -100,10 +100,10 @@ function Get-ShortRunName {
 function Is-CorePackage {
     param([string]$PackageName)
     $corePackages = @(
-        'org.viscereality.questionnaires2d',
-        'org.viscereality.chainlink',
-        'org.viscereality.orchestrator',
-        'org.viscereality.chainhookwrapper'
+        'org.questquestionnaire.questionnaires2d',
+        'org.questquestionnaire.chainlink',
+        'org.questquestionnaire.orchestrator',
+        'org.questquestionnaire.chainhookwrapper'
     )
     return $corePackages -contains $PackageName
 }
@@ -214,7 +214,7 @@ $failedRuns = @($runs | Where-Object { $_.status -ne 'pass' })
 $status = if ($failedRuns.Count -eq 0) { 'pass' } else { 'fail' }
 
 $summary = [ordered]@{
-    schemaVersion = 'viscereality.chainlink-scenario-batch.v1'
+    schemaVersion = 'questquestionnaire.chainlink-scenario-batch.v1'
     status = $status
     dryRun = [bool]$DryRun
     projectPath = $ProjectPath

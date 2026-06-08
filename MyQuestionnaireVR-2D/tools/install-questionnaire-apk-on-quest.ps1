@@ -5,7 +5,7 @@ param(
     [string]$OutputRoot = "",
     [string]$RunId = "",
     [int]$WaitSeconds = 0,
-    [string]$Package = "org.viscereality.questionnaires2d",
+    [string]$Package = "org.questquestionnaire.questionnaires2d",
     [switch]$DryRun
 )
 

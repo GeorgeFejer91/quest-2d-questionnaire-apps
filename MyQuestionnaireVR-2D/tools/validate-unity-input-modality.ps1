@@ -14,7 +14,7 @@ if ([string]::IsNullOrWhiteSpace($RunId)) {
     $RunId = "unity-input-modality-" + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
 }
 if ([string]::IsNullOrWhiteSpace($UnityProjectPath)) {
-    $UnityProjectPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\AweGreatDictatorUnity'))
+    $UnityProjectPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\QuestionnaireStimulusUnity'))
 }
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path (Split-Path -Parent $PSScriptRoot) "artifacts\unity-input-modality\$RunId"

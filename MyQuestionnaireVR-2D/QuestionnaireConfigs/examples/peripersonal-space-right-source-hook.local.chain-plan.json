@@ -1,21 +1,21 @@
 {
     "schemaVersion":  "my-questionnaire-2d.chain-plan.v1",
     "chainId":  "peripersonal-space-right-source-hook-chain",
-    "questionnaireId":  "viscereality-maia2",
+    "questionnaireId":  "quest-questionnaire-maia2",
     "questionnaireVersion":  "1.0.0",
     "defaultFinishBehavior":  "resumeCaller",
     "steps":  [
                   {
                       "id":  "peripersonal-space-right-source-hook",
                       "type":  "scenario",
-                      "package":  "com.Viscereality.ViscerealityPeriPersonalSpaceRight",
-                      "action":  "org.viscereality.CHAIN_COMMAND",
+                      "package":  "org.questquestionnaire.stimulusdemo",
+                      "action":  "org.questquestionnaire.CHAIN_COMMAND",
                       "command":  "startScenario",
                       "extras":  {
                                      "scenarioId":  "peripersonal-space-right",
                                      "trialId":  "trial-01",
                                      "mq.sessionId":  "peripersonal-space-right-session",
-                                     "mq.experimentId":  "viscereality-experiment",
+                                     "mq.experimentId":  "questquestionnaire-experiment",
                                      "mq.scenarioId":  "peripersonal-space-right",
                                      "mq.trialId":  "trial-01",
                                      "mq.participantId":  "P001",
@@ -27,11 +27,11 @@
                   {
                       "id":  "questionnaire-after-peripersonal-space-right",
                       "type":  "questionnaire",
-                      "package":  "org.viscereality.questionnaires2d",
+                      "package":  "org.questquestionnaire.questionnaires2d",
                       "activity":  ".MainActivity",
                       "extras":  {
                                      "mq.sessionId":  "peripersonal-space-right-session",
-                                     "mq.experimentId":  "viscereality-experiment",
+                                     "mq.experimentId":  "questquestionnaire-experiment",
                                      "mq.scenarioId":  "peripersonal-space-right",
                                      "mq.trialId":  "trial-01",
                                      "mq.participantId":  "P001",

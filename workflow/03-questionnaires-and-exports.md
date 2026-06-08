@@ -71,13 +71,13 @@ receive result metadata, but it should not be the only place data lives.
 Demographic exports:
 
 ```text
-/sdcard/Android/data/org.viscereality.questionnaires2d/files/QuestionnaireExports
+/sdcard/Android/data/org.questquestionnaire.questionnaires2d/files/QuestionnaireExports
 ```
 
 Temporal tracer exports:
 
 ```text
-/sdcard/Android/data/org.viscereality.temporaltracer2d/files/TemporalTraceExports
+/sdcard/Android/data/org.questquestionnaire.temporaltracer2d/files/TemporalTraceExports
 ```
 
 Use unique run ids and participant/session metadata in filenames and rows so

@@ -1,18 +1,18 @@
 {
   "schemaVersion": "my-questionnaire-2d.chain-plan.v1",
   "chainId": "questionnaire-then-peripersonal-space-right",
-  "questionnaireId": "viscereality-maia2",
+  "questionnaireId": "quest-questionnaire-maia2",
   "questionnaireVersion": "1.0.0",
   "defaultFinishBehavior": "resumeCaller",
   "steps": [
     {
       "id": "questionnaire-before-peripersonal-space-right",
       "type": "questionnaire",
-      "package": "org.viscereality.questionnaires2d",
+      "package": "org.questquestionnaire.questionnaires2d",
       "activity": ".MainActivity",
       "extras": {
         "mq.sessionId": "questionnaire-before-peripersonal-space-right-session",
-        "mq.experimentId": "viscereality-peripersonal",
+        "mq.experimentId": "questquestionnaire-peripersonal",
         "mq.scenarioId": "pre-peripersonal-questionnaire",
         "mq.trialId": "trial-01",
         "mq.participantId": "P001",
@@ -24,12 +24,12 @@
     {
       "id": "peripersonal-space-right-wrapper",
       "type": "scenario",
-      "package": "org.viscereality.chainhookwrapper",
+      "package": "org.questquestionnaire.chainhookwrapper",
       "activity": ".ChainHookActivity",
-      "action": "org.viscereality.CHAIN_COMMAND",
+      "action": "org.questquestionnaire.CHAIN_COMMAND",
       "command": "launchTarget",
       "extras": {
-        "targetPackage": "com.Viscereality.ViscerealityPeriPersonalSpaceRight",
+        "targetPackage": "org.questquestionnaire.stimulusdemo",
         "targetActivity": "com.unity3d.player.UnityPlayerGameActivity",
         "scenarioId": "peripersonal-space-right"
       }

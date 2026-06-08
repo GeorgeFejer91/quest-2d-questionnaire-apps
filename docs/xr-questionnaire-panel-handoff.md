@@ -11,11 +11,18 @@ The product path must not depend on ADB foreground switching, force-stop,
 package killing, or Meta menu navigation. ADB remains valid for installation,
 log capture, evidence pulls, and developer stress tests.
 
+The generated 2D questionnaire APK is the study logic owner. Unity/stimulus
+APKs are passive trigger emitters: they present stimulus content and emit simple
+trigger events, but they do not decide questionnaire order, questionnaire type,
+scoring, participant state, block progression, or export behavior. The
+questionnaire APK interprets each `mq.triggerId` against its own protocol state
+and resumes the next configured block.
+
 ## Contract
 
-The foreground XR app owns semantic triggers. When the app reaches an event,
-it launches the appropriate 2D panel with an explicit component intent and the
-`mq.handoff.v1` extras below.
+The foreground XR app owns only stimulus timing and the physical moment a
+trigger fires. When the app reaches that event, it launches the 2D questionnaire
+APK with an explicit component intent and the `mq.handoff.v1` extras below.
 
 Required extras:
 
@@ -23,11 +30,20 @@ Required extras:
 mq.handoffSchema=mq.handoff.v1
 mq.sessionId=<stable session id>
 mq.triggerId=<manifest trigger id>
-mq.blockId=<generated block id>
-mq.blockNumber=<three digit block number>
 mq.scenarioId=<scenario/study id>
 mq.finishBehavior=resumeCaller
 ```
+
+Optional developer fallback extras:
+
+```text
+mq.blockId=<generated block id>
+mq.blockNumber=<three digit block number>
+```
+
+Use `mq.triggerId` as the normal Unity-to-questionnaire contract. `mq.blockId`
+and `mq.blockNumber` are for diagnostics, explicit tests, or legacy plans; they
+should not become Unity's questionnaire-routing decision surface.
 
 Preferred return extra:
 
@@ -79,8 +95,8 @@ The 2D panel activities should be exported, resizeable, `singleTop`, and
 launched by explicit action/component pairs:
 
 ```text
-org.viscereality.questionnaires2d.RUN
-org.viscereality.temporaltracer2d.RUN
+org.questquestionnaire.questionnaires2d.RUN
+org.questquestionnaire.temporaltracer2d.RUN
 ```
 
 ## Focus Expectations
@@ -121,8 +137,10 @@ Meta Home -> 2D demographics -> Unity Start experiment gate -> video/stimulus
 That removes the first "questionnaire over a running Unity video" transition.
 Unity should consume the demographics completion extras, show the foreground
 start target, and start media only after real input inside Unity. Later
-Unity-triggered questionnaire/tracer panels still need the explicit
-panel-focus pause/resume and result-clearing behavior below.
+Unity-triggered questionnaire/tracer panels still use passive trigger emission:
+Unity sends `mq.triggerId`; the questionnaire APK decides the next questionnaire
+block and still needs the explicit panel-focus pause/resume and result-clearing
+behavior below.
 
 Demo and stimulus Unity APKs should advertise both hands and controllers unless
 the experiment explicitly requires controller-only input. In Unity/OpenXR that
@@ -212,7 +230,7 @@ The 2026-06-07 live Quest pass
 PendingIntent product-path trial: Unity launched once, trigger 1 returned from
 the questionnaire, video playback resumed and produced non-black frame markers,
 trigger 2 launched Temporal Tracer, Temporal Tracer exported 12 SVG/JSON traces
-plus CSV/session files, and Unity received `AWE_DEMO_COMPLETE` after the tracer
+plus CSV/session files, and Unity received `QQ_STIMULUS_COMPLETE` after the tracer
 return. The trial still leaves the production decision gate open because the
 validator requires 10 clean real Quest trials and a manual headset pass before
 defaulting Candidate A.
@@ -261,7 +279,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools
 The 2026-06-07 full companion pass wrote
 `MyQuestionnaireVR-2D\artifacts\builder-companion-workflow\builder-companion-20260607T013607Z\builder-companion-workflow-summary.json`
 and generated
-`MyQuestionnaireVR-2D\Builds\viscereality-maia2-1.0.0.apk` through the local
+`MyQuestionnaireVR-2D\Builds\quest-questionnaire-maia2-1.0.0.apk` through the local
 `/api/generate-apk` endpoint. The companion validator also dry-runs the
 standalone `/api/direct-handoff` job with real questionnaire, temporal tracer,
 and Unity APKs so the direct PendingIntent package/activity/catalog preflight
@@ -329,7 +347,7 @@ foreground switching after the initial Unity launch.
 The end-to-end builder-to-Quest evidence matrix is:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\validate-builder-to-quest-workflow.ps1 -ConfigPath .\MyQuestionnaireVR-2D\QuestionnaireConfigs\generated\viscereality-maia2.config.json -RunQuestReadiness -Serial <quest-serial>
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\validate-builder-to-quest-workflow.ps1 -ConfigPath .\MyQuestionnaireVR-2D\QuestionnaireConfigs\generated\quest-questionnaire-maia2.config.json -RunQuestReadiness -Serial <quest-serial>
 ```
 
 The hosted/offline GUI exposes the same gate through the companion

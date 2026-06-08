@@ -2322,6 +2322,61 @@ function Receive-JsonPayload {
     return $body | ConvertFrom-Json
 }
 
+function Save-StagedScenarioApk {
+    param([object]$Payload)
+
+    $fileName = if ($Payload.PSObject.Properties.Name -contains 'fileName') { [string]$Payload.fileName } else { 'scenario.apk' }
+    $base64 = if ($Payload.PSObject.Properties.Name -contains 'base64') { [string]$Payload.base64 } else { '' }
+    if ([string]::IsNullOrWhiteSpace($base64)) {
+        throw "Scenario APK upload is missing base64 content."
+    }
+
+    $safeName = Get-SafeName -Value ([System.IO.Path]::GetFileName($fileName))
+    if (-not $safeName.EndsWith('.apk', [System.StringComparison]::OrdinalIgnoreCase)) {
+        $safeName = "$safeName.apk"
+    }
+
+    $runId = 'builder-scenario-apk-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    $targetDir = Join-Path $ProjectPath ("artifacts\builder-scenario-apks\$runId")
+    New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
+
+    $targetPath = Join-Path $targetDir $safeName
+    $bytes = [Convert]::FromBase64String($base64)
+    [System.IO.File]::WriteAllBytes($targetPath, $bytes)
+
+    $sha = ''
+    try {
+        $sha = (Get-FileHash -LiteralPath $targetPath -Algorithm SHA256).Hash
+    }
+    catch {
+        $sha = ''
+    }
+
+    $summaryPath = Join-Path $targetDir 'staged-scenario-apk-summary.json'
+    $summary = [ordered]@{
+        status = 'ok'
+        schemaVersion = 'questquestionnaire.builder.staged-scenario-apk.v1'
+        runId = $runId
+        fileName = $safeName
+        apk = $targetPath
+        bytes = $bytes.Length
+        sha256 = $sha
+        stagedAt = (Get-Date).ToString('o')
+    }
+    $summary | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
+
+    return [ordered]@{
+        status = 'ok'
+        runId = $runId
+        fileName = $safeName
+        apk = $targetPath
+        bytes = $bytes.Length
+        sha256 = $sha
+        artifactDir = $targetDir
+        summaryPath = $summaryPath
+    }
+}
+
 function Resolve-NodeCandidate {
     $candidates = New-Object 'System.Collections.Generic.List[string]'
     $command = Get-Command node -ErrorAction SilentlyContinue
@@ -2629,6 +2684,7 @@ function New-StatusPayload {
             'workflow-job-status',
             'workflow-receipt',
             'quest-readiness',
+            'stage-scenario-apk',
             'install-apk',
             'install-apk-job-status',
             'quest-replay',
@@ -2825,6 +2881,14 @@ function Handle-Request {
         $payload = Receive-JsonPayload -Request $request
         $result = Invoke-QuestReadinessCheck -Payload $payload
         Write-JsonResponse -Context $Context -StatusCode ($(if ($result.status -eq 'ok') { 200 } else { 500 })) -Value $result
+        return
+    }
+
+    if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/stage-scenario-apk') {
+        Assert-OriginAndToken -Request $request
+        $payload = Receive-JsonPayload -Request $request
+        $result = Save-StagedScenarioApk -Payload $payload
+        Write-JsonResponse -Context $Context -StatusCode 200 -Value $result
         return
     }
 

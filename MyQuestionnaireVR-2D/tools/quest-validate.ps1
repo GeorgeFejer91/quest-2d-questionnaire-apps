@@ -16,9 +16,9 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$package = "org.viscereality.questionnaires2d"
-$activity = "org.viscereality.questionnaires2d.MainActivity"
-$legacyUnityPackage = "org.viscereality.questionnaires"
+$package = "org.questquestionnaire.questionnaires2d"
+$activity = "org.questquestionnaire.questionnaires2d.MainActivity"
+$legacyUnityPackage = "org.questquestionnaire.questionnaires"
 if ([string]::IsNullOrWhiteSpace($Apk)) {
     $apk = Join-Path $ProjectPath 'Builds\MyQuestionnaireVR-2D.apk'
 }
@@ -153,12 +153,56 @@ function Get-ExpectedCounts {
     $pictographicBlock = @($runtimeConfig.blocks | Where-Object { $_.type -eq 'pictographic' } | Select-Object -First 1)[0]
     $sliderBlock = @($runtimeConfig.blocks | Where-Object { $_.type -eq 'slider' } | Select-Object -First 1)[0]
 
-    return [ordered]@{
-        maia2Answers = if ($maiaBlock) { [int]$maiaBlock.expectedItemCount } else { 0 }
-        maia2Scores = if ($maiaBlock) { 8 } else { 0 }
-        pictographicSelections = if ($pictographicBlock) { @($pictographicBlock.prompts).Count } else { 0 }
-        questionnaireAnswers = if ($sliderBlock) { [int]$sliderBlock.expectedItemCount } else { 0 }
+    $sequence = @($runtimeConfig.chainDefaults.questionnaireSequence | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
+    $mode = if ($runtimeConfig.chainDefaults.questionnaireMode) { [string]$runtimeConfig.chainDefaults.questionnaireMode } else { "" }
+    $activeModules = New-Object 'System.Collections.Generic.HashSet[string]'
+    if ($sequence.Count -gt 0) {
+        foreach ($module in $sequence) { $activeModules.Add([string]$module) | Out-Null }
     }
+    elseif ($mode -eq "none") {
+        # Intentionally empty first block.
+    }
+    elseif ($mode -eq "demographics") {
+        $activeModules.Add("demographics") | Out-Null
+    }
+    elseif ($mode -eq "baseline") {
+        $activeModules.Add("demographics") | Out-Null
+        $activeModules.Add("maia2") | Out-Null
+    }
+    elseif ($mode -eq "maia2" -or $mode -eq "pictographic" -or $mode -eq "slider") {
+        $activeModules.Add($mode) | Out-Null
+    }
+    else {
+        foreach ($module in @("maia2", "pictographic", "slider")) { $activeModules.Add($module) | Out-Null }
+    }
+
+    return [ordered]@{
+        maia2Answers = if ($maiaBlock -and $activeModules.Contains("maia2")) { [int]$maiaBlock.expectedItemCount } else { 0 }
+        maia2Scores = if ($maiaBlock -and $activeModules.Contains("maia2")) { 8 } else { 0 }
+        pictographicSelections = if ($pictographicBlock -and $activeModules.Contains("pictographic")) { @($pictographicBlock.prompts).Count } else { 0 }
+        questionnaireAnswers = if ($sliderBlock -and $activeModules.Contains("slider")) { [int]$sliderBlock.expectedItemCount } else { 0 }
+    }
+}
+
+function Get-FinishBehavior {
+    param([string]$ProjectPath)
+
+    $runtimeConfigPath = Join-Path $ProjectPath 'app\src\main\assets\questionnaire\QuestionnaireConfig.json'
+    if (-not (Test-Path -LiteralPath $runtimeConfigPath)) {
+        return 'staySaved'
+    }
+
+    try {
+        $runtimeConfig = Get-Content -LiteralPath $runtimeConfigPath -Encoding UTF8 -Raw | ConvertFrom-Json
+        if ($runtimeConfig.chainDefaults.finishBehavior) {
+            return [string]$runtimeConfig.chainDefaults.finishBehavior
+        }
+    }
+    catch {
+        return 'staySaved'
+    }
+
+    return 'staySaved'
 }
 
 if (-not $SkipBuild) {
@@ -188,6 +232,7 @@ if ($runLanguages.Count -eq 0) {
 }
 
 $expectedCounts = Get-ExpectedCounts -ProjectPath $ProjectPath
+$finishBehavior = Get-FinishBehavior -ProjectPath $ProjectPath
 $deviceExports = "/sdcard/Android/data/$package/files/QuestionnaireExports"
 $filesDir = "/sdcard/Android/data/$package/files"
 $markerCleanup = "rm -f '$filesDir/auto-validate.txt' '$filesDir/auto-validate-english.txt' '$filesDir/auto-validate-deutsch.txt' '$filesDir/command-replay-english.json' '$filesDir/command-replay-deutsch.json'"
@@ -264,11 +309,65 @@ foreach ($language in $runLanguages) {
     New-Item -ItemType Directory -Force -Path $exportOut | Out-Null
     $pullStdout = Join-Path $runOutDir 'pull-questionnaire-exports-stdout.txt'
     $pullStderr = Join-Path $runOutDir 'pull-questionnaire-exports-stderr.txt'
-    $pullProcess = Start-Process -FilePath $Adb -ArgumentList @('-s', $Serial, 'pull', $deviceExports, $exportOut) -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $pullStdout -RedirectStandardError $pullStderr
-    $pullExitCode = $pullProcess.ExitCode
-    $pullOutput = @()
-    if (Test-Path -LiteralPath $pullStdout) { $pullOutput += Get-Content -LiteralPath $pullStdout -Encoding UTF8 }
-    if (Test-Path -LiteralPath $pullStderr) { $pullOutput += Get-Content -LiteralPath $pullStderr -Encoding UTF8 }
+    $remoteFiles = & $Adb -s $Serial shell "find '$deviceExports' -type f -print" 2>&1
+    $pullExitCode = $LASTEXITCODE
+    $pullOutput = @("Remote files:", $remoteFiles)
+    if ($pullExitCode -eq 0) {
+        $pullIndex = 0
+        foreach ($remoteFileRaw in @($remoteFiles)) {
+            $remoteFile = ([string]$remoteFileRaw).Trim()
+            if ([string]::IsNullOrWhiteSpace($remoteFile) -or $remoteFile -notlike "$deviceExports/*") {
+                continue
+            }
+            $remoteRelativePath = $remoteFile.Substring($deviceExports.Length).TrimStart('/')
+            $remoteLeafName = @($remoteRelativePath -split '/')[-1]
+            $remoteExtension = [System.IO.Path]::GetExtension($remoteLeafName).ToLowerInvariant()
+            if ($remoteRelativePath -like 'in_progress/*') {
+                $relativePath = "in_progress\session-draft$remoteExtension"
+            }
+            elseif ($remoteLeafName -eq 'session-index.jsonl') {
+                $relativePath = 'session-index.jsonl'
+            }
+            elseif ($remoteLeafName -like 'session_*_combined.csv') {
+                $relativePath = 'combined.csv'
+            }
+            elseif ($remoteExtension -eq '.json') {
+                $relativePath = 'record.json'
+            }
+            elseif ($remoteExtension -eq '.csv') {
+                $relativePath = 'record.csv'
+            }
+            else {
+                $relativePath = "export-$pullIndex$remoteExtension"
+            }
+            $localFile = Join-Path $exportOut $relativePath
+            $localFileFull = [System.IO.Path]::GetFullPath($localFile)
+            $localDir = Split-Path -Parent $localFileFull
+            New-Item -ItemType Directory -Force -Path $localDir | Out-Null
+            $pullIndex += 1
+            $singleStdout = Join-Path $runOutDir ("pull-questionnaire-export-{0:D3}-stdout.txt" -f $pullIndex)
+            $singleStderr = Join-Path $runOutDir ("pull-questionnaire-export-{0:D3}-stderr.txt" -f $pullIndex)
+            $tempPullFile = [System.IO.Path]::GetFullPath((Join-Path $runOutDir ("adb-pull-export-{0:D3}.tmp" -f $pullIndex)))
+            if (Test-Path -LiteralPath $tempPullFile) {
+                Remove-Item -LiteralPath $tempPullFile -Force
+            }
+            $singleProcess = Start-Process -FilePath $Adb -ArgumentList @('-s', $Serial, 'pull', $remoteFile, $tempPullFile) -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $singleStdout -RedirectStandardError $singleStderr
+            $singleExit = $singleProcess.ExitCode
+            $singlePull = @()
+            if (Test-Path -LiteralPath $singleStdout) { $singlePull += Get-Content -LiteralPath $singleStdout -Encoding UTF8 }
+            if (Test-Path -LiteralPath $singleStderr) { $singlePull += Get-Content -LiteralPath $singleStderr -Encoding UTF8 }
+            $pullOutput += $singlePull
+            if ($singleExit -ne 0) {
+                $pullExitCode = $singleExit
+            }
+            elseif (Test-Path -LiteralPath $tempPullFile) {
+                [System.IO.File]::Copy($tempPullFile, $localFileFull, $true)
+                Remove-Item -LiteralPath $tempPullFile -Force
+            }
+        }
+    }
+    $pullOutput | Set-Content -LiteralPath $pullStdout -Encoding UTF8
+    "" | Set-Content -LiteralPath $pullStderr -Encoding UTF8
     $pullOutput | Set-Content -LiteralPath (Join-Path $runOutDir 'pull-questionnaire-exports.txt') -Encoding UTF8
 
     $records = @(Get-ExportRecords -ExportDir $exportOut | Sort-Object -Property Timestamp -Descending)
@@ -294,7 +393,10 @@ foreach ($language in $runLanguages) {
     if ($expectedCounts.maia2Answers -gt 0) { $requiredVisualStages += 'maia2' }
     if ($expectedCounts.pictographicSelections -gt 0) { $requiredVisualStages += 'pictographic' }
     if ($expectedCounts.questionnaireAnswers -gt 0) { $requiredVisualStages += 'slider' }
-    $requiredVisualStages += @('saved-confirmation', 'finished-black')
+    $requiredVisualStages += 'saved-confirmation'
+    if ($finishBehavior -ne 'openNext' -and $finishBehavior -ne 'resumeCaller') {
+        $requiredVisualStages += 'finished-black'
+    }
     $visualStageReplayPassed = $true
     foreach ($requiredStage in $requiredVisualStages) {
         if (-not ($visualStages -contains $requiredStage)) {
@@ -325,6 +427,7 @@ foreach ($language in $runLanguages) {
         commandReplayPassed = [bool]($logText -match 'MYQUESTIONNAIRE_NAVIGATION_SUMMARY status=pass mode=command-replay')
         commandReplayExportMatched = [bool]($logText -match 'MYQUESTIONNAIRE_COMMAND_REPLAY_EXPORT_MATCH')
         exportCompleteLogged = [bool]($logText -match 'MYQUESTIONNAIRE_EXPORT_COMPLETE')
+        chainReturnFailed = [bool]($logText -match 'MYQUESTIONNAIRE_CHAIN_RETURN_FAILED')
         commandEventCount = $commandEventCount
         visualStages = $visualStages
         visualStageReplayPassed = $visualStageReplayPassed
@@ -364,6 +467,7 @@ $summary = [ordered]@{
     validationMode = if ($NoAutoValidate) { "manual" } elseif ($UseLegacyAutoValidation) { "auto-validation" } else { "command-replay" }
     leaveForeground = [bool]$LeaveForeground
     stopLegacyUnityApp = [bool]$StopLegacyUnityApp
+    finishBehavior = $finishBehavior
     expectedCounts = $expectedCounts
     requestedLanguages = if ($NoAutoValidate) { @() } else { @($runLanguages) }
     exportChecks = @($runChecks.ToArray())

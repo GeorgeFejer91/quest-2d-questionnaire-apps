@@ -52,6 +52,39 @@ questionnaire type per detected trigger block -> generate questionnaire APK ->
 detect Quest -> install/load APK onto headset
 ```
 
+Public naming should stay open-source and repo-branded: the page is "Quest
+Questionnaire Builder", generated questionnaire IDs should use
+`quest-questionnaire-*`, Android defaults should use `org.questquestionnaire.*`,
+schemas should use `questquestionnaire.*`, and example stimulus packages should
+use neutral placeholders such as `org.questquestionnaire.stimulusdemo`.
+
+Block 1 is configurable. Demographics is a suggested preload/template, not a
+hard-coded product step. After the hosted GUI loads a scenario APK or trigger
+catalog, the generated questionnaire APK should become the front door
+automatically: `questionnaireFirst`, editable block 1, and `openNext` into the
+scanned Unity package/activity. Manifest trigger assignments remain empty until
+the builder/user maps questionnaire elements to later Unity-triggered
+questionnaire or tracer blocks.
+The fixed V2 sequence is: generated 2D APK block 1 first, block 1 save and
+handoff to Unity, 2D APK background wait, passive Unity `mq.triggerId`, then 2D
+APK foreground recovery into the next configured protocol block.
+The generated 2D questionnaire APK is the study logic owner. Unity/stimulus
+APKs are passive trigger emitters: they present stimulus content and emit simple
+trigger IDs, but do not choose questionnaire order, questionnaire type, scoring,
+participant state, block progression, or export behavior. The hosted builder
+must treat scanned Unity trigger catalogs as event manifests and keep
+trigger-to-block interpretation in the generated questionnaire config/APK.
+The public GUI should expose questionnaire upload through type-oriented CSV
+templates rather than named-instrument templates. MAIA-2 is a preloaded
+questionnaire/library option; reusable CSV template types should cover
+slider/VAS, Likert, multiple choice, text entry, and temporal tracer
+dimensions. Unsupported uploaded types must be rejected with clear messages
+until the generated APK runtime and exporter support them end to end.
+Custom questionnaire families should enter the public GUI through downloadable
+templates and placeholder metafiles: CSV for item/scale metadata, and ZIP
+templates for asset-backed formats such as pictographic scales where users
+replace placeholder PNGs plus a manifest before reupload.
+
 Development validators, direct handoff stress runners, replay/export runners,
 readiness audits, manual signoff packet prep, raw logs, pipeline commands, and
 other internal evidence tools may remain in the shared source for offline

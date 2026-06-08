@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "my-questionnaire-vr.config.v1",
+  "questionnaireId": "quest-questionnaire-maia2",
+  "questionnaireVersion": "1.0.0",
+  "appVersion": "1.0.0",
+  "uiTextSource": "app/src/main/assets/questionnaire/UIText.txt",
+  "languages": [
+    "English",
+    "Deutsch"
+  ],
+  "participantFields": [
+    { "id": "name", "type": "text", "required": true },
+    { "id": "age", "type": "integer", "required": true },
+    { "id": "gender", "type": "singleChoice", "required": true },
+    { "id": "consent", "type": "checkbox", "required": true }
+  ],
+  "blocks": [
+    {
+      "id": "demographics",
+      "type": "demographics"
+    },
+    {
+      "id": "maia2",
+      "type": "likert",
+      "source": "app/src/main/assets/questionnaire/MAIA2_Questions.json",
+      "target": "app/src/main/assets/questionnaire/MAIA2_Questions.json",
+      "expectedItemCount": 37,
+      "min": 0,
+      "max": 5,
+      "wholeNumbers": true,
+      "anchors": {
+        "left": "Never",
+        "right": "Always"
+      },
+      "scoreGroups": [
+        { "id": "noticing", "label": "Noticing", "items": [1, 2, 3, 4] },
+        { "id": "not_distracting", "label": "Not-Distracting", "items": [5, 6, 7, 8, 9, 10] },
+        { "id": "not_worrying", "label": "Not-Worrying", "items": [11, 12, 13, 14, 15] },
+        { "id": "attention_regulation", "label": "Attention Regulation", "items": [16, 17, 18, 19, 20, 21, 22] },
+        { "id": "emotional_awareness", "label": "Emotional Awareness", "items": [23, 24, 25, 26, 27] },
+        { "id": "self_regulation", "label": "Self-Regulation", "items": [28, 29, 30, 31] },
+        { "id": "body_listening", "label": "Body Listening", "items": [32, 33, 34] },
+        { "id": "trusting", "label": "Trusting", "items": [35, 36, 37] }
+      ]
+    },
+    {
+      "id": "pictographic",
+      "type": "pictographic",
+      "choices": ["A", "B", "C", "D", "E", "F", "G", "H"],
+      "prompts": [
+        {
+          "id": "perceived_body_boundaries",
+          "imageFileName": "1.PerceivedBodyBoundariesScale.png",
+          "source": "app/src/main/assets/questionnaire/PictographicScales/1.PerceivedBodyBoundariesScale.png",
+          "choices": ["A", "B", "C", "D", "E", "F", "G"]
+        },
+        {
+          "id": "self_extension",
+          "imageFileName": "2.SpatialFrameReferenceContinuum.png",
+          "source": "app/src/main/assets/questionnaire/PictographicScales/2.SpatialFrameReferenceContinuum.png",
+          "choices": ["A", "B", "C", "D", "E", "F", "G", "H"]
+        },
+        {
+          "id": "small_self",
+          "imageFileName": "3.SmallSelf.png",
+          "source": "app/src/main/assets/questionnaire/PictographicScales/3.SmallSelf.png",
+          "choices": ["A", "B", "C", "D", "E", "F", "G"]
+        }
+      ]
+    },
+    {
+      "id": "custom_slider",
+      "type": "slider",
+      "expectedItemCount": 42,
+      "min": 0,
+      "max": 100,
+      "wholeNumbers": true,
+      "anchors": {
+        "left": "NO, not more than usual",
+        "right": "YES, much more than usual"
+      },
+      "languages": {
+        "English": {
+          "source": "app/src/main/assets/questionnaire/Questions_English.txt",
+          "target": "app/src/main/assets/questionnaire/Questions_English.txt"
+        },
+        "Deutsch": {
+          "source": "app/src/main/assets/questionnaire/Questions_Deutsch.txt",
+          "target": "app/src/main/assets/questionnaire/Questions_Deutsch.txt"
+        }
+      }
+    },
+    {
+      "id": "end",
+      "type": "blackScreen"
+    }
+  ],
+  "exports": {
+    "destination": "Application.persistentDataPath/QuestionnaireExports",
+    "formats": ["json", "csv"]
+  }
+}

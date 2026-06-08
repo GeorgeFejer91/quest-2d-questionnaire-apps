@@ -1,19 +1,19 @@
 {
   "schemaVersion": "my-questionnaire-2d.chain-plan.v1",
   "chainId": "sussex-polar-controller-then-questionnaire",
-  "questionnaireId": "viscereality-maia2",
+  "questionnaireId": "quest-questionnaire-maia2",
   "questionnaireVersion": "1.0.0",
   "defaultFinishBehavior": "resumeCaller",
   "steps": [
     {
       "id": "sussex-polar-controller-wrapper",
       "type": "scenario",
-      "package": "org.viscereality.chainhookwrapper",
+      "package": "org.questquestionnaire.chainhookwrapper",
       "activity": ".ChainHookActivity",
-      "action": "org.viscereality.CHAIN_COMMAND",
+      "action": "org.questquestionnaire.CHAIN_COMMAND",
       "command": "launchTarget",
       "extras": {
-        "targetPackage": "com.Viscereality.SussexPolarController",
+        "targetPackage": "org.questquestionnaire.SussexPolarController",
         "targetActivity": "com.unity3d.player.UnityPlayerGameActivity",
         "scenarioId": "sussex-polar-controller",
         "mq.autoContinueDelayMs": 10000
@@ -22,11 +22,11 @@
     {
       "id": "questionnaire-after-sussex-polar-controller",
       "type": "questionnaire",
-      "package": "org.viscereality.questionnaires2d",
+      "package": "org.questquestionnaire.questionnaires2d",
       "activity": ".MainActivity",
       "extras": {
         "mq.sessionId": "sussex-polar-controller-session",
-        "mq.experimentId": "viscereality-experiment",
+        "mq.experimentId": "questquestionnaire-experiment",
         "mq.scenarioId": "sussex-polar-controller",
         "mq.trialId": "trial-01",
         "mq.participantId": "P001",

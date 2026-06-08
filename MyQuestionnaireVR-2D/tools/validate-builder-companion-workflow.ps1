@@ -525,13 +525,13 @@ if (-not $SkipHostedBuilderValidation) {
     Add-Progress "hosted-builder-validation-complete status=$($hostedBuilderValidation.status)"
 }
 
-$handoffConfigPath = Join-Path $builderOut 'awe-great-dictator-handoff.config.json'
+$handoffConfigPath = Join-Path $builderOut 'quest-questionnaire-stimulus-handoff.config.json'
 if (-not (Test-Path -LiteralPath $handoffConfigPath)) {
     throw "Expected handoff config not found: $handoffConfigPath"
 }
 $handoffConfig = Get-Content -LiteralPath $handoffConfigPath -Encoding UTF8 -Raw | ConvertFrom-Json
 
-$twoDFirstConfigPath = Join-Path $builderOut 'awe-great-dictator-2d-first.config.json'
+$twoDFirstConfigPath = Join-Path $builderOut 'quest-questionnaire-stimulus-2d-first.config.json'
 if (-not (Test-Path -LiteralPath $twoDFirstConfigPath)) {
     throw "Expected 2D-first config not found: $twoDFirstConfigPath"
 }
@@ -786,12 +786,12 @@ try {
 
     Write-Host "== Direct PendingIntent handoff dry run through companion =="
     $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $ProjectPath '..'))
-    $questionnaireApkForDirect = Join-Path $ProjectPath 'Builds\viscereality-maia2-1.0.0.apk'
+    $questionnaireApkForDirect = Join-Path $ProjectPath 'Builds\quest-questionnaire-maia2-1.0.0.apk'
     if (-not (Test-Path -LiteralPath $questionnaireApkForDirect)) {
         $questionnaireApkForDirect = Join-Path $ProjectPath 'Builds\MyQuestionnaireVR-2D.apk'
     }
     $temporalTracerApkForDirect = Join-Path $repoRoot 'TemporalExperienceTracerVR-2D\Builds\TemporalExperienceTracerVR-2D.apk'
-    $unityApkForDirect = Join-Path $repoRoot 'AweGreatDictatorUnity\Builds\QuestionnaireStimulusBuilderDemo.apk'
+    $unityApkForDirect = Join-Path $repoRoot 'QuestionnaireStimulusUnity\Builds\QuestionnaireStimulusBuilderDemo.apk'
     $directHandoffRequiredApks = @($questionnaireApkForDirect, $temporalTracerApkForDirect, $unityApkForDirect)
     $missingDirectHandoffApks = @($directHandoffRequiredApks | Where-Object { -not (Test-Path -LiteralPath $_) })
     if ($missingDirectHandoffApks.Count -gt 0) {

@@ -3,7 +3,7 @@
   "command": "startPlan",
   "sessionId": "participant-001-session-a",
   "chainId": "participant-001-chain-a",
-  "experimentId": "viscereality-study",
+  "experimentId": "quest-questionnaire-study",
   "scenarioId": "scenario-01",
   "trialId": "trial-03",
   "participantId": "P001",
@@ -26,11 +26,11 @@
       {
         "id": "questionnaire-after-scenario-01",
         "type": "questionnaire",
-        "package": "org.viscereality.questionnaires2d",
+        "package": "org.questquestionnaire.questionnaires2d",
         "activity": ".MainActivity",
         "extras": {
           "mq.sessionId": "participant-001-session-a",
-          "mq.experimentId": "viscereality-study",
+          "mq.experimentId": "quest-questionnaire-study",
           "mq.scenarioId": "scenario-01",
           "mq.trialId": "trial-03",
           "mq.participantId": "P001",

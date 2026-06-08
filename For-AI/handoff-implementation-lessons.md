@@ -1020,7 +1020,7 @@ target, wait for real participant/operator input inside the foreground Unity
 app, then launch trigger 1. The video still starts only after the expected
 panel result returns. Automated direct-handoff validators may bypass this gate
 only by passing an explicit validation extra such as
-`mq.validationAutoStart=true` and recording `AWE_START_GATE_AUTO_START` in the
+`mq.validationAutoStart=true` and recording `QQ_STIMULUS_START_GATE_AUTO_START` in the
 log evidence.
 
 Generalizable rule: put human readiness gates in the foreground scenario app,
@@ -1095,7 +1095,7 @@ Solution: runtime tests should derive expected questionnaire ids and optional
 sections from the active packaged config, or pass explicit launch extras when
 the test is proving full replay behavior. The 2D-first demo workflow now runs
 the same APK/render/preflight spine after applying
-`QuestionnaireConfigs/examples/awe-great-dictator-2d-first-demo.config.json`,
+`QuestionnaireConfigs/examples/quest-questionnaire-stimulus-2d-first-demo.config.json`,
 so custom-config generation exercises the unit-test gate instead of skipping
 it.
 

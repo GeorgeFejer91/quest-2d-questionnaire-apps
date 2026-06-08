@@ -17,8 +17,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$questionnairePackage = "org.viscereality.questionnaires2d"
-$wrapperPackage = "org.viscereality.chainhookwrapper"
+$questionnairePackage = "org.questquestionnaire.questionnaires2d"
+$wrapperPackage = "org.questquestionnaire.chainhookwrapper"
 $singleValidator = Join-Path $ProjectPath 'tools\quest-orchestrator-wrapper-chain-validate.ps1'
 
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
@@ -58,7 +58,7 @@ function Invoke-AdbText {
 
 function ConvertTo-Slug {
     param([string]$Value)
-    $leaf = (($Value -split '\.')[-1] -replace '^Viscereality', '')
+    $leaf = (($Value -split '\.')[-1] -replace '^Quest 2D Questionnaire', '')
     $spaced = $leaf -creplace '([a-z0-9])([A-Z])', '$1-$2'
     $spaced = $spaced -creplace '([A-Z]+)([A-Z][a-z])', '$1-$2'
     $slug = ($spaced -replace '[^A-Za-z0-9]+', '-').Trim('-').ToLowerInvariant()
@@ -90,7 +90,7 @@ function New-Plan {
         type = "scenario"
         package = $wrapperPackage
         activity = ".ChainHookActivity"
-        action = "org.viscereality.CHAIN_COMMAND"
+        action = "org.questquestionnaire.CHAIN_COMMAND"
         command = "launchTarget"
         extras = [ordered]@{
             targetPackage = $PackageName
@@ -125,7 +125,7 @@ function New-Plan {
     return [ordered]@{
         schemaVersion = "my-questionnaire-2d.chain-plan.v1"
         chainId = $chainId
-        questionnaireId = "viscereality-maia2"
+        questionnaireId = "quest-questionnaire-maia2"
         questionnaireVersion = "1.0.0"
         defaultFinishBehavior = "resumeCaller"
         steps = $steps
@@ -134,20 +134,20 @@ function New-Plan {
 
 function Get-InstalledScenarioPackages {
     $preferred = @(
-        'com.Viscereality.ViscerealityPeriPersonalSpaceRight',
-        'com.Viscereality.ViscerealityPeriPersonalSpaceLeft',
-        'com.Viscereality.ViscerealityPeriPersonalRight2',
-        'com.Viscereality.ViscerealitySphere',
-        'com.Viscereality.ViscerealityEggspansion',
-        'com.Viscereality.ViscerealityTracers',
-        'com.Viscereality.SussexPolarController',
-        'com.Viscereality.ViscerealityPolarTest'
+        'org.questquestionnaire.stimulusdemo',
+        'org.questquestionnaire.stimulusdemo.left',
+        'org.questquestionnaire.stimulusdemo.right2',
+        'org.questquestionnaire.stimulusdemo.sphere',
+        'org.questquestionnaire.stimulusdemo.expansion',
+        'org.questquestionnaire.stimulusdemo.tracers',
+        'org.questquestionnaire.stimulusdemo.sussex_polar_controller',
+        'org.questquestionnaire.stimulusdemo.polar_test'
     )
     $probe = Invoke-AdbText -Arguments @('shell', 'pm', 'list', 'packages') -OutputPath (Join-Path $OutputRoot 'pm-list-packages.txt')
     if ($probe.ExitCode -ne 0) {
         throw "Could not list installed packages."
     }
-    $installed = @($probe.Output | ForEach-Object { $_.ToString().Trim().Replace('package:', '') } | Where-Object { $_ -match '^com\.Viscereality\.' })
+    $installed = @($probe.Output | ForEach-Object { $_.ToString().Trim().Replace('package:', '') } | Where-Object { $_ -match '^org\.questquestionnaire\.stimulusdemo' })
     $selected = @()
     foreach ($candidate in $preferred) {
         if ($installed -contains $candidate) {
@@ -284,7 +284,7 @@ $passCount = @($runs | Where-Object { $_.status -eq 'pass' }).Count
 $failCount = @($runs | Where-Object { $_.status -ne 'pass' }).Count
 $controllerPromptCount = @($runs | Where-Object { $_.launchCheckControllerRequiredCount -gt 0 }).Count
 $summaryRoot = [ordered]@{
-    schemaVersion = 'viscereality.installed-scenario-batch-validation.v1'
+    schemaVersion = 'questquestionnaire.installed-scenario-batch-validation.v1'
     status = if ($failCount -eq 0) { 'pass' } else { 'fail' }
     serial = $Serial
     targetActivity = $TargetActivity

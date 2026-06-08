@@ -20,7 +20,7 @@ else {
 }
 
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
-    $ConfigPath = Join-Path $ProjectRoot 'QuestionnaireConfigs\viscereality-maia2.config.json'
+    $ConfigPath = Join-Path $ProjectRoot 'QuestionnaireConfigs\quest-questionnaire-maia2.config.json'
 }
 
 $validateConfigScript = Join-Path $PSScriptRoot 'validate-questionnaire-config.ps1'
@@ -60,21 +60,107 @@ function Copy-Source {
     }
 
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Target) | Out-Null
+    $sourceFull = [System.IO.Path]::GetFullPath($resolvedSource)
+    $targetFull = [System.IO.Path]::GetFullPath($Target)
+    if ($sourceFull -ieq $targetFull) {
+        return
+    }
+
     Copy-Item -LiteralPath $resolvedSource -Destination $Target -Force
+}
+
+function Format-LfNoTrailingWhitespace {
+    param([string]$Text)
+
+    $normalized = ($Text -replace "`r`n", "`n") -replace "`r", "`n"
+    $lines = $normalized -split "`n", 0, "SimpleMatch"
+    return (($lines | ForEach-Object { $_.TrimEnd() }) -join "`n").TrimEnd("`n") + "`n"
+}
+
+function Write-Utf8Text {
+    param([string]$Target, [string]$Text)
+
+    [System.IO.File]::WriteAllText($Target, (Format-LfNoTrailingWhitespace -Text $Text), [System.Text.UTF8Encoding]::new($false))
 }
 
 function Write-Utf8Lines {
     param([object[]]$Items, [string]$Target)
-    [System.IO.File]::WriteAllText($Target, (@($Items) -join [Environment]::NewLine), [System.Text.UTF8Encoding]::new($false))
+    Write-Utf8Text -Target $Target -Text (@($Items) -join "`n")
 }
 
 function Write-Utf8Json {
     param([object[]]$Items, [string]$Target)
-    [System.IO.File]::WriteAllText($Target, (@($Items) | ConvertTo-Json -Depth 20), [System.Text.UTF8Encoding]::new($false))
+    Write-Utf8Text -Target $Target -Text (@($Items) | ConvertTo-Json -Depth 20)
+}
+
+function Write-DataUrlFile {
+    param(
+        [string]$DataUrl,
+        [string]$Target
+    )
+
+    if ([string]::IsNullOrWhiteSpace($DataUrl) -or -not ($DataUrl -match '^data:[^;]+;base64,(.+)$')) {
+        throw "Invalid dataUrl for target: $Target"
+    }
+
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Target) | Out-Null
+    [System.IO.File]::WriteAllBytes($Target, [Convert]::FromBase64String($Matches[1]))
+}
+
+function Get-FirstText {
+    param([object[]]$Values)
+    foreach ($value in @($Values)) {
+        $text = [string]$value
+        if (-not [string]::IsNullOrWhiteSpace($text)) {
+            return $text.Trim()
+        }
+    }
+    return ''
+}
+
+function Get-AppDisplayName {
+    param([object]$Config)
+
+    $configured = Get-FirstText @($Config.appDisplayName, $Config.displayName, $Config.appName)
+    if (-not [string]::IsNullOrWhiteSpace($configured)) {
+        return $configured
+    }
+
+    $startMode = if ($Config.chainDefaults -and $Config.chainDefaults.startMode) { [string]$Config.chainDefaults.startMode } else { 'unityFirst' }
+    if ($startMode -ne 'questionnaireFirst') {
+        return 'Quest Questionnaire 2D'
+    }
+
+    $targetLabel = Get-FirstText @(
+        $Config.experimentBlockRegistry.targetApp.label,
+        $Config.experimentBlockRegistry.scenario.label,
+        $Config.triggerQuestionnaireMapping.scenarioLabel,
+        $Config.chainDefaults.nextPackage
+    )
+    if ([string]::IsNullOrWhiteSpace($targetLabel)) {
+        $targetLabel = 'Scenario APK'
+    }
+    return "Start Experiment | $targetLabel"
+}
+
+function Set-AndroidAppName {
+    param([string]$DisplayName)
+
+    $stringsPath = Join-Path $ProjectRoot 'app\src\main\res\values\strings.xml'
+    $escaped = [System.Security.SecurityElement]::Escape($DisplayName)
+    $xml = "<resources>`n    <string name=`"app_name`">$escaped</string>`n</resources>`n"
+    Write-Utf8Text -Target $stringsPath -Text $xml
 }
 
 if ($config.uiTextSource) {
-    Copy-Source $config.uiTextSource (Join-Path $assets 'UIText.txt')
+    $uiTextSource = Resolve-SourcePath $config.uiTextSource
+    $uiTextTarget = Join-Path $assets 'UIText.txt'
+    if (Test-Path -LiteralPath $uiTextSource) {
+        Copy-Source $config.uiTextSource $uiTextTarget
+    }
+    elseif (-not (Test-Path -LiteralPath $uiTextTarget)) {
+        throw "Source file not found: $uiTextSource"
+    }
 }
 
 foreach ($block in @($config.blocks)) {
@@ -103,7 +189,13 @@ foreach ($block in @($config.blocks)) {
 
     if ($block.type -eq 'pictographic') {
         foreach ($prompt in @($block.prompts)) {
-            Copy-Source $prompt.source (Join-Path $pictographic $prompt.imageFileName)
+            $target = Join-Path $pictographic $prompt.imageFileName
+            if ($prompt.PSObject.Properties.Name -contains 'dataUrl' -and -not [string]::IsNullOrWhiteSpace([string]$prompt.dataUrl)) {
+                Write-DataUrlFile $prompt.dataUrl $target
+            }
+            else {
+                Copy-Source $prompt.source $target
+            }
         }
     }
 }
@@ -131,6 +223,7 @@ foreach ($block in @($config.blocks)) {
             id = $prompt.id
             imageFileName = $prompt.imageFileName
             source = $prompt.source
+            dataUrl = $prompt.dataUrl
             promptEnglish = $prompt.promptEnglish
             promptDeutsch = $prompt.promptDeutsch
             choices = @($prompt.choices)
@@ -181,10 +274,11 @@ $runtimeConfig = [ordered]@{
     questionnaireId = $config.questionnaireId
     questionnaireVersion = $config.questionnaireVersion
     appVersion = $config.appVersion
+    appDisplayName = Get-AppDisplayName -Config $config
     sourceConfig = 'QuestionnaireConfigs/' + [System.IO.Path]::GetFileName($ConfigPath)
-    sourceRepository = if ($config.sourceRepository) { $config.sourceRepository } else { 'MesmerPrism/Viscereality' }
+    sourceRepository = if ($config.sourceRepository) { $config.sourceRepository } else { 'quest-2d-questionnaire-apps' }
     sourceCommit = if ($config.sourceCommit) { $config.sourceCommit } else { '7f0f7c9a40885aa841892b9a680acf45fa45b2d7' }
-    maia2SourcePath = if ($config.maia2SourcePath) { $config.maia2SourcePath } else { 'C:\Users\cogpsy-vrlab\Documents\GitHub\maia-2\questionnaire\src' }
+    maia2SourcePath = if ($config.maia2SourcePath) { $config.maia2SourcePath } else { '' }
     languages = @($config.languages)
     participantFields = $runtimeParticipantFields
     blocks = $runtimeBlocks
@@ -201,6 +295,9 @@ $runtimeConfig = [ordered]@{
             nextPackage = if ($config.chainDefaults.nextPackage) { $config.chainDefaults.nextPackage } else { '' }
             nextActivity = if ($config.chainDefaults.nextActivity) { $config.chainDefaults.nextActivity } else { '' }
             questionnaireMode = if ($config.chainDefaults.questionnaireMode) { $config.chainDefaults.questionnaireMode } else { '' }
+            questionnaireSequence = if ($config.chainDefaults.PSObject.Properties.Name -contains 'questionnaireSequence' -and $null -ne $config.chainDefaults.questionnaireSequence) {
+                @($config.chainDefaults.questionnaireSequence | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
+            } else { @() }
             triggerId = if ($config.chainDefaults.triggerId) { $config.chainDefaults.triggerId } else { '' }
             blockNumber = if ($config.chainDefaults.blockNumber) { $config.chainDefaults.blockNumber } else { '' }
             blockId = if ($config.chainDefaults.blockId) { $config.chainDefaults.blockId } else { '' }
@@ -216,6 +313,7 @@ $runtimeConfig = [ordered]@{
             nextPackage = ''
             nextActivity = ''
             questionnaireMode = ''
+            questionnaireSequence = @()
             triggerId = ''
             blockNumber = ''
             blockId = ''
@@ -227,10 +325,12 @@ $runtimeConfig = [ordered]@{
 if ($config.PSObject.Properties.Name -contains 'triggerQuestionnaireMapping' -and $null -ne $config.triggerQuestionnaireMapping) {
     $runtimeConfig.triggerQuestionnaireMapping = $config.triggerQuestionnaireMapping
 }
-[System.IO.File]::WriteAllText((Join-Path $assets 'QuestionnaireConfig.json'), ($runtimeConfig | ConvertTo-Json -Depth 20), [System.Text.UTF8Encoding]::new($false))
+Write-Utf8Text -Target (Join-Path $assets 'QuestionnaireConfig.json') -Text ($runtimeConfig | ConvertTo-Json -Depth 20)
+Set-AndroidAppName -DisplayName $runtimeConfig.appDisplayName
 
 [pscustomobject]@{
     AppliedConfig = (Resolve-Path -LiteralPath $ConfigPath).Path
     AndroidAssets = $assets
+    AppDisplayName = $runtimeConfig.appDisplayName
     Status = 'OK'
 } | Format-List

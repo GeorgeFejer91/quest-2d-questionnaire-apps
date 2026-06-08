@@ -5,24 +5,34 @@ on-headset APK chain with the 2D questionnaire panel app:
 
 - `QuestQuestionnaireChainBridge.cs`: static Android intent bridge.
 - `ChainLinkControllerHook.cs`: optional scene component that watches the left
-  Quest controller and sends `mq.command=nextBlock` to ChainLink.
+  Quest controller and emits a passive `mq.triggerId` event.
 - `ChainLinkTimedTrigger.cs`: optional scene component that fires the same
   chain action from a Unity timer, without requiring controller input.
+
+Unity/stimulus APKs should stay passive in the product architecture. They may
+present stimulus content and emit simple trigger events, but they should not
+choose questionnaire order, questionnaire type, scoring, participant state,
+block progression, or export behavior. The generated 2D questionnaire APK owns
+that study logic and interprets `mq.triggerId` against its own protocol state.
+Use `mq.blockId`, `mq.blockNumber`, or `mq.questionnaireMode` only as
+diagnostic or legacy fallbacks.
 
 ## Drop-In Timed Trigger
 
 For controller-free experiment switching, add `ChainLinkTimedTrigger` to a
-GameObject in the foreground Unity scene. This lets the Unity APK bring the 2D
-questionnaire panel forward after a fixed delay.
+GameObject in the foreground Unity scene. This lets the Unity APK emit a
+passive trigger and bring the 2D questionnaire panel forward after a fixed
+delay.
 
 Common settings:
 
-- `Action = ContinueBrokerPlan`: use when ChainLink/broker launched the Unity
-  APK and the timer should advance to the next plan block.
+- `Action = ContinueBrokerPlan`: legacy broker fallback for existing ChainLink
+  plans.
 - `Action = ChainLinkNextBlock`: use when the Unity APK should send the
-  standalone ChainLink `nextBlock` command.
+  standalone legacy ChainLink `nextBlock` command.
 - `Action = LaunchQuestionnaire`: use when the Unity APK is started directly
-  and should open the questionnaire without broker state.
+  and should open the questionnaire APK with `mq.triggerId` and no broker
+  state.
 - `Initial Delay Seconds`: time after scene start before firing.
 - `Repeat`, `Repeat Interval Seconds`, and `Max Sends`: use for repeated
   timed pictographic probes. `Max Sends = 0` means unlimited sends.
@@ -31,6 +41,7 @@ The hook copies incoming broker extras from the Unity activity intent by
 default, then attaches timing metadata:
 
 ```text
+mq.triggerId = <configured passive trigger id>
 mq.triggerSource = unity-timed-trigger
 mq.triggerTimestampUtc = <UTC ISO-8601 timestamp>
 mq.triggerTimestampUnixMs = <milliseconds since epoch>
@@ -50,13 +61,13 @@ Repeat Interval Seconds = 120
 Max Sends = 3
 ```
 
-Example: if the Unity APK itself should immediately open the baseline
-questionnaire when launched directly, set:
+Example: if the Unity APK itself should emit a single end trigger when launched
+directly, set:
 
 ```text
 Action = LaunchQuestionnaire
 Initial Delay Seconds = 0.5
-Questionnaire Mode = baseline
+Trigger Id = video_complete
 Finish Behavior = resumeCaller
 Caller Package = <this Unity package>
 Caller Activity = <this Unity activity>
@@ -64,8 +75,7 @@ Caller Activity = <this Unity activity>
 
 The timer is the quickest way to prove the switching mechanism in-device before
 adding the physical controller gate. Once the timer path works, the controller
-hook only has to emit the same broker continuation or ChainLink `nextBlock`
-intent.
+hook only has to emit the same passive trigger intent.
 
 ## Drop-In ChainLink Controller Hook
 
@@ -74,6 +84,7 @@ the foreground Unity scene. In the inspector, set:
 
 - `Button`: usually `SecondaryButton` for the left controller Y button, because
   X/left primary is already used in the Peripersonal Space scene controls.
+- `Trigger Id`: the passive event id for the questionnaire APK to interpret.
 - `Experiment metadata`: chain/session fields you want repeated in ChainLink
   event logs.
 - `Debounce Seconds`: keep the default unless the scenario needs rapid repeats.
@@ -82,21 +93,23 @@ At runtime, the hook listens with Unity XR input while the Unity APK owns the
 foreground OpenXR session. On a rising button edge it starts ChainLink with:
 
 ```text
-action = org.viscereality.chainlink.COMMAND
-component = org.viscereality.chainlink/.ChainLinkActivity
-mq.command = nextBlock
+action = org.questquestionnaire.chainlink.COMMAND
+component = org.questquestionnaire.chainlink/.ChainLinkActivity
+mq.command = trigger
+mq.triggerId = <configured passive trigger id>
 mq.triggerTimestampUtc = <UTC ISO-8601 timestamp>
 mq.triggerTimestampUnixMs = <milliseconds since epoch>
 ```
 
 This is the reliable route for controller-triggered APK switches. Android and
 Horizon OS do not deliver another immersive APK's controller events to a
-background 2D app.
+background 2D app. Leave `Trigger Id` blank only for legacy `nextBlock`
+ChainLink plans.
 
 Scenario scripts can also call the bridge directly:
 
 ```csharp
-QuestQuestionnaireChainBridge.SendChainLinkNextBlock(new Dictionary<string, string>
+QuestQuestionnaireChainBridge.LaunchQuestionnaireTrigger("video_complete", new Dictionary<string, string>
 {
     ["mq.chainId"] = "participant-001-chain-a",
     ["mq.scenarioId"] = "peripersonal-space-right",
@@ -104,9 +117,9 @@ QuestQuestionnaireChainBridge.SendChainLinkNextBlock(new Dictionary<string, stri
 });
 ```
 
-For rebuilt Viscereality scenario APKs, also add an Android intent filter for
-`org.viscereality.CHAIN_COMMAND` to the Unity activity. The
-`QuestExperimentChainHook` script in the Viscereality source tree does this
+For rebuilt Quest 2D Questionnaire scenario APKs, also add an Android intent filter for
+`org.questquestionnaire.CHAIN_COMMAND` to the Unity activity. The
+`QuestExperimentChainHook` script in the Quest 2D Questionnaire stimulus source tree does this
 passively: it logs incoming broker commands, refreshes launch intents while the
 Unity activity stays alive, and exposes one completion call for scenario
 scripts.
@@ -114,8 +127,8 @@ scripts.
 Preferred brokered flow:
 
 1. Start the broker plan once, usually from the first scenario.
-2. When a scenario reaches its questionnaire trigger point, call `ContinueBrokerPlan()`.
-3. The questionnaire saves locally, returns to the broker, and the broker opens the next plan step.
+2. When a scenario reaches its passive trigger point, emit the configured trigger id.
+3. The questionnaire saves locally, interprets the trigger, and returns/opens the next app from its own protocol state.
 
 Start a plan:
 
@@ -133,11 +146,11 @@ string chainPlanJson = @"{
     {
       ""id"": ""questionnaire-after-scenario-01"",
       ""type"": ""questionnaire"",
-      ""package"": ""org.viscereality.questionnaires2d"",
+      ""package"": ""org.questquestionnaire.questionnaires2d"",
       ""activity"": "".MainActivity"",
       ""extras"": {
         ""mq.sessionId"": ""participant-001-session-a"",
-        ""mq.experimentId"": ""viscereality-study"",
+        ""mq.experimentId"": ""quest-questionnaire-study"",
         ""mq.scenarioId"": ""scenario-01"",
         ""mq.trialId"": ""trial-03"",
         ""mq.participantId"": ""P001"",
@@ -161,7 +174,7 @@ QuestQuestionnaireChainBridge.StartBrokerPlan(chainPlanJson, new Dictionary<stri
 });
 ```
 
-Continue from a scenario trigger:
+Continue from a scenario trigger in legacy brokered plans:
 
 ```csharp
 QuestQuestionnaireChainBridge.ContinueBrokerPlan();
@@ -190,7 +203,7 @@ The hook returns to the broker named in the incoming extras
 are absent, it falls back to the questionnaire-owned broker. This makes the
 same Unity hook compatible with the standalone orchestrator APK.
 
-In the current Viscereality source project, `ExperimentRun` already calls
+In the current Quest 2D Questionnaire stimulus source project, `ExperimentRun` already calls
 `QuestExperimentChainHook.ContinueCurrentPlan(...)` after `ThankYou()`, so a
 rebuilt Peripersonal-style APK can return to the broker at real experiment
 completion instead of using a wrapper timer.
@@ -208,16 +221,16 @@ Treat source-hook rebuild validation as blocked until that preflight and Unity
 compilation pass.
 
 For source-hook APKs, chain-plan scenario steps should target the Unity package
-directly with `action=org.viscereality.CHAIN_COMMAND`. For compiled
+directly with `action=org.questquestionnaire.CHAIN_COMMAND`. For compiled
 APKs that cannot be rebuilt, use the separate hook-wrapper APK instead.
 
-Simple direct launch, without broker state:
+Simple direct passive trigger launch, without broker state:
 
 ```csharp
-QuestQuestionnaireChainBridge.LaunchQuestionnaire(new Dictionary<string, string>
+QuestQuestionnaireChainBridge.LaunchQuestionnaireTrigger("video_complete", new Dictionary<string, string>
 {
     ["mq.sessionId"] = "participant-001-session-a",
-    ["mq.experimentId"] = "viscereality-study",
+    ["mq.experimentId"] = "quest-questionnaire-study",
     ["mq.scenarioId"] = "scenario-01",
     ["mq.trialId"] = "trial-03",
     ["mq.participantId"] = "P001",
@@ -232,7 +245,8 @@ QuestQuestionnaireChainBridge.LaunchQuestionnaire(new Dictionary<string, string>
 
 For source scenes that should not start stimulus timing immediately, keep the
 start gate inside Unity. Show a visible `Start experiment` target, wait for
-foreground Unity input, then call `LaunchQuestionnaire(...)` for trigger 1.
+foreground Unity input, then call `LaunchQuestionnaireTrigger(...)` for the
+configured passive trigger.
 Validation-only launch extras can be read through `ReadValidationExtras()`; use
 an explicit `mq.validationAutoStart=true` bypass for unattended scripts rather
 than silently starting product runs without a participant click.

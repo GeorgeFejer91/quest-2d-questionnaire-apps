@@ -12,11 +12,11 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$questionnairePackage = "org.viscereality.questionnaires2d"
-$brokerActivity = "org.viscereality.questionnaires2d.QuestChainBrokerActivity"
-$brokerAction = "org.viscereality.questionnaires2d.BROKER"
-$sourcePackage = "org.viscereality.sourcehookstub"
-$sourceActivity = "org.viscereality.sourcehookstub.SourceHookStubActivity"
+$questionnairePackage = "org.questquestionnaire.questionnaires2d"
+$brokerActivity = "org.questquestionnaire.questionnaires2d.QuestChainBrokerActivity"
+$brokerAction = "org.questquestionnaire.questionnaires2d.BROKER"
+$sourcePackage = "org.questquestionnaire.sourcehookstub"
+$sourceActivity = "org.questquestionnaire.sourcehookstub.SourceHookStubActivity"
 $deviceFiles = "/sdcard/Android/data/$questionnairePackage/files"
 $deviceExports = "$deviceFiles/QuestionnaireExports"
 $deviceBroker = "$deviceFiles/ChainBroker"
@@ -25,7 +25,7 @@ if ([string]::IsNullOrWhiteSpace($QuestionnaireApk)) {
     $QuestionnaireApk = Join-Path $ProjectPath 'Builds\MyQuestionnaireVR-2D.apk'
 }
 if ([string]::IsNullOrWhiteSpace($SourceHookStubApk)) {
-    $SourceHookStubApk = Join-Path $ProjectPath 'Builds\ViscerealitySourceHookStub.apk'
+    $SourceHookStubApk = Join-Path $ProjectPath 'Builds\QuestQuestionnaireSourceHookStub.apk'
 }
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $ProjectPath ("artifacts\quest-source-hook-chain-validation\" + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'"))
@@ -99,7 +99,7 @@ $planPath = Join-Path $OutputRoot 'source-hook-chain-plan.json'
 $plan = [ordered]@{
     schemaVersion = 'my-questionnaire-2d.chain-plan.v1'
     chainId = $chainId
-    questionnaireId = 'viscereality-maia2'
+    questionnaireId = 'quest-questionnaire-maia2'
     questionnaireVersion = '1.0.0'
     defaultFinishBehavior = 'resumeCaller'
     steps = @(
@@ -108,7 +108,7 @@ $plan = [ordered]@{
             type = 'scenario'
             package = $sourcePackage
             activity = $sourceActivity
-            action = 'org.viscereality.CHAIN_COMMAND'
+            action = 'org.questquestionnaire.CHAIN_COMMAND'
             command = 'startScenario'
             extras = [ordered]@{
                 scenarioId = 'source-hook-stub'
@@ -157,7 +157,7 @@ $launchExitCode = Invoke-AdbText -Arguments @(
 
 Start-Sleep -Seconds $WaitSeconds
 Invoke-AdbText -Arguments @('logcat', '-d', '-v', 'threadtime') -OutputPath (Join-Path $OutputRoot 'logcat.txt') | Out-Null
-Invoke-AdbText -Arguments @('logcat', '-d', '-v', 'threadtime', 'MyQuestionnaire2D:I', 'ViscerealitySourceHook:I', 'AndroidRuntime:E', '*:S') -OutputPath (Join-Path $OutputRoot 'logcat-chain.txt') | Out-Null
+Invoke-AdbText -Arguments @('logcat', '-d', '-v', 'threadtime', 'MyQuestionnaire2D:I', 'QuestQuestionnaireSourceHook:I', 'AndroidRuntime:E', '*:S') -OutputPath (Join-Path $OutputRoot 'logcat-chain.txt') | Out-Null
 Invoke-AdbText -Arguments @('shell', 'dumpsys', 'window') -OutputPath (Join-Path $OutputRoot 'foreground-after.txt') | Out-Null
 
 $pullRoot = Join-Path $OutputRoot 'device-files'

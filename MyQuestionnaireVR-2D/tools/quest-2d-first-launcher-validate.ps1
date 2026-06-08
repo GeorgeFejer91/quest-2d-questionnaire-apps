@@ -7,8 +7,8 @@ param(
     [string]$OutputRoot = "",
     [string]$QuestionnaireApk = "",
     [string]$UnityApk = "",
-    [string]$UnityPackage = "org.questionnairebuilder.stimulusdemo",
-    [string]$UnityActivity = "org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity",
+    [string]$UnityPackage = "org.questquestionnaire.stimulusdemo",
+    [string]$UnityActivity = "org.questquestionnaire.stimulusdemo.StimulusUnityPlayerGameActivity",
     [int]$TrialCount = 1,
     [int]$WaitSeconds = 45,
     [int]$FocusPollMilliseconds = 750,
@@ -25,8 +25,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$questionnairePackage = "org.viscereality.questionnaires2d"
-$questionnaireActivity = "org.viscereality.questionnaires2d.MainActivity"
+$questionnairePackage = "org.questquestionnaire.questionnaires2d"
+$questionnaireActivity = "org.questquestionnaire.questionnaires2d.MainActivity"
 $questionnaireFiles = "/sdcard/Android/data/$questionnairePackage/files"
 $questionnaireExports = "$questionnaireFiles/QuestionnaireExports"
 
@@ -39,7 +39,7 @@ if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $ProjectPath "artifacts\quest-2d-first-launcher\$stamp"
 }
 if ([string]::IsNullOrWhiteSpace($UnityApk)) {
-    $UnityApk = Join-Path $RepoRoot 'AweGreatDictatorUnity\Builds\QuestionnaireStimulusBuilderDemo.apk'
+    $UnityApk = Join-Path $RepoRoot 'QuestionnaireStimulusUnity\Builds\QuestionnaireStimulusBuilderDemo.apk'
 }
 
 function Write-Json {
@@ -645,8 +645,8 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
         questionnaireOpenNextReturn = Count-Matches -Text $allLogText -Pattern 'MYQUESTIONNAIRE_CHAIN_RETURN finishBehavior=openNext'
         questionnaireTargetMissing = Count-Matches -Text $allLogText -Pattern 'MYQUESTIONNAIRE_CHAIN_TARGET_MISSING'
         questionnaireReturnFailed = Count-Matches -Text $allLogText -Pattern 'MYQUESTIONNAIRE_CHAIN_RETURN_FAILED'
-        unityStartGateReady = Count-Matches -Text $allLogText -Pattern 'AWE_START_GATE_READY|START_GATE_READY'
-        unityExperimentStart = Count-Matches -Text $allLogText -Pattern 'AWE_EXPERIMENT_START|VIDEO_PREPARE_START|VIDEO_PLAY'
+        unityStartGateReady = Count-Matches -Text $allLogText -Pattern 'QQ_STIMULUS_START_GATE_READY|START_GATE_READY'
+        unityExperimentStart = Count-Matches -Text $allLogText -Pattern 'QQ_STIMULUS_EXPERIMENT_START|VIDEO_PREPARE_START|VIDEO_PLAY'
     }
 
     $handoffOk = (

@@ -227,8 +227,8 @@ $unityEmbeddedTriggerCount = [int](Get-FirstPropertyValue -Object $unityEmbedded
 $demoUnityCatalogPass = (
     $exampleCatalog -and
     [string]$exampleCatalog.schemaVersion -eq 'mq.quest_questionnaire_trigger_catalog.v1' -and
-    [string]$exampleCatalog.package -eq 'org.questionnairebuilder.stimulusdemo' -and
-    [string]$exampleCatalog.activity -eq 'org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity' -and
+    [string]$exampleCatalog.package -eq 'org.questquestionnaire.stimulusdemo' -and
+    [string]$exampleCatalog.activity -eq 'org.questquestionnaire.stimulusdemo.StimulusUnityPlayerGameActivity' -and
     $exampleTriggerIds -contains 'trigger_1_launch_questionnaire' -and
     $exampleTriggerIds -contains 'trigger_2_video_complete' -and
     $exampleRecommendedModes['trigger_1_launch_questionnaire'] -eq 'demographics' -and

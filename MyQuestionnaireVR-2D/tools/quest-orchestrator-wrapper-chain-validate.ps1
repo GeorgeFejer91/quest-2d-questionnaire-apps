@@ -5,7 +5,7 @@ param(
     [string]$QuestionnaireApk = "",
     [string]$WrapperApk = "",
     [string]$OrchestratorApk = "",
-    [string]$TargetPackage = "com.Viscereality.ViscerealityPeriPersonalSpaceRight",
+    [string]$TargetPackage = "org.questquestionnaire.stimulusdemo",
     [string]$TargetActivity = "com.unity3d.player.UnityPlayerGameActivity",
     [string]$ChainPlanPath = "",
     [string]$OutputRoot = "",
@@ -17,11 +17,11 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$questionnairePackage = "org.viscereality.questionnaires2d"
-$wrapperPackage = "org.viscereality.chainhookwrapper"
-$orchestratorPackage = "org.viscereality.orchestrator"
-$orchestratorActivity = "org.viscereality.orchestrator.ExperimentOrchestratorActivity"
-$orchestratorAction = "org.viscereality.orchestrator.BROKER"
+$questionnairePackage = "org.questquestionnaire.questionnaires2d"
+$wrapperPackage = "org.questquestionnaire.chainhookwrapper"
+$orchestratorPackage = "org.questquestionnaire.orchestrator"
+$orchestratorActivity = "org.questquestionnaire.orchestrator.ExperimentOrchestratorActivity"
+$orchestratorAction = "org.questquestionnaire.orchestrator.BROKER"
 $questionnaireFiles = "/sdcard/Android/data/$questionnairePackage/files"
 $questionnaireExports = "$questionnaireFiles/QuestionnaireExports"
 $orchestratorFiles = "/sdcard/Android/data/$orchestratorPackage/files"
@@ -31,10 +31,10 @@ if ([string]::IsNullOrWhiteSpace($QuestionnaireApk)) {
     $QuestionnaireApk = Join-Path $ProjectPath 'Builds\MyQuestionnaireVR-2D.apk'
 }
 if ([string]::IsNullOrWhiteSpace($WrapperApk)) {
-    $WrapperApk = Join-Path $ProjectPath 'Builds\ViscerealityChainHookWrapper.apk'
+    $WrapperApk = Join-Path $ProjectPath 'Builds\QuestQuestionnaireChainHookWrapper.apk'
 }
 if ([string]::IsNullOrWhiteSpace($OrchestratorApk)) {
-    $OrchestratorApk = Join-Path $ProjectPath 'Builds\ViscerealityExperimentOrchestrator.apk'
+    $OrchestratorApk = Join-Path $ProjectPath 'Builds\QuestQuestionnaireExperimentOrchestrator.apk'
 }
 if ([string]::IsNullOrWhiteSpace($ChainPlanPath)) {
     $ChainPlanPath = Join-Path $ProjectPath 'QuestionnaireConfigs\examples\peripersonal-space-right-then-questionnaire.chain-plan.json'
@@ -188,7 +188,7 @@ $launchExitCode = Invoke-AdbText -Arguments @(
 
 Start-Sleep -Seconds $WaitSeconds
 Invoke-AdbText -Arguments @('logcat', '-d', '-v', 'threadtime') -OutputPath (Join-Path $OutputRoot 'logcat.txt') | Out-Null
-Invoke-AdbText -Arguments @('logcat', '-d', '-v', 'threadtime', 'ViscerealityOrchestrator:I', 'ViscerealityChainHook:I', 'MyQuestionnaire2D:I', 'AndroidRuntime:E', '*:S') -OutputPath (Join-Path $OutputRoot 'logcat-chain.txt') | Out-Null
+Invoke-AdbText -Arguments @('logcat', '-d', '-v', 'threadtime', 'Quest 2D QuestionnaireOrchestrator:I', 'QuestQuestionnaireChainHook:I', 'MyQuestionnaire2D:I', 'AndroidRuntime:E', '*:S') -OutputPath (Join-Path $OutputRoot 'logcat-chain.txt') | Out-Null
 Invoke-AdbText -Arguments @('shell', 'dumpsys', 'window') -OutputPath (Join-Path $OutputRoot 'foreground-after.txt') | Out-Null
 
 $pullRoot = Join-Path $OutputRoot 'device-files'
@@ -302,7 +302,7 @@ if ($stateStatus -ne 'complete' -or $stateStepIndex -ne $lastStepIndex) {
 }
 
 $summary = [ordered]@{
-    schemaVersion = 'viscereality.orchestrator-wrapper-chain-validation.v1'
+    schemaVersion = 'questquestionnaire.orchestrator-wrapper-chain-validation.v1'
     status = $status
     serial = $Serial
     questionnaireApk = $QuestionnaireApk

@@ -27,12 +27,15 @@ public sealed class ChainLinkTimedTrigger : MonoBehaviour
     public TimedChainAction action = TimedChainAction.ContinueBrokerPlan;
     public string chainLinkCommand = "nextBlock";
 
-    [Header("Questionnaire direct launch")]
-    public string questionnaireMode = "pictographic";
+    [Header("Passive questionnaire trigger")]
+    public string triggerId = "";
     public string finishBehavior = "resumeCaller";
     public string callerPackage = "";
     public string callerActivity = "";
     public string autoCloseDelayMs = "2000";
+
+    [Header("Legacy/dev questionnaire fallback")]
+    public string questionnaireMode = "";
 
     [Header("Experiment metadata")]
     public bool copyIncomingChainExtras = true;
@@ -149,14 +152,28 @@ public sealed class ChainLinkTimedTrigger : MonoBehaviour
                 QuestQuestionnaireChainBridge.ContinueBrokerPlan(extras);
                 break;
             case TimedChainAction.ChainLinkNextBlock:
-                QuestQuestionnaireChainBridge.SendChainLinkNextBlock(extras);
+                if (string.IsNullOrEmpty(triggerId))
+                {
+                    QuestQuestionnaireChainBridge.SendChainLinkNextBlock(extras);
+                }
+                else
+                {
+                    QuestQuestionnaireChainBridge.SendChainLinkTrigger(triggerId, extras);
+                }
                 break;
             case TimedChainAction.ChainLinkCommand:
                 QuestQuestionnaireChainBridge.SendChainLinkCommand(chainLinkCommand, extras);
                 break;
             case TimedChainAction.LaunchQuestionnaire:
                 AddQuestionnaireLaunchExtras(extras);
-                QuestQuestionnaireChainBridge.LaunchQuestionnaire(extras);
+                if (string.IsNullOrEmpty(triggerId))
+                {
+                    QuestQuestionnaireChainBridge.LaunchQuestionnaire(extras);
+                }
+                else
+                {
+                    QuestQuestionnaireChainBridge.LaunchQuestionnaireTrigger(triggerId, extras);
+                }
                 break;
             default:
                 Debug.LogWarning("ChainLinkTimedTrigger has no action configured.");
@@ -194,6 +211,7 @@ public sealed class ChainLinkTimedTrigger : MonoBehaviour
         AddIfSet(extras, "mq.participantId", participantId);
         AddIfSet(extras, "mq.participantName", participantName);
         AddIfSet(extras, "mq.language", language);
+        AddIfSet(extras, "mq.triggerId", triggerId);
         AddIfSet(extras, "mq.blockNumber", blockNumber);
         AddIfSet(extras, "mq.blockId", blockId);
 

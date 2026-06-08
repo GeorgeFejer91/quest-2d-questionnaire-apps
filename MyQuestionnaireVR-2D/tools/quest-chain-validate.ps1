@@ -17,10 +17,10 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$package = "org.viscereality.questionnaires2d"
-$activity = "org.viscereality.questionnaires2d.MainActivity"
-$action = "org.viscereality.questionnaires2d.RUN"
-$legacyUnityPackage = "org.viscereality.questionnaires"
+$package = "org.questquestionnaire.questionnaires2d"
+$activity = "org.questquestionnaire.questionnaires2d.MainActivity"
+$action = "org.questquestionnaire.questionnaires2d.RUN"
+$legacyUnityPackage = "org.questquestionnaire.questionnaires"
 $deviceExports = "/sdcard/Android/data/$package/files/QuestionnaireExports"
 $filesDir = "/sdcard/Android/data/$package/files"
 

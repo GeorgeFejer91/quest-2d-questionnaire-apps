@@ -4,7 +4,7 @@
     <application
         android:allowBackup="false"
         android:appCategory="productivity"
-        android:label="Viscereality Chain Hook"
+        android:label="Quest 2D Questionnaire Chain Hook"
         android:resizeableActivity="true"
         android:theme="@style/AppTheme">
         <activity
@@ -16,7 +16,7 @@
             android:noHistory="false"
             android:resizeableActivity="true">
             <intent-filter>
-                <action android:name="org.viscereality.CHAIN_COMMAND" />
+                <action android:name="org.questquestionnaire.CHAIN_COMMAND" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <layout

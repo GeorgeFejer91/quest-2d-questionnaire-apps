@@ -1,22 +1,22 @@
 # Experiment Chain Workflow
 
 This is the recommended workflow for building Quest experiment chains that mix
-Viscereality Unity APKs and the native Android questionnaire 2D panel app.
+Quest 2D Questionnaire stimulus APKs and the native Android questionnaire 2D panel app.
 
 ## Recommended Architecture
 
 Use the standalone orchestrator APK as the chain owner:
 
 ```text
-org.viscereality.orchestrator/.ExperimentOrchestratorActivity
+org.questquestionnaire.orchestrator/.ExperimentOrchestratorActivity
 ```
 
 Install these APKs on the headset:
 
 ```text
-Builds\ViscerealityExperimentOrchestrator.apk
+Builds\QuestQuestionnaireExperimentOrchestrator.apk
 Builds\MyQuestionnaireVR-2D.apk
-Builds\ViscerealityChainHookWrapper.apk
+Builds\QuestQuestionnaireChainHookWrapper.apk
 ```
 
 For a portable handoff folder, publish the experiment-chain kit:
@@ -97,7 +97,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-wrapper-manual
   -Mode Start `
   -Serial 2G0YC1ZG1002QL `
   -SkipBuild `
-  -TargetPackage com.Viscereality.ViscerealityPeriPersonalSpaceRight `
+  -TargetPackage org.questquestionnaire.stimulusdemo `
   -TargetActivity com.unity3d.player.UnityPlayerGameActivity `
   -ChainPlanPath .\QuestionnaireConfigs\examples\peripersonal-space-right-then-questionnaire.chain-plan.json
 ```
@@ -130,7 +130,7 @@ advance until an explicit continue command is sent.
 ### Rebuildable Scenario With Source Hook
 
 For source projects, the strongest route is an in-app semantic hook. In the
-current Viscereality source tree, `ExperimentRun.NotifyExperimentChainComplete()`
+current Quest 2D Questionnaire stimulus source tree, `ExperimentRun.NotifyExperimentChainComplete()`
 already calls:
 
 ```text
@@ -157,8 +157,8 @@ Build a source-hook candidate APK from the currently hooked experiment scene:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\build-unity-source-hook-apk.ps1 `
   -ScenePath "Assets\Scenes\Main Questionnaire.unity" `
-  -PackageId "com.Viscereality.ViscerealityPeriPersonalSpaceRight.SourceHook" `
-  -ProductName "Viscereality Peripersonal Source Hook Candidate"
+  -PackageId "org.questquestionnaire.stimulusdemo.sourcehook" `
+  -ProductName "Quest Questionnaire Stimulus Source Hook Candidate"
 ```
 
 Validate the source-hook smoke plan:
@@ -187,11 +187,11 @@ Quest serial:
 Validated packages:
 
 ```text
-com.Viscereality.ViscerealityPeriPersonalSpaceRight
-com.Viscereality.ViscerealityPeriPersonalSpaceLeft
-com.Viscereality.ViscerealityPeriPersonalRight2
-com.Viscereality.ViscerealitySphere
-com.Viscereality.ViscerealityEggspansion
+org.questquestionnaire.stimulusdemo
+org.questquestionnaire.stimulusdemo.left
+org.questquestionnaire.stimulusdemo.right2
+org.questquestionnaire.stimulusdemo.sphere
+org.questquestionnaire.stimulusdemo.expansion
 ```
 
 The batch ran both orders for each scenario:
@@ -245,7 +245,7 @@ artifacts\quest-orchestrator-wrapper-chain-validation\20260605T035658Z\quest-orc
 The installed package/activity are:
 
 ```text
-com.Viscereality.ViscerealityPeriPersonalSpaceRight/com.unity3d.player.UnityPlayerGameActivity
+org.questquestionnaire.stimulusdemo/com.unity3d.player.UnityPlayerGameActivity
 ```
 
 The source-hook Unity project also preflights and compiles:
@@ -266,7 +266,7 @@ The questionnaire saves locally before returning to any broker or next app.
 Exports live on the headset under:
 
 ```text
-/sdcard/Android/data/org.viscereality.questionnaires2d/files/QuestionnaireExports
+/sdcard/Android/data/org.questquestionnaire.questionnaires2d/files/QuestionnaireExports
 ```
 
 Each run gets a unique run id and participant-safe filename:
@@ -313,12 +313,12 @@ Validate one Peripersonal Space Right wrapper chain:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-orchestrator-wrapper-chain-validate.ps1 `
   -Serial 2G0YC1ZG1002QL `
   -SkipBuild `
-  -TargetPackage com.Viscereality.ViscerealityPeriPersonalSpaceRight `
+  -TargetPackage org.questquestionnaire.stimulusdemo `
   -TargetActivity com.unity3d.player.UnityPlayerGameActivity `
   -ChainPlanPath .\QuestionnaireConfigs\examples\peripersonal-space-right-then-questionnaire.chain-plan.json
 ```
 
-Stress test installed Viscereality scenarios in both directions:
+Stress test installed Quest 2D Questionnaire stimulus scenarios in both directions:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-installed-scenario-batch-validate.ps1 `

@@ -106,7 +106,7 @@ foreach ($launcherFile in $launcherFiles) {
 }
 
 $exampleFiles = @(
-    (Join-Path $projectFull 'QuestionnaireConfigs\viscereality-maia2.config.json'),
+    (Join-Path $projectFull 'QuestionnaireConfigs\quest-questionnaire-maia2.config.json'),
     (Join-Path $projectFull 'QuestionnaireConfigs\examples\custom-presence-check.config.json'),
     (Join-Path $projectFull 'QuestionnaireConfigs\examples\two-item-slider-template.csv'),
     (Join-Path $projectFull 'QuestionnaireConfigs\examples\chain-plan.example.json'),
@@ -281,7 +281,7 @@ $manifest = [ordered]@{
     sourceHtml = $sourceHtml
     packageDir = $packageDir
     examples = @(
-        'examples\viscereality-maia2.config.json',
+        'examples\quest-questionnaire-maia2.config.json',
         'examples\custom-presence-check.config.json',
         'examples\two-item-slider-template.csv',
         'examples\chain-plan.example.json',
@@ -341,7 +341,7 @@ $manifest = [ordered]@{
         generateWrapperChainPlan = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\new-wrapper-chain-plan.ps1 -TargetApk <scenario.apk> -ScenarioId <scenario-id> -HookMode Wrapper -OutputPath .\QuestionnaireConfigs\examples\<scenario-id>.chain-plan.json'
         generateSourceHookChainPlan = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\new-wrapper-chain-plan.ps1 -TargetApk <rebuilt-scenario.apk> -ScenarioId <scenario-id> -HookMode Source -OutputPath .\QuestionnaireConfigs\examples\<scenario-id>-source-hook.chain-plan.json'
         sourceHookCandidateAudit = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\audit-unity-source-hook-candidates.ps1'
-        sourceHookCandidateBuild = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\build-unity-source-hook-apk.ps1 -ScenePath "Assets\Scenes\Main Questionnaire.unity" -PackageId "com.Viscereality.ViscerealityPeriPersonalSpaceRight.SourceHook" -ProductName "Viscereality Peripersonal Source Hook Candidate"'
+        sourceHookCandidateBuild = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\build-unity-source-hook-apk.ps1 -ScenePath "Assets\Scenes\Main Questionnaire.unity" -PackageId "org.questquestionnaire.stimulusdemo.sourcehook" -ProductName "Quest Questionnaire Stimulus Source Hook Candidate"'
         installedScenarioBatchValidation = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-installed-scenario-batch-validate.ps1 -Serial <quest-serial> -MaxTargets 3 -Order Both -SkipBuild'
         liveChainLinkStress = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\run-live-chainlink-stress.ps1 -RestartServer -WaitSeconds 90 -SkipBuild'
         orchestratorWrapperValidation = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-orchestrator-wrapper-chain-validate.ps1 -Serial <quest-serial> -TargetPackage <scenario-package> -TargetActivity <scenario-activity> -ChainPlanPath .\QuestionnaireConfigs\examples\<scenario-id>.chain-plan.json -SkipBuild'

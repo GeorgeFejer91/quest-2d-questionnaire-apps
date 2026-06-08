@@ -1,9 +1,9 @@
 param(
-    [string]$UnityProjectPath = "C:\Users\cogpsy-vrlab\Documents\GithubVR\Viscereality\Viscereality",
+    [string]$UnityProjectPath = "C:\Users\cogpsy-vrlab\Documents\GithubVR\Quest 2D Questionnaire\Quest 2D Questionnaire",
     [string]$UnityEditorPath = "",
     [string]$ScenePath = "Assets\Scenes\Main Questionnaire.unity",
-    [string]$PackageId = "com.Viscereality.ViscerealityPeriPersonalSpaceRight.SourceHook",
-    [string]$ProductName = "Viscereality Peripersonal Source Hook Candidate",
+    [string]$PackageId = "org.questquestionnaire.stimulusdemo.sourcehook",
+    [string]$ProductName = "Quest Questionnaire Stimulus Source Hook Candidate",
     [string]$OutputApk = "",
     [string]$OutputRoot = "",
     [switch]$Development,
@@ -85,7 +85,7 @@ $outputRootFull = Get-FullPath $OutputRoot
 New-Item -ItemType Directory -Force -Path $outputRootFull | Out-Null
 
 if ([string]::IsNullOrWhiteSpace($OutputApk)) {
-    $OutputApk = Join-Path $projectRoot 'Builds\ViscerealityPeripersonalSourceHookCandidate.apk'
+    $OutputApk = Join-Path $projectRoot 'Builds\Quest 2D QuestionnairePeripersonalSourceHookCandidate.apk'
 }
 $outputApkFull = Get-FullPath $OutputApk
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $outputApkFull) | Out-Null
@@ -141,7 +141,7 @@ if ($Development) {
 }
 
 $summary = [ordered]@{
-    schemaVersion = 'viscereality.unity-source-hook-build-wrapper.v1'
+    schemaVersion = 'questquestionnaire.unity-source-hook-build-wrapper.v1'
     status = if ($DryRun) { 'dry-run' } else { 'pending' }
     unityEditor = $unity
     unityProjectPath = $projectPath

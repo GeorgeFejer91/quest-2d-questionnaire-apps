@@ -5,7 +5,7 @@ param(
     [string]$TargetLabel = "",
     [string]$ExperimentId = "",
     [string]$PlanId = "",
-    [string]$QuestionnaireId = "viscereality-maia2",
+    [string]$QuestionnaireId = "quest-questionnaire-maia2",
     [string]$QuestionnaireVersion = "1.0.0",
     [int]$PictographicRepeats = 2,
     [string]$TriggerButton = "auto-unused-non-breath-tracking",
@@ -120,9 +120,9 @@ if ([string]::IsNullOrWhiteSpace($OutputPath)) {
     $OutputPath = Join-Path (Split-Path -Parent $PSScriptRoot) "QuestionnaireConfigs\examples\$(Get-SafeFileStem $PlanId).chain-plan.json"
 }
 
-$questionnairePackage = 'org.viscereality.questionnaires2d'
-$questionnaireActivity = 'org.viscereality.questionnaires2d.MainActivity'
-$questionnaireAction = 'org.viscereality.questionnaires2d.RUN'
+$questionnairePackage = 'org.questquestionnaire.questionnaires2d'
+$questionnaireActivity = 'org.questquestionnaire.questionnaires2d.MainActivity'
+$questionnaireAction = 'org.questquestionnaire.questionnaires2d.RUN'
 $blocks = New-Object System.Collections.Generic.List[object]
 
 $blocks.Add((New-RegisteredBlock -Index 1 -Id 'baseline_questionnaire' -Type 'questionnaire' -Label 'Language, demographics, MAIA-2' `
@@ -160,7 +160,7 @@ for ($repeat = 1; $repeat -le $PictographicRepeats; $repeat++) {
 }
 
 $registry = [ordered]@{
-    schemaVersion = 'viscereality.chainlink.block-registry.v1'
+    schemaVersion = 'questquestionnaire.chainlink.block-registry.v1'
     experimentId = $ExperimentId
     planId = $PlanId
     questionnaireId = $QuestionnaireId
@@ -207,7 +207,7 @@ $steps = @($registry.blocks | ForEach-Object {
 })
 
 $plan = [ordered]@{
-    schemaVersion = 'viscereality.chainlink.plan.v1'
+    schemaVersion = 'questquestionnaire.chainlink.plan.v1'
     legacySchemaVersion = 'my-questionnaire-2d.chain-plan.v1'
     planKind = 'registered-block-sequence'
     experimentId = $ExperimentId
@@ -228,7 +228,7 @@ if (-not [string]::IsNullOrWhiteSpace($outputDir)) {
 $plan | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
 
 $summary = [ordered]@{
-    schemaVersion = 'viscereality.chainlink-plan-generator.v1'
+    schemaVersion = 'questquestionnaire.chainlink-plan-generator.v1'
     status = 'pass'
     targetPackage = $TargetPackage
     targetActivity = $TargetActivity

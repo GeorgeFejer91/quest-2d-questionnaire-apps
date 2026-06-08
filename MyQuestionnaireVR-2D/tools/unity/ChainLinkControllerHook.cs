@@ -14,8 +14,9 @@ public sealed class ChainLinkControllerHook : MonoBehaviour
         MenuButton
     }
 
-    [Header("ChainLink trigger")]
+    [Header("Passive trigger")]
     public bool enableHook = true;
+    public string triggerId = "";
     public LeftControllerButton button = LeftControllerButton.SecondaryButton;
     public float debounceSeconds = 0.75f;
     public bool sendOnlyOnce = false;
@@ -63,17 +64,24 @@ public sealed class ChainLinkControllerHook : MonoBehaviour
             return;
         }
 
-        SendNextBlock();
+        SendPassiveTrigger();
     }
 
-    [ContextMenu("Send ChainLink Next Block")]
-    public void SendNextBlock()
+    [ContextMenu("Send Passive Questionnaire Trigger")]
+    public void SendPassiveTrigger()
     {
         var extras = BuildTriggerExtras();
-        QuestQuestionnaireChainBridge.SendChainLinkNextBlock(extras);
+        if (!string.IsNullOrEmpty(triggerId))
+        {
+            QuestQuestionnaireChainBridge.SendChainLinkTrigger(triggerId, extras);
+        }
+        else
+        {
+            QuestQuestionnaireChainBridge.SendChainLinkNextBlock(extras);
+        }
         sentCount++;
         nextAllowedSendTime = Time.unscaledTime + Math.Max(0.05f, debounceSeconds);
-        Debug.Log("ChainLinkControllerHook sent nextBlock to ChainLink.");
+        Debug.Log("ChainLinkControllerHook emitted passive trigger " + (string.IsNullOrEmpty(triggerId) ? "legacy-nextBlock" : triggerId) + ".");
     }
 
     public Dictionary<string, string> BuildTriggerExtras()
@@ -95,6 +103,7 @@ public sealed class ChainLinkControllerHook : MonoBehaviour
         AddIfSet(extras, "mq.participantId", participantId);
         AddIfSet(extras, "mq.participantName", participantName);
         AddIfSet(extras, "mq.language", language);
+        AddIfSet(extras, "mq.triggerId", triggerId);
         AddIfSet(extras, "mq.blockNumber", blockNumber);
         AddIfSet(extras, "mq.blockId", blockId);
 

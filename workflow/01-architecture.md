@@ -45,13 +45,13 @@ size. The working size for these apps is `1280dp x 800dp` with a minimum around
 Every app should expose a stable explicit component and a stable action:
 
 - Demographic questionnaire:
-  - package `org.viscereality.questionnaires2d`
+  - package `org.questquestionnaire.questionnaires2d`
   - activity `.MainActivity`
-  - action `org.viscereality.questionnaires2d.RUN`
+  - action `org.questquestionnaire.questionnaires2d.RUN`
 - Temporal tracer:
-  - package `org.viscereality.temporaltracer2d`
+  - package `org.questquestionnaire.temporaltracer2d`
   - activity `.MainActivity`
-  - action `org.viscereality.temporaltracer2d.RUN`
+  - action `org.questquestionnaire.temporaltracer2d.RUN`
 
 Use explicit component launches when chaining experiment APKs. Implicit actions
 are useful for discovery and compatibility, but explicit package/activity pairs

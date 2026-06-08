@@ -94,6 +94,24 @@ The editor keeps the v1 contract: language selection, demographics, MAIA-2,
 pictographic selections, and one custom slider block. It also scans Unity APK
 trigger catalogs, maps trigger event IDs to questionnaire blocks, shows
 participant-experience counts, and prints the matching APK generator command.
+The hosted product flow exposes CSV upload and downloadable type templates in
+the trigger/block step. Treat these like Qualtrics-style starting sheets:
+slider/VAS, Likert, multiple choice, text entry, and temporal tracer dimensions
+are question-type templates. MAIA-2 is a preloaded named questionnaire example,
+not the definition of generic Likert. The current APK runtime can build and
+render arbitrary uploaded slider/VAS item sets; other uploaded question types
+are template/protocol preloads until the APK runtime and exporter support them
+end to end, and unsupported rows should fail loudly.
+The generated 2D questionnaire APK is the study logic owner: it owns block
+order, participant/session state, trigger interpretation, exports, and the
+next pending questionnaire block. Unity APKs should stay passive and emit
+trigger IDs only; they should not decide which questionnaire, tracer, scoring,
+or block comes next.
+In V2 the runtime sequence is intentionally simple: the 2D APK starts block 1,
+block 1 completion saves state and launches the configured Unity APK, the 2D
+APK goes to the background, and Unity later emits a passive `mq.triggerId`.
+Foreground recovery then continues the next configured questionnaire block from
+the 2D APK protocol state.
 The builder UI is APK-first: downstream block-building, questionnaire editing,
 validation, local dependency, export, and APK-generation controls remain
 disabled until an existing scenario APK, trigger catalog JSON, or the repository
@@ -109,9 +127,19 @@ normal-launch default that runs demographics, saves the first block, and opens
 the configured Unity APK through `finishBehavior=openNext`. That generated APK
 is effectively pinned to the chosen Unity package/activity, while the reusable
 Android source stays builder/config driven. Later Unity-triggered blocks still
-return to Unity with `resumeCaller`; this does not replace the Unity
-input-modality requirement that generic stimulus APKs support both hands and
-controllers.
+return to Unity with `resumeCaller`, but Unity only emits passive trigger IDs.
+The questionnaire APK interprets those IDs against its own protocol state. This
+does not replace the Unity input-modality requirement that generic stimulus APKs
+support both hands and controllers.
+Questionnaire-first generated APKs are named for the headset operator as
+`Start Experiment | <target APK label>` in Meta Home and in the first panel
+heading, so the app list itself shows which item starts the sequence.
+
+For custom questionnaire content, prefer downloadable templates over one-off
+form design. The GUI provides CSV templates for question-style metadata and a
+pictographic ZIP template with placeholder PNGs plus a manifest; users edit or
+replace those local files, reupload them, and then assign the resulting
+questionnaire element into block 1 or a Unity-return block.
 
 The repository includes a small 2D-first demo config that can run the full
 offline APK/render/preflight spine without relying on generated smoke-test
@@ -119,7 +147,7 @@ artifacts:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-builder-to-quest-workflow.ps1 `
-  -ConfigPath .\QuestionnaireConfigs\examples\awe-great-dictator-2d-first-demo.config.json `
+  -ConfigPath .\QuestionnaireConfigs\examples\quest-questionnaire-stimulus-2d-first-demo.config.json `
   -RunQuestDirectHandoff `
   -DryRunQuestDirectHandoff `
   -SkipInstall
@@ -300,7 +328,7 @@ Run the full builder-to-Quest evidence spine for a saved GUI config:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-builder-to-quest-workflow.ps1 `
-  -ConfigPath .\QuestionnaireConfigs\generated\viscereality-maia2.config.json `
+  -ConfigPath .\QuestionnaireConfigs\generated\quest-questionnaire-maia2.config.json `
   -RunQuestReadiness `
   -Serial <quest-serial>
 ```
@@ -353,7 +381,7 @@ before trigger 1. The demo Unity app waits for participant/operator input in
 Unity, launches the first questionnaire only after that input, and starts the
 video only after the matching questionnaire result returns. The direct handoff
 validator passes `mq.validationAutoStart=true` so unattended validation runs
-can bypass this human gate with an auditable `AWE_START_GATE_AUTO_START`
+can bypass this human gate with an auditable `QQ_STIMULUS_START_GATE_AUTO_START`
 marker; manual headset passes should launch the app normally and click the
 start target.
 
@@ -404,7 +432,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-questionnai
   -SkipQuest
 ```
 
-Run the universal Quest handoff local stress ladder for the Chaplin/Awe demo
+Run the universal Quest handoff local stress ladder for the Quest questionnaire stimulus demo
 contract. This validates builder trigger mapping, generated handoff config,
 questionnaire local render, temporal tracer assets, and temporal tracer local
 render without requiring a headset:
@@ -529,7 +557,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\validate-questionnai
 Exports are written on-device under:
 
 ```text
-/sdcard/Android/data/org.mesmerprism.viscereality.questionnaires2d/files/QuestionnaireExports
+/sdcard/Android/data/org.questquestionnaire.questionnaires2d/files/QuestionnaireExports
 ```
 
 ## APK Chain Broker
@@ -543,9 +571,9 @@ For the full experiment-chain recipe and current stress-test evidence, see
 `docs\experiment-chain-workflow.md`.
 
 ```text
-package: org.mesmerprism.viscereality.orchestrator
-activity: org.mesmerprism.viscereality.orchestrator.ExperimentOrchestratorActivity
-action: org.mesmerprism.viscereality.orchestrator.BROKER
+package: org.questquestionnaire.orchestrator
+activity: org.questquestionnaire.orchestrator.ExperimentOrchestratorActivity
+action: org.questquestionnaire.orchestrator.BROKER
 ```
 
 Build output:
@@ -555,16 +583,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\build-orchestrator-a
 ```
 
 ```text
-Builds\ViscerealityExperimentOrchestrator.apk
+Builds\QuestQuestionnaireExperimentOrchestrator.apk
 ```
 
 The questionnaire APK also keeps its own compatible broker for small
 questionnaire-centered chains and backward compatibility:
 
 ```text
-package: org.mesmerprism.viscereality.questionnaires2d
-activity: org.mesmerprism.viscereality.questionnaires2d.QuestChainBrokerActivity
-action: org.mesmerprism.viscereality.questionnaires2d.BROKER
+package: org.questquestionnaire.questionnaires2d
+activity: org.questquestionnaire.questionnaires2d.QuestChainBrokerActivity
+action: org.questquestionnaire.questionnaires2d.BROKER
 ```
 
 Both brokers accept `mq.brokerCommand` values:
@@ -576,13 +604,13 @@ startPlan, continuePlan, clearPlan, startQuestionnaire, openApp, goHome, ping
 The standalone orchestrator stores chain state under:
 
 ```text
-/sdcard/Android/data/org.mesmerprism.viscereality.orchestrator/files/ExperimentOrchestrator
+/sdcard/Android/data/org.questquestionnaire.orchestrator/files/ExperimentOrchestrator
 ```
 
 The questionnaire-owned broker stores chain state under:
 
 ```text
-/sdcard/Android/data/org.mesmerprism.viscereality.questionnaires2d/files/ChainBroker
+/sdcard/Android/data/org.questquestionnaire.questionnaires2d/files/ChainBroker
 ```
 
 Recommended flow:
@@ -596,7 +624,7 @@ entry point. The broker can identify that app by package/activity and issue a
 hook command using:
 
 ```text
-intent action: org.mesmerprism.viscereality.CHAIN_COMMAND
+intent action: org.questquestionnaire.CHAIN_COMMAND
 extra: mq.hookCommand=startScenario
 extras: mq.chainId, mq.chainStepId, mq.chainStepIndex
 callback extras: mq.brokerAction, mq.brokerPackage, mq.brokerActivity
@@ -616,15 +644,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\build-hook-wrapper-a
 Output:
 
 ```text
-Builds\ViscerealityChainHookWrapper.apk
+Builds\QuestQuestionnaireChainHookWrapper.apk
 ```
 
 The wrapper advertises the same discoverable hook action:
 
 ```text
-package: org.mesmerprism.viscereality.chainhookwrapper
-activity: org.mesmerprism.viscereality.chainhookwrapper.ChainHookActivity
-action: org.mesmerprism.viscereality.CHAIN_COMMAND
+package: org.questquestionnaire.chainhookwrapper
+activity: org.questquestionnaire.chainhookwrapper.ChainHookActivity
+action: org.questquestionnaire.CHAIN_COMMAND
 ```
 
 In a chain plan, target the wrapper and pass the old APK target through extras:
@@ -633,12 +661,12 @@ In a chain plan, target the wrapper and pass the old APK target through extras:
 {
   "id": "peripersonal-space-right-wrapper",
   "type": "scenario",
-  "package": "org.mesmerprism.viscereality.chainhookwrapper",
+  "package": "org.questquestionnaire.chainhookwrapper",
   "activity": ".ChainHookActivity",
-  "action": "org.mesmerprism.viscereality.CHAIN_COMMAND",
+  "action": "org.questquestionnaire.CHAIN_COMMAND",
   "command": "launchTarget",
   "extras": {
-    "targetPackage": "com.Viscereality.ViscerealityPeriPersonalSpaceRight",
+    "targetPackage": "org.questquestionnaire.stimulusdemo",
     "targetActivity": "com.unity3d.player.UnityPlayerGameActivity",
     "mq.autoContinueDelayMs": 10000
   }
@@ -649,16 +677,16 @@ Use `mq.autoContinueDelayMs` only for automated validation or timed segments.
 For real experimental logic, a source-level hook inside the Unity APK should
 call the broker when the scenario is genuinely finished.
 
-For Viscereality Unity source builds, the source-hook pieces are already staged
-in the Unity project:
+For rebuildable Unity stimulus source builds, stage the source-hook pieces in
+the Unity project:
 
 ```text
-C:\Users\cogpsy-vrlab\Documents\GithubVR\Viscereality\Viscereality\Assets\Scripts\ExperimentChain\QuestQuestionnaireChainBridge.cs
-C:\Users\cogpsy-vrlab\Documents\GithubVR\Viscereality\Viscereality\Assets\Scripts\ExperimentChain\QuestExperimentChainHook.cs
-C:\Users\cogpsy-vrlab\Documents\GithubVR\Viscereality\Viscereality\Assets\Plugins\Android\AndroidManifest.xml
+<UnityProjectPath>\Assets\Scripts\ExperimentChain\QuestQuestionnaireChainBridge.cs
+<UnityProjectPath>\Assets\Scripts\ExperimentChain\QuestExperimentChainHook.cs
+<UnityProjectPath>\Assets\Plugins\Android\AndroidManifest.xml
 ```
 
-Those source builds expose the same `org.mesmerprism.viscereality.CHAIN_COMMAND`
+Those source builds expose the same `org.questquestionnaire.CHAIN_COMMAND`
 action directly from the Unity activity. At the semantic end of a scenario, call
 this from Unity:
 
@@ -666,11 +694,11 @@ this from Unity:
 QuestExperimentChainHook.ContinueCurrentPlan();
 ```
 
-The current Viscereality source tree also wires this into `ExperimentRun`: after
-`ThankYou()`, it calls `QuestExperimentChainHook.ContinueCurrentPlan(...)` with
-`mq.scenarioResultStatus`, `mq.scenarioVersion`, and
-`mq.scenarioParticipantDataPath`. A rebuilt Peripersonal-style APK can therefore
-advance the chain from real scenario completion instead of a wrapper timeout.
+Source stimulus projects can wire this into their own completion method: after
+the scenario ends, call `QuestExperimentChainHook.ContinueCurrentPlan(...)`
+with `mq.scenarioResultStatus`, `mq.scenarioVersion`, and any relevant
+participant data path. A rebuilt demo APK can therefore advance the chain from
+real scenario completion instead of a wrapper timeout.
 
 The Unity hook uses the callback broker extras supplied by the incoming chain
 intent (`mq.brokerAction`, `mq.brokerPackage`, `mq.brokerActivity`). If the
@@ -745,7 +773,7 @@ Then validate the wrapper chain on Quest. For the standalone orchestrator path:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-orchestrator-wrapper-chain-validate.ps1 `
   -Serial 2G0YC1ZG1002QL `
-  -TargetPackage "com.Viscereality.ViscerealityPeriPersonalSpaceRight" `
+  -TargetPackage "org.questquestionnaire.stimulusdemo" `
   -TargetActivity "com.unity3d.player.UnityPlayerGameActivity" `
   -ChainPlanPath .\QuestionnaireConfigs\examples\peripersonal-space-right-then-questionnaire.chain-plan.json
 ```
@@ -759,7 +787,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-wrapper-chain-
   -ChainPlanPath .\QuestionnaireConfigs\examples\peripersonal-space-right-then-questionnaire.local.chain-plan.json
 ```
 
-For stress-testing several installed legacy Viscereality APKs through the
+For stress-testing several installed legacy Quest 2D Questionnaire stimulus APKs through the
 standalone orchestrator and wrapper, run the installed-scenario batch validator:
 
 ```powershell
@@ -770,7 +798,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-installed-scen
   -SkipBuild
 ```
 
-This discovers installed `com.Viscereality.*` packages, generates temporary
+This discovers installed `org.questquestionnaire.*` packages, generates temporary
 chain plans, runs scenario -> questionnaire and questionnaire -> scenario
 orders, and writes compact evidence under:
 
@@ -783,8 +811,8 @@ unique run ids, participant names, and config ids, so deeply nested Windows
 paths can become too long for `adb pull`.
 
 In this workspace, the Peripersonal Space Right Unity sidecar folder is present
-under `Viscereality\Viscereality\APKs`. The installed headset APK was verified
-as package `com.Viscereality.ViscerealityPeriPersonalSpaceRight`, launch
+under `Quest 2D Questionnaire\Quest 2D Questionnaire\APKs`. The installed headset APK was verified
+as package `org.questquestionnaire.stimulusdemo`, launch
 activity `com.unity3d.player.UnityPlayerGameActivity`, and was pulled for
 metadata evidence to:
 
@@ -819,7 +847,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-broker-chain-v
 ```
 
 Run the direct source-hook proof. This installs a tiny scenario stub that
-behaves like a rebuilt Viscereality APK with a real hook: the broker starts the
+behaves like a rebuilt Quest 2D Questionnaire stimulus APK with a real hook: the broker starts the
 scenario hook directly, the hook calls back through the provided broker extras,
 then the questionnaire runs and exports.
 

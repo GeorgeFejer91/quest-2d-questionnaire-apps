@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'org.viscereality.chainlink'
+    namespace 'org.questquestionnaire.chainlink'
     compileSdk 35
 
     defaultConfig {
-        applicationId 'org.viscereality.chainlink'
+        applicationId 'org.questquestionnaire.chainlink'
         minSdk 29
         targetSdk 35
         versionCode 1

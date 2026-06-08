@@ -1,12 +1,13 @@
 {
     "schemaVersion":  "my-questionnaire-vr.config.v1",
-    "questionnaireId":  "viscereality-maia2",
+    "questionnaireId":  "quest-questionnaire-maia2",
     "questionnaireVersion":  "1.0.0",
     "appVersion":  "1.0.0",
-    "sourceConfig":  "QuestionnaireConfigs/viscereality-maia2.config.json",
-    "sourceRepository":  "Viscereality",
+    "appDisplayName":  "Quest Questionnaire 2D",
+    "sourceConfig":  "QuestionnaireConfigs/quest-questionnaire-maia2.config.json",
+    "sourceRepository":  "quest-2d-questionnaire-apps",
     "sourceCommit":  "7f0f7c9a40885aa841892b9a680acf45fa45b2d7",
-    "maia2SourcePath":  "C:\\Users\\cogpsy-vrlab\\Documents\\GitHub\\maia-2\\questionnaire\\src",
+    "maia2SourcePath":  "",
     "languages":  [
                       "English",
                       "Deutsch"
@@ -178,7 +179,8 @@
                                        {
                                            "id":  "perceived_body_boundaries",
                                            "imageFileName":  "1.PerceivedBodyBoundariesScale.png",
-                                           "source":  "Assets/StreamingAssets/PictographicScales/1.PerceivedBodyBoundariesScale.png",
+                                           "source":  "app/src/main/assets/questionnaire/PictographicScales/1.PerceivedBodyBoundariesScale.png",
+                                           "dataUrl":  null,
                                            "promptEnglish":  null,
                                            "promptDeutsch":  null,
                                            "choices":  [
@@ -194,7 +196,8 @@
                                        {
                                            "id":  "self_extension",
                                            "imageFileName":  "2.SpatialFrameReferenceContinuum.png",
-                                           "source":  "Assets/StreamingAssets/PictographicScales/2.SpatialFrameReferenceContinuum.png",
+                                           "source":  "app/src/main/assets/questionnaire/PictographicScales/2.SpatialFrameReferenceContinuum.png",
+                                           "dataUrl":  null,
                                            "promptEnglish":  null,
                                            "promptDeutsch":  null,
                                            "choices":  [
@@ -211,7 +214,8 @@
                                        {
                                            "id":  "small_self",
                                            "imageFileName":  "3.SmallSelf.png",
-                                           "source":  "Assets/StreamingAssets/PictographicScales/3.SmallSelf.png",
+                                           "source":  "app/src/main/assets/questionnaire/PictographicScales/3.SmallSelf.png",
+                                           "dataUrl":  null,
                                            "promptEnglish":  null,
                                            "promptDeutsch":  null,
                                            "choices":  [
@@ -240,7 +244,7 @@
                                    ]
                    },
                    {
-                       "id":  "viscereality",
+                       "id":  "custom_slider",
                        "type":  "slider",
                        "expectedItemCount":  42,
                        "min":  0,
@@ -253,13 +257,13 @@
                        "languageSources":  [
                                                {
                                                    "language":  "English",
-                                                   "source":  "Assets/StreamingAssets/Questions_English.txt",
+                                                   "source":  "app/src/main/assets/questionnaire/Questions_English.txt",
                                                    "target":  "app/src/main/assets/questionnaire/Questions_English.txt",
                                                    "inlineItemCount":  0
                                                },
                                                {
                                                    "language":  "Deutsch",
-                                                   "source":  "Assets/StreamingAssets/Questions_Deutsch.txt",
+                                                   "source":  "app/src/main/assets/questionnaire/Questions_Deutsch.txt",
                                                    "target":  "app/src/main/assets/questionnaire/Questions_Deutsch.txt",
                                                    "inlineItemCount":  0
                                                }
@@ -305,10 +309,19 @@
                 },
     "chainDefaults":  {
                           "finishBehavior":  "staySaved",
+                          "startMode":  "unityFirst",
                           "callerPackage":  "",
                           "callerActivity":  "",
                           "nextPackage":  "",
                           "nextActivity":  "",
+                          "questionnaireMode":  "",
+                          "questionnaireSequence":  [
+
+                                                    ],
+                          "triggerId":  "",
+                          "blockNumber":  "",
+                          "blockId":  "",
+                          "saveNamespace":  "",
                           "autoCloseDelayMs":  2000
                       }
 }

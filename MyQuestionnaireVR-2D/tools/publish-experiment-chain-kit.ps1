@@ -163,16 +163,16 @@ foreach ($dir in @($apksDir, $plansDir, $configsDir, $schemasDir, $toolsDir, $do
 
 $requiredApks = @(
     'MyQuestionnaireVR-2D.apk',
-    'ViscerealityExperimentOrchestrator.apk',
-    'ViscerealityChainLink.apk',
-    'ViscerealityChainHookWrapper.apk'
+    'QuestQuestionnaireExperimentOrchestrator.apk',
+    'QuestQuestionnaireChainLink.apk',
+    'QuestQuestionnaireChainHookWrapper.apk'
 )
 foreach ($apkName in $requiredApks) {
     Copy-RequiredFile -Source (Join-Path $projectFull "Builds\$apkName") -Destination (Join-Path $apksDir $apkName)
 }
 
 $optionalApkNames = @(
-    'ViscerealitySourceHookStub.apk',
+    'QuestQuestionnaireSourceHookStub.apk',
     'PeripersonalSpaceRight-device-base.apk'
 )
 if ($IncludeOptionalApks) {
@@ -190,7 +190,7 @@ foreach ($apkName in $optionalApkNames) {
     }
 }
 
-Copy-RequiredFile -Source (Join-Path $projectFull 'QuestionnaireConfigs\viscereality-maia2.config.json') -Destination (Join-Path $configsDir 'viscereality-maia2.config.json')
+Copy-RequiredFile -Source (Join-Path $projectFull 'QuestionnaireConfigs\quest-questionnaire-maia2.config.json') -Destination (Join-Path $configsDir 'quest-questionnaire-maia2.config.json')
 
 Get-ChildItem -LiteralPath (Join-Path $projectFull 'QuestionnaireConfigs\examples') -File |
     Where-Object { $_.Extension -in @('.json', '.csv') } |
@@ -295,9 +295,9 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $apks = @(
     "MyQuestionnaireVR-2D.apk",
-    "ViscerealityExperimentOrchestrator.apk",
-    "ViscerealityChainLink.apk",
-    "ViscerealityChainHookWrapper.apk"
+    "QuestQuestionnaireExperimentOrchestrator.apk",
+    "QuestQuestionnaireChainLink.apk",
+    "QuestQuestionnaireChainHookWrapper.apk"
 )
 if ($InstallPeripersonal) {
     $apks += "PeripersonalSpaceRight-device-base.apk"
@@ -320,24 +320,24 @@ $installScript | Set-Content -LiteralPath $installScriptPath -Encoding UTF8
 
 $readmePath = Join-Path $packageDir 'README.md'
 $readme = @"
-# Viscereality Experiment Chain Kit
+# Quest 2D Questionnaire Experiment Chain Kit
 
 This kit packages the tested Quest APK-chain workflow for the questionnaire
-Android 2D app for Meta Horizon OS and Viscereality scenario APKs.
+Android 2D app for Meta Horizon OS and Quest 2D Questionnaire scenario APKs.
 
 ## Contents
 
 - `apks\MyQuestionnaireVR-2D.apk`: questionnaire 2D panel app.
-- `apks\ViscerealityExperimentOrchestrator.apk`: on-headset plan owner.
-- `apks\ViscerealityChainLink.apk`: numbered block registry switchboard for APK launches.
-- `apks\ViscerealityChainHookWrapper.apk`: wrapper for closed/legacy scenario APKs.
+- `apks\QuestQuestionnaireExperimentOrchestrator.apk`: on-headset plan owner.
+- `apks\QuestQuestionnaireChainLink.apk`: numbered block registry switchboard for APK launches.
+- `apks\QuestQuestionnaireChainHookWrapper.apk`: wrapper for closed/legacy scenario APKs.
 - `apks\PeripersonalSpaceRight-device-base.apk`: pulled Peripersonal Space Right APK, when available.
 - `chain-plans\*.chain-plan.json`: orchestrator plans, including Peripersonal Space Right before/after questionnaire.
 - `tools\quest-wrapper-manual-gate-validate.ps1`: closed-APK manual/controller gate validation.
 - `tools\quest-adb-readiness.ps1`: Quest ADB transport readiness and USB/wireless diagnostic gate.
 - `tools\run-live-chainlink-stress.ps1`: restartable wait/dry-run/live ChainLink stress harness.
 - `tools\validate-experiment-setup.ps1`: one-command local/device experiment setup validation index.
-- `tools\quest-installed-scenario-batch-validate.ps1`: batch stress validation for installed Viscereality APKs.
+- `tools\quest-installed-scenario-batch-validate.ps1`: batch stress validation for installed Quest 2D Questionnaire stimulus APKs.
 - `tools\stress-chainlink-scenario-batch.ps1`: discover launchable APK targets and run ChainLink dry-run/device stress for each.
 - `tools\quest-chainlink-plan-validate.ps1`: direct ChainLink numbered-plan stress validation with simulated foreground-hook `nextBlock` commands.
 - `tools\audit-unity-source-hook-candidates.ps1`: inspect Unity source scenes/build profiles for source-hook readiness.
@@ -431,7 +431,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-wrapper-manual
   -Mode Start `
   -Serial <quest-serial> `
   -SkipBuild `
-  -TargetPackage com.Viscereality.ViscerealityPeriPersonalSpaceRight `
+  -TargetPackage org.questquestionnaire.stimulusdemo `
   -TargetActivity com.unity3d.player.UnityPlayerGameActivity `
   -ChainPlanPath .\chain-plans\peripersonal-space-right-then-questionnaire.chain-plan.json
 ```
@@ -485,8 +485,8 @@ Build a source-hook candidate APK:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\build-unity-source-hook-apk.ps1 `
   -ScenePath "Assets\Scenes\Main Questionnaire.unity" `
-  -PackageId "com.Viscereality.ViscerealityPeriPersonalSpaceRight.SourceHook" `
-  -ProductName "Viscereality Peripersonal Source Hook Candidate"
+  -PackageId "org.questquestionnaire.stimulusdemo.sourcehook" `
+  -ProductName "Quest Questionnaire Stimulus Source Hook Candidate"
 ```
 
 Use `chain-plans\peripersonal-source-hook-candidate-smoke.chain-plan.json` for a
@@ -499,7 +499,7 @@ The questionnaire writes draft data during the run and final JSON/CSV exports
 before returning to the orchestrator. Device path:
 
 ```text
-/sdcard/Android/data/org.viscereality.questionnaires2d/files/QuestionnaireExports
+/sdcard/Android/data/org.questquestionnaire.questionnaires2d/files/QuestionnaireExports
 ```
 
 Each invocation uses a unique run id, participant-safe filename, and
@@ -514,7 +514,7 @@ $contentFiles = Get-ChildItem -LiteralPath $packageDir -File -Recurse |
     ForEach-Object { Get-ManifestFile -Root $packageDir -Path $_.FullName }
 
 $manifest = [ordered]@{
-    schemaVersion = 'viscereality.experiment-chain-kit.v1'
+    schemaVersion = 'questquestionnaire.experiment-chain-kit.v1'
     status = 'pass'
     runId = $RunId
     kitName = $KitName
@@ -523,18 +523,18 @@ $manifest = [ordered]@{
     requiredApks = $requiredApks
     optionalApksPackaged = $packagedOptionalApks
     primaryClosedApkTarget = [ordered]@{
-        package = 'com.Viscereality.ViscerealityPeriPersonalSpaceRight'
+        package = 'org.questquestionnaire.stimulusdemo'
         activity = 'com.unity3d.player.UnityPlayerGameActivity'
         chainPlan = 'chain-plans\peripersonal-space-right-then-questionnaire.chain-plan.json'
         linkMode = 'wrapper-manual-gate'
     }
     recommendedCommands = [ordered]@{
         install = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\install-core-apks.ps1 -Serial <quest-serial> -InstallPeripersonal'
-        peripersonalManualStart = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-wrapper-manual-gate-validate.ps1 -Mode Start -Serial <quest-serial> -SkipBuild -TargetPackage com.Viscereality.ViscerealityPeriPersonalSpaceRight -TargetActivity com.unity3d.player.UnityPlayerGameActivity -ChainPlanPath .\chain-plans\peripersonal-space-right-then-questionnaire.chain-plan.json'
+        peripersonalManualStart = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-wrapper-manual-gate-validate.ps1 -Mode Start -Serial <quest-serial> -SkipBuild -TargetPackage org.questquestionnaire.stimulusdemo -TargetActivity com.unity3d.player.UnityPlayerGameActivity -ChainPlanPath .\chain-plans\peripersonal-space-right-then-questionnaire.chain-plan.json'
         installedScenarioBatch = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-installed-scenario-batch-validate.ps1 -Serial <quest-serial> -MaxTargets 5 -Order Both -SkipBuild'
         liveChainLinkStress = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\run-live-chainlink-stress.ps1 -RestartServer -WaitSeconds 90 -SkipBuild'
         sourceHookAudit = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\audit-unity-source-hook-candidates.ps1'
-        sourceHookBuild = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\build-unity-source-hook-apk.ps1 -ScenePath "Assets\Scenes\Main Questionnaire.unity" -PackageId "com.Viscereality.ViscerealityPeriPersonalSpaceRight.SourceHook" -ProductName "Viscereality Peripersonal Source Hook Candidate"'
+        sourceHookBuild = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\build-unity-source-hook-apk.ps1 -ScenePath "Assets\Scenes\Main Questionnaire.unity" -PackageId "org.questquestionnaire.stimulusdemo.sourcehook" -ProductName "Quest Questionnaire Stimulus Source Hook Candidate"'
         lslBridge = 'powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\lsl-chain-bridge.ps1 -Serial <quest-serial> -InstallDependencies'
     }
     evidence = $evidenceFiles
@@ -552,7 +552,7 @@ Compress-Archive -Path (Join-Path $packageDir '*') -DestinationPath $zipPath -Fo
 
 $summaryPath = Join-Path $outputFull "$KitName-package-summary.json"
 $summary = [ordered]@{
-    schemaVersion = 'viscereality.experiment-chain-kit-publish-summary.v1'
+    schemaVersion = 'questquestionnaire.experiment-chain-kit-publish-summary.v1'
     status = 'pass'
     runId = $RunId
     packageDir = $packageDir

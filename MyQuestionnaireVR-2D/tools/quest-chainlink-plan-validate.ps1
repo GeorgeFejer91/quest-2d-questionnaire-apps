@@ -23,12 +23,12 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$questionnairePackage = "org.viscereality.questionnaires2d"
-$questionnaireActivity = "org.viscereality.questionnaires2d.MainActivity"
-$chainLinkPackage = "org.viscereality.chainlink"
-$chainLinkActivity = "org.viscereality.chainlink.ChainLinkActivity"
-$chainLinkRunAction = "org.viscereality.chainlink.RUN"
-$chainLinkCommandAction = "org.viscereality.chainlink.COMMAND"
+$questionnairePackage = "org.questquestionnaire.questionnaires2d"
+$questionnaireActivity = "org.questquestionnaire.questionnaires2d.MainActivity"
+$chainLinkPackage = "org.questquestionnaire.chainlink"
+$chainLinkActivity = "org.questquestionnaire.chainlink.ChainLinkActivity"
+$chainLinkRunAction = "org.questquestionnaire.chainlink.RUN"
+$chainLinkCommandAction = "org.questquestionnaire.chainlink.COMMAND"
 $questionnaireFiles = "/sdcard/Android/data/$questionnairePackage/files"
 $questionnaireExports = "$questionnaireFiles/QuestionnaireExports"
 $chainLinkFiles = "/sdcard/Android/data/$chainLinkPackage/files"
@@ -50,11 +50,11 @@ if ([string]::IsNullOrWhiteSpace($QuestionnaireApk)) {
     }
 }
 if ([string]::IsNullOrWhiteSpace($ChainLinkApk)) {
-    $packagedChainLinkApk = Join-Path $ProjectPath 'apks\ViscerealityChainLink.apk'
+    $packagedChainLinkApk = Join-Path $ProjectPath 'apks\QuestQuestionnaireChainLink.apk'
     if (Test-Path -LiteralPath $packagedChainLinkApk) {
         $ChainLinkApk = $packagedChainLinkApk
     } else {
-        $ChainLinkApk = Join-Path $ProjectPath 'Builds\ViscerealityChainLink.apk'
+        $ChainLinkApk = Join-Path $ProjectPath 'Builds\QuestQuestionnaireChainLink.apk'
     }
 }
 
@@ -215,7 +215,7 @@ if ([string]::IsNullOrWhiteSpace($ChainPlanPath)) {
             -OutputPath $generatedPlan | Out-Host
     } else {
         if ([string]::IsNullOrWhiteSpace($TargetPackage)) {
-            $defaultTarget = Join-Path $ProjectPath 'Builds\ViscerealitySourceHookStub.apk'
+            $defaultTarget = Join-Path $ProjectPath 'Builds\QuestQuestionnaireSourceHookStub.apk'
             if (Test-Path -LiteralPath $defaultTarget) {
                 $TargetApk = $defaultTarget
                 $InstallTarget = $true
@@ -272,7 +272,7 @@ if ($InstallTarget -and -not [string]::IsNullOrWhiteSpace($TargetApk)) {
 
 if ($DryRun) {
     $summary = [ordered]@{
-        schemaVersion = 'viscereality.quest-chainlink-plan-validation.v1'
+        schemaVersion = 'questquestionnaire.quest-chainlink-plan-validation.v1'
         status = 'pass'
         dryRun = $true
         projectPath = $ProjectPath
@@ -392,7 +392,7 @@ for ($i = 1; $i -le $nextBlockCommandCount; $i++) {
 }
 
 Invoke-AdbText -Arguments @('logcat', '-d', '-v', 'threadtime') -OutputPath (Join-Path $OutputRoot 'logcat.txt') | Out-Null
-Invoke-AdbText -Arguments @('logcat', '-d', '-v', 'threadtime', 'ViscerealityChainLink:I', 'MyQuestionnaire2D:I', 'AndroidRuntime:E', '*:S') -OutputPath (Join-Path $OutputRoot 'logcat-chainlink-questionnaire.txt') | Out-Null
+Invoke-AdbText -Arguments @('logcat', '-d', '-v', 'threadtime', 'QuestQuestionnaireChainLink:I', 'MyQuestionnaire2D:I', 'AndroidRuntime:E', '*:S') -OutputPath (Join-Path $OutputRoot 'logcat-chainlink-questionnaire.txt') | Out-Null
 Invoke-AdbText -Arguments @('shell', 'dumpsys', 'window') -OutputPath (Join-Path $OutputRoot 'foreground-final.txt') | Out-Null
 
 $pullRoot = Join-Path $OutputRoot 'd'
@@ -563,7 +563,7 @@ if ($chainLinkLaunchStepCount -lt $steps.Count) { $status = 'fail' }
 if (-not $NoFinalCompleteCommand -and ($chainLinkPlanCompleteCount -lt 1 -or $chainState.status -ne 'complete')) { $status = 'fail' }
 
 $summary = [ordered]@{
-    schemaVersion = 'viscereality.quest-chainlink-plan-validation.v1'
+    schemaVersion = 'questquestionnaire.quest-chainlink-plan-validation.v1'
     status = $status
     dryRun = $false
     serial = $Serial

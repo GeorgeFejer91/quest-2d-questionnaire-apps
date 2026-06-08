@@ -10,14 +10,14 @@
 **/QuestionnaireConfigs/generated/
 
 # Unity generated state for the demo scenario project
-AweGreatDictatorUnity/Library/
-AweGreatDictatorUnity/Temp/
-AweGreatDictatorUnity/Logs/
-AweGreatDictatorUnity/UserSettings/
-AweGreatDictatorUnity/RenderValidation/
-AweGreatDictatorUnity/Assets/XR/Temp/
-AweGreatDictatorUnity/Assets/XR/UserSimulationSettings/
-AweGreatDictatorUnity/Assets/XR/Resources/XRSimulationRuntimeSettings.asset*
+QuestionnaireStimulusUnity/Library/
+QuestionnaireStimulusUnity/Temp/
+QuestionnaireStimulusUnity/Logs/
+QuestionnaireStimulusUnity/UserSettings/
+QuestionnaireStimulusUnity/RenderValidation/
+QuestionnaireStimulusUnity/Assets/XR/Temp/
+QuestionnaireStimulusUnity/Assets/XR/UserSimulationSettings/
+QuestionnaireStimulusUnity/Assets/XR/Resources/XRSimulationRuntimeSettings.asset*
 
 # Python and editor state
 **/__pycache__/

@@ -22,7 +22,7 @@
             </intent-filter>
 
             <intent-filter>
-                <action android:name="org.viscereality.temporaltracer2d.RUN" />
+                <action android:name="org.questquestionnaire.temporaltracer2d.RUN" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="temporaltracer2d" android:host="run" />
             </intent-filter>

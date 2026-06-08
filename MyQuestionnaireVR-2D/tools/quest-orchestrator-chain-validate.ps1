@@ -13,12 +13,12 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$questionnairePackage = "org.viscereality.questionnaires2d"
-$sourcePackage = "org.viscereality.sourcehookstub"
-$sourceActivity = "org.viscereality.sourcehookstub.SourceHookStubActivity"
-$orchestratorPackage = "org.viscereality.orchestrator"
-$orchestratorActivity = "org.viscereality.orchestrator.ExperimentOrchestratorActivity"
-$orchestratorAction = "org.viscereality.orchestrator.BROKER"
+$questionnairePackage = "org.questquestionnaire.questionnaires2d"
+$sourcePackage = "org.questquestionnaire.sourcehookstub"
+$sourceActivity = "org.questquestionnaire.sourcehookstub.SourceHookStubActivity"
+$orchestratorPackage = "org.questquestionnaire.orchestrator"
+$orchestratorActivity = "org.questquestionnaire.orchestrator.ExperimentOrchestratorActivity"
+$orchestratorAction = "org.questquestionnaire.orchestrator.BROKER"
 $questionnaireFiles = "/sdcard/Android/data/$questionnairePackage/files"
 $questionnaireExports = "$questionnaireFiles/QuestionnaireExports"
 $orchestratorFiles = "/sdcard/Android/data/$orchestratorPackage/files"
@@ -28,10 +28,10 @@ if ([string]::IsNullOrWhiteSpace($QuestionnaireApk)) {
     $QuestionnaireApk = Join-Path $ProjectPath 'Builds\MyQuestionnaireVR-2D.apk'
 }
 if ([string]::IsNullOrWhiteSpace($SourceHookStubApk)) {
-    $SourceHookStubApk = Join-Path $ProjectPath 'Builds\ViscerealitySourceHookStub.apk'
+    $SourceHookStubApk = Join-Path $ProjectPath 'Builds\QuestQuestionnaireSourceHookStub.apk'
 }
 if ([string]::IsNullOrWhiteSpace($OrchestratorApk)) {
-    $OrchestratorApk = Join-Path $ProjectPath 'Builds\ViscerealityExperimentOrchestrator.apk'
+    $OrchestratorApk = Join-Path $ProjectPath 'Builds\QuestQuestionnaireExperimentOrchestrator.apk'
 }
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $ProjectPath ("artifacts\quest-orchestrator-chain-validation\" + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'"))
@@ -108,7 +108,7 @@ $planPath = Join-Path $OutputRoot 'orchestrator-chain-plan.json'
 $plan = [ordered]@{
     schemaVersion = 'my-questionnaire-2d.chain-plan.v1'
     chainId = $chainId
-    questionnaireId = 'viscereality-maia2'
+    questionnaireId = 'quest-questionnaire-maia2'
     questionnaireVersion = '1.0.0'
     defaultFinishBehavior = 'resumeCaller'
     steps = @(
@@ -117,7 +117,7 @@ $plan = [ordered]@{
             type = 'scenario'
             package = $sourcePackage
             activity = $sourceActivity
-            action = 'org.viscereality.CHAIN_COMMAND'
+            action = 'org.questquestionnaire.CHAIN_COMMAND'
             command = 'startScenario'
             extras = [ordered]@{
                 scenarioId = 'source-hook-before'
@@ -145,7 +145,7 @@ $plan = [ordered]@{
             type = 'scenario'
             package = $sourcePackage
             activity = $sourceActivity
-            action = 'org.viscereality.CHAIN_COMMAND'
+            action = 'org.questquestionnaire.CHAIN_COMMAND'
             command = 'startScenario'
             extras = [ordered]@{
                 scenarioId = 'source-hook-after'
@@ -178,7 +178,7 @@ $launchExitCode = Invoke-AdbText -Arguments @(
 
 Start-Sleep -Seconds $WaitSeconds
 Invoke-AdbText -Arguments @('logcat', '-d', '-v', 'threadtime') -OutputPath (Join-Path $OutputRoot 'logcat.txt') | Out-Null
-Invoke-AdbText -Arguments @('logcat', '-d', '-v', 'threadtime', 'ViscerealityOrchestrator:I', 'ViscerealitySourceHook:I', 'MyQuestionnaire2D:I', 'AndroidRuntime:E', '*:S') -OutputPath (Join-Path $OutputRoot 'logcat-chain.txt') | Out-Null
+Invoke-AdbText -Arguments @('logcat', '-d', '-v', 'threadtime', 'Quest 2D QuestionnaireOrchestrator:I', 'QuestQuestionnaireSourceHook:I', 'MyQuestionnaire2D:I', 'AndroidRuntime:E', '*:S') -OutputPath (Join-Path $OutputRoot 'logcat-chain.txt') | Out-Null
 Invoke-AdbText -Arguments @('shell', 'dumpsys', 'window') -OutputPath (Join-Path $OutputRoot 'foreground-after.txt') | Out-Null
 
 $pullRoot = Join-Path $OutputRoot 'device-files'
@@ -265,7 +265,7 @@ if ($stateStatus -ne 'complete' -or $stateStepIndex -ne 2) {
 }
 
 $summary = [ordered]@{
-    schemaVersion = 'viscereality.orchestrator-chain-validation.v1'
+    schemaVersion = 'questquestionnaire.orchestrator-chain-validation.v1'
     status = $status
     serial = $Serial
     questionnaireApk = $QuestionnaireApk

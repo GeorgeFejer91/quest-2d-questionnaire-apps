@@ -1,6 +1,6 @@
 # Temporal Tracer 2D Workflow
 
-This app is the native Android 2D panel counterpart to the Unity temporal experience tracer in `Viscereality/Assets/Scripts/Assesment`.
+This app is the native Android 2D panel counterpart to a Unity temporal experience tracer source tree.
 
 ## Validation Ladder
 

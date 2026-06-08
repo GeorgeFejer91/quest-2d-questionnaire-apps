@@ -1,6 +1,6 @@
 {
   "schemaVersion": "my-questionnaire-2d.chain-plan.v1",
-  "questionnaireId": "viscereality-maia2",
+  "questionnaireId": "quest-questionnaire-maia2",
   "questionnaireVersion": "1.0.0",
   "chainId": "participant-001-chain-a",
   "defaultFinishBehavior": "resumeCaller",
@@ -10,7 +10,7 @@
       "type": "scenario",
       "package": "org.example.scenario01",
       "activity": "org.example.scenario01.ChainHookActivity",
-      "action": "org.viscereality.CHAIN_COMMAND",
+      "action": "org.questquestionnaire.CHAIN_COMMAND",
       "command": "startScenario",
       "extras": {
         "scenarioId": "unity-scenario-01",
@@ -20,12 +20,12 @@
     {
       "id": "questionnaire-after-scenario-01",
       "type": "questionnaire",
-      "package": "org.viscereality.questionnaires2d",
-      "activity": "org.viscereality.questionnaires2d.MainActivity",
-      "action": "org.viscereality.questionnaires2d.RUN",
+      "package": "org.questquestionnaire.questionnaires2d",
+      "activity": "org.questquestionnaire.questionnaires2d.MainActivity",
+      "action": "org.questquestionnaire.questionnaires2d.RUN",
       "extras": {
         "mq.sessionId": "participant-001-session-a",
-        "mq.experimentId": "viscereality-study",
+        "mq.experimentId": "quest-questionnaire-study",
         "mq.scenarioId": "unity-scenario-01",
         "mq.trialId": "trial-03",
         "mq.participantId": "P001",
@@ -39,7 +39,7 @@
       "type": "scenario",
       "package": "org.example.scenario02",
       "activity": "org.example.scenario02.ChainHookActivity",
-      "action": "org.viscereality.CHAIN_COMMAND",
+      "action": "org.questquestionnaire.CHAIN_COMMAND",
       "command": "startScenario",
       "extras": {
         "scenarioId": "unity-scenario-02"

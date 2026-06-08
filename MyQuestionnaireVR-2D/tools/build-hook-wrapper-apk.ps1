@@ -41,7 +41,7 @@ if (-not (Test-Path -LiteralPath $sourceApk)) {
 
 $builds = Join-Path $ProjectPath 'Builds'
 New-Item -ItemType Directory -Force -Path $builds | Out-Null
-$targetApk = Join-Path $builds 'ViscerealityChainHookWrapper.apk'
+$targetApk = Join-Path $builds 'QuestQuestionnaireChainHookWrapper.apk'
 Copy-Item -LiteralPath $sourceApk -Destination $targetApk -Force
 
 [pscustomobject]@{

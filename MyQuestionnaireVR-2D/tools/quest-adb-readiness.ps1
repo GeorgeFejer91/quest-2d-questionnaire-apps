@@ -176,10 +176,10 @@ function Get-FocusPackage {
 
     $focusText = (Get-FocusLines -Text $Text) -join "`n"
     foreach ($package in @(
-        'org.questionnairebuilder.stimulusdemo',
-        'org.viscereality.questionnaires2d',
-        'org.viscereality.temporaltracer2d',
-        'org.viscereality.chainlink',
+        'org.questquestionnaire.stimulusdemo',
+        'org.questquestionnaire.questionnaires2d',
+        'org.questquestionnaire.temporaltracer2d',
+        'org.questquestionnaire.chainlink',
         'com.oculus.vrshell',
         'com.oculus.shellenv'
     )) {
@@ -354,7 +354,7 @@ if ($readiness -eq 'online') {
 $status = if ($readiness -eq 'online') { 'pass' } else { if ($RequireOnline) { 'fail' } else { 'warn' } }
 
 $summary = [ordered]@{
-    schemaVersion = 'viscereality.quest-adb-readiness.v1'
+    schemaVersion = 'questquestionnaire.quest-adb-readiness.v1'
     status = $status
     readiness = $readiness
     adb = $script:AdbPath

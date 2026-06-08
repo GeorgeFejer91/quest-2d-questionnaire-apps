@@ -200,7 +200,7 @@ if ($readiness -and $readiness.recommendations) {
 }
 
 $summary = [ordered]@{
-    schemaVersion = 'viscereality.live-chainlink-stress.v1'
+    schemaVersion = 'questquestionnaire.live-chainlink-stress.v1'
     status = $status
     runId = $RunId
     projectPath = $ProjectPath

@@ -1,5 +1,5 @@
 param(
-    [string]$UnityProjectPath = "C:\Users\cogpsy-vrlab\Documents\GithubVR\Viscereality\Viscereality",
+    [string]$UnityProjectPath = "C:\Users\cogpsy-vrlab\Documents\GithubVR\Quest 2D Questionnaire\Quest 2D Questionnaire",
     [double]$MinimumFreeGb = 5.0,
     [string]$OutputPath = "",
     [switch]$AsJson
@@ -192,11 +192,11 @@ foreach ($relative in $hookFiles) {
 $manifestAndroid = Join-Path $projectPath 'Assets\Plugins\Android\AndroidManifest.xml'
 if (Test-Path -LiteralPath $manifestAndroid) {
     $androidManifestText = Get-Content -LiteralPath $manifestAndroid -Raw
-    if ($androidManifestText -match 'org\.viscereality\.CHAIN_COMMAND') {
-        $checks.Add((New-Check 'android-chain-intent-filter' 'pass' 'AndroidManifest.xml exposes org.viscereality.CHAIN_COMMAND.' $manifestAndroid))
+    if ($androidManifestText -match 'org\.questquestionnaire\.CHAIN_COMMAND') {
+        $checks.Add((New-Check 'android-chain-intent-filter' 'pass' 'AndroidManifest.xml exposes org.questquestionnaire.CHAIN_COMMAND.' $manifestAndroid))
     }
     else {
-        $checks.Add((New-Check 'android-chain-intent-filter' 'fail' 'AndroidManifest.xml does not expose org.viscereality.CHAIN_COMMAND.' $manifestAndroid))
+        $checks.Add((New-Check 'android-chain-intent-filter' 'fail' 'AndroidManifest.xml does not expose org.questquestionnaire.CHAIN_COMMAND.' $manifestAndroid))
     }
 }
 
@@ -205,7 +205,7 @@ $warnCount = @($checks | Where-Object { $_.status -eq 'warn' }).Count
 $status = if ($failCount -gt 0) { 'fail' } elseif ($warnCount -gt 0) { 'warn' } else { 'pass' }
 
 $summary = [pscustomobject][ordered]@{
-    schemaVersion = 'viscereality.unity-source-hook-preflight.v1'
+    schemaVersion = 'questquestionnaire.unity-source-hook-preflight.v1'
     status = $status
     unityProjectPath = $projectPath
     failCount = $failCount

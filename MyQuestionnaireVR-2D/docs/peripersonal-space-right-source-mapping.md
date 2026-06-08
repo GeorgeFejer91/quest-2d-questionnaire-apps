@@ -8,7 +8,7 @@ versus the local Unity source project.
 The headset-installed APK used in validation is:
 
 ```text
-com.Viscereality.ViscerealityPeriPersonalSpaceRight/com.unity3d.player.UnityPlayerGameActivity
+org.questquestionnaire.stimulusdemo/com.unity3d.player.UnityPlayerGameActivity
 ```
 
 The pulled APK copy is:
@@ -28,7 +28,7 @@ orchestrator -> chain wrapper -> Peripersonal Space Right -> manual/controller c
 The inspected Unity project is:
 
 ```text
-C:\Users\cogpsy-vrlab\Documents\GithubVR\Viscereality\Viscereality
+C:\Users\cogpsy-vrlab\Documents\GithubVR\Quest 2D Questionnaire\Quest 2D Questionnaire
 ```
 
 It has relevant peripersonal-looking scene/config candidates:
@@ -47,7 +47,7 @@ Assets\Configs\PE_AdvancedConfig.asset
 Its Android manifest now exposes the source-hook action:
 
 ```text
-org.viscereality.CHAIN_COMMAND
+org.questquestionnaire.CHAIN_COMMAND
 ```
 
 The source-hook scripts are staged under:
@@ -88,11 +88,11 @@ package.
 
 ```text
 Assets\Settings\Build Profiles\Meta Quest.asset
-  package: com.Viscereality.ViscerealityAirres
+  package: org.questquestionnaire.stimulusdemo.air
   enabled scene: Assets/Scenes/Ballpit.unity
 
 Assets\Settings\Build Profiles\Coupling.asset
-  package: com.Viscereality.ViscerealityMergedEggspansionSphereMax
+  package: org.questquestionnaire.stimulusdemo.expansion_sphere
   enabled scene: Assets/Scenes/Coupling.unity
 ```
 
@@ -146,8 +146,8 @@ Build a candidate source-hook APK from the currently hooked experiment scene:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\build-unity-source-hook-apk.ps1 `
   -ScenePath "Assets\Scenes\Main Questionnaire.unity" `
-  -PackageId "com.Viscereality.ViscerealityPeriPersonalSpaceRight.SourceHook" `
-  -ProductName "Viscereality Peripersonal Source Hook Candidate"
+  -PackageId "org.questquestionnaire.stimulusdemo.sourcehook" `
+  -ProductName "Quest Questionnaire Stimulus Source Hook Candidate"
 ```
 
 For smoke validation, use:
@@ -174,7 +174,7 @@ For a fully automatic semantic chain, create or recover a Unity build profile
 for:
 
 ```text
-package: com.Viscereality.ViscerealityPeriPersonalSpaceRight
+package: org.questquestionnaire.stimulusdemo
 scene: likely one of the Pre Sussex peripersonal scenes, to be confirmed
 ```
 

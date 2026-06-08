@@ -27,7 +27,7 @@ if ([string]::IsNullOrWhiteSpace($TemporalTracerPath)) {
     $TemporalTracerPath = Join-Path $RepoRoot 'TemporalExperienceTracerVR-2D'
 }
 if ([string]::IsNullOrWhiteSpace($UnityDemoPath)) {
-    $UnityDemoPath = Join-Path $RepoRoot 'AweGreatDictatorUnity'
+    $UnityDemoPath = Join-Path $RepoRoot 'QuestionnaireStimulusUnity'
 }
 
 $artifactRoot = Join-Path $ProjectPath ("artifacts\universal-handoff\" + $RunId)
@@ -87,9 +87,9 @@ Invoke-Step 'builder-smoke-and-handoff-config' {
         -OutputDir $builderOut
 }
 
-$handoffConfig = Join-Path $builderOut 'awe-great-dictator-handoff.config.json'
-$handoffQuality = Join-Path $builderOut 'awe-great-dictator-handoff.quality-report.json'
-$handoffChainPlan = Join-Path $builderOut 'awe-great-dictator-handoff.chainlink-plan.json'
+$handoffConfig = Join-Path $builderOut 'quest-questionnaire-stimulus-handoff.config.json'
+$handoffQuality = Join-Path $builderOut 'quest-questionnaire-stimulus-handoff.quality-report.json'
+$handoffChainPlan = Join-Path $builderOut 'quest-questionnaire-stimulus-handoff.chainlink-plan.json'
 foreach ($required in @($handoffConfig, $handoffQuality, $handoffChainPlan)) {
     if (-not (Test-Path -LiteralPath $required)) {
         throw "Expected handoff builder output is missing: $required"

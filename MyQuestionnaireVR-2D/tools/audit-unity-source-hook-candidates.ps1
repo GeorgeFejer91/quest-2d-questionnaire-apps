@@ -1,6 +1,6 @@
 param(
-    [string]$UnityProjectPath = "C:\Users\cogpsy-vrlab\Documents\GithubVR\Viscereality\Viscereality",
-    [string]$TargetPackage = "com.Viscereality.ViscerealityPeriPersonalSpaceRight",
+    [string]$UnityProjectPath = "C:\Users\cogpsy-vrlab\Documents\GithubVR\Quest 2D Questionnaire\Quest 2D Questionnaire",
+    [string]$TargetPackage = "org.questquestionnaire.stimulusdemo",
     [string]$OutputPath = "",
     [switch]$AsJson
 )
@@ -187,18 +187,18 @@ $bestCandidates = @($sceneInfos | Where-Object { $_.score -gt 0 } | Select-Objec
 
 $status = if (@($matchingProfiles).Count -gt 0 -and @($experimentRunScenes).Count -gt 0) {
     'pass'
-} elseif ($manifestText -match 'org\.viscereality\.CHAIN_COMMAND' -and $experimentRunText -match 'ContinueCurrentPlan') {
+} elseif ($manifestText -match 'org\.questquestionnaire\.CHAIN_COMMAND' -and $experimentRunText -match 'ContinueCurrentPlan') {
     'source-hook-ready-exact-build-profile-missing'
 } else {
     'fail'
 }
 
 $summary = [ordered]@{
-    schemaVersion = 'viscereality.unity-source-hook-candidates.v1'
+    schemaVersion = 'questquestionnaire.unity-source-hook-candidates.v1'
     status = $status
     unityProjectPath = $projectPath
     targetPackage = $TargetPackage
-    manifestHasChainCommandIntent = $manifestText -match 'org\.viscereality\.CHAIN_COMMAND'
+    manifestHasChainCommandIntent = $manifestText -match 'org\.questquestionnaire\.CHAIN_COMMAND'
     hookFiles = [ordered]@{
         experimentRun = [ordered]@{
             path = $experimentRunPath

@@ -16,10 +16,10 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$questionnairePackage = "org.viscereality.questionnaires2d"
-$brokerActivity = "org.viscereality.questionnaires2d.QuestChainBrokerActivity"
-$brokerAction = "org.viscereality.questionnaires2d.BROKER"
-$wrapperPackage = "org.viscereality.chainhookwrapper"
+$questionnairePackage = "org.questquestionnaire.questionnaires2d"
+$brokerActivity = "org.questquestionnaire.questionnaires2d.QuestChainBrokerActivity"
+$brokerAction = "org.questquestionnaire.questionnaires2d.BROKER"
+$wrapperPackage = "org.questquestionnaire.chainhookwrapper"
 $deviceFiles = "/sdcard/Android/data/$questionnairePackage/files"
 $deviceBroker = "$deviceFiles/ChainBroker"
 $deviceExports = "$deviceFiles/QuestionnaireExports"
@@ -28,7 +28,7 @@ if ([string]::IsNullOrWhiteSpace($QuestionnaireApk)) {
     $QuestionnaireApk = Join-Path $ProjectPath 'Builds\MyQuestionnaireVR-2D.apk'
 }
 if ([string]::IsNullOrWhiteSpace($WrapperApk)) {
-    $WrapperApk = Join-Path $ProjectPath 'Builds\ViscerealityChainHookWrapper.apk'
+    $WrapperApk = Join-Path $ProjectPath 'Builds\QuestQuestionnaireChainHookWrapper.apk'
 }
 if ([string]::IsNullOrWhiteSpace($ChainPlanPath)) {
     $ChainPlanPath = Join-Path $ProjectPath 'QuestionnaireConfigs\examples\peripersonal-space-right-then-questionnaire.chain-plan.json'
@@ -179,7 +179,7 @@ $launchExitCode = Invoke-AdbText -Arguments @(
 
 Start-Sleep -Seconds $WaitSeconds
 Invoke-AdbText -Arguments @('logcat', '-d', '-v', 'threadtime') -OutputPath (Join-Path $OutputRoot 'logcat.txt') | Out-Null
-Invoke-AdbText -Arguments @('logcat', '-d', '-v', 'threadtime', 'MyQuestionnaire2D:I', 'ViscerealityChainHook:I', 'AndroidRuntime:E', '*:S') -OutputPath (Join-Path $OutputRoot 'logcat-chain.txt') | Out-Null
+Invoke-AdbText -Arguments @('logcat', '-d', '-v', 'threadtime', 'MyQuestionnaire2D:I', 'QuestQuestionnaireChainHook:I', 'AndroidRuntime:E', '*:S') -OutputPath (Join-Path $OutputRoot 'logcat-chain.txt') | Out-Null
 Invoke-AdbText -Arguments @('shell', 'dumpsys', 'window') -OutputPath (Join-Path $OutputRoot 'foreground-after.txt') | Out-Null
 
 $pullRoot = Join-Path $OutputRoot 'device-files'

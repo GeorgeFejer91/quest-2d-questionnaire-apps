@@ -8,8 +8,8 @@ param(
     [string]$QuestionnaireApk = "",
     [string]$TemporalTracerApk = "",
     [string]$UnityApk = "",
-    [string]$UnityPackage = "org.questionnairebuilder.stimulusdemo",
-    [string]$UnityActivity = "org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity",
+    [string]$UnityPackage = "org.questquestionnaire.stimulusdemo",
+    [string]$UnityActivity = "org.questquestionnaire.stimulusdemo.StimulusUnityPlayerGameActivity",
     [string]$TriggerCatalogPath = "",
     [int]$TrialCount = 1,
     [int]$WaitSeconds = 0,
@@ -30,10 +30,10 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
-$questionnairePackage = "org.viscereality.questionnaires2d"
-$questionnaireActivity = "org.viscereality.questionnaires2d.MainActivity"
-$temporalTracerPackage = "org.viscereality.temporaltracer2d"
-$temporalTracerActivity = "org.viscereality.temporaltracer2d.MainActivity"
+$questionnairePackage = "org.questquestionnaire.questionnaires2d"
+$questionnaireActivity = "org.questquestionnaire.questionnaires2d.MainActivity"
+$temporalTracerPackage = "org.questquestionnaire.temporaltracer2d"
+$temporalTracerActivity = "org.questquestionnaire.temporaltracer2d.MainActivity"
 $questionnaireFiles = "/sdcard/Android/data/$questionnairePackage/files"
 $questionnaireExports = "$questionnaireFiles/QuestionnaireExports"
 $temporalTracerFiles = "/sdcard/Android/data/$temporalTracerPackage/files"
@@ -48,7 +48,7 @@ if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $ProjectPath "artifacts\quest-direct-handoff\$stamp"
 }
 if ([string]::IsNullOrWhiteSpace($QuestionnaireApk)) {
-    $generated = Join-Path $ProjectPath 'Builds\viscereality-maia2-1.0.0.apk'
+    $generated = Join-Path $ProjectPath 'Builds\quest-questionnaire-maia2-1.0.0.apk'
     $fallback = Join-Path $ProjectPath 'Builds\MyQuestionnaireVR-2D.apk'
     $QuestionnaireApk = if (Test-Path -LiteralPath $generated) { $generated } else { $fallback }
 }
@@ -56,10 +56,10 @@ if ([string]::IsNullOrWhiteSpace($TemporalTracerApk)) {
     $TemporalTracerApk = Join-Path $RepoRoot 'TemporalExperienceTracerVR-2D\Builds\TemporalExperienceTracerVR-2D.apk'
 }
 if ([string]::IsNullOrWhiteSpace($UnityApk)) {
-    $UnityApk = Join-Path $RepoRoot 'AweGreatDictatorUnity\Builds\QuestionnaireStimulusBuilderDemo.apk'
+    $UnityApk = Join-Path $RepoRoot 'QuestionnaireStimulusUnity\Builds\QuestionnaireStimulusBuilderDemo.apk'
 }
 if ([string]::IsNullOrWhiteSpace($TriggerCatalogPath)) {
-    $TriggerCatalogPath = Join-Path $RepoRoot 'AweGreatDictatorUnity\Assets\StreamingAssets\mq\questionnaire-trigger-catalog.json'
+    $TriggerCatalogPath = Join-Path $RepoRoot 'QuestionnaireStimulusUnity\Assets\StreamingAssets\mq\questionnaire-trigger-catalog.json'
 }
 if ($WaitSeconds -le 0) {
     $WaitSeconds = if ($FastVideoForValidation) { 95 } else { 330 }
@@ -951,13 +951,13 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
     $markerCounts = [ordered]@{
         fatalLogs = Count-Matches -Text $allLogText -Pattern 'FATAL EXCEPTION|\bE\s+AndroidRuntime\b'
         controllerRequiredDialogs = Count-Matches -Text $allLogText -Pattern 'LaunchCheckControllerRequiredDialogActivity|controller required'
-        unityValidationAutoTrace = Count-Matches -Text $allLogText -Pattern 'AWE_DEMO_VALIDATION_AUTO_TRACE'
-        unityValidationAutoStart = Count-Matches -Text $allLogText -Pattern 'AWE_START_GATE_AUTO_START'
-        unityValidationFastVideo = Count-Matches -Text $allLogText -Pattern 'AWE_DEMO_VALIDATION_FAST_VIDEO'
-        unityStartGateReady = Count-Matches -Text $allLogText -Pattern 'AWE_START_GATE_READY'
-        unityStartGateClicked = Count-Matches -Text $allLogText -Pattern 'AWE_START_GATE_CLICKED'
-        unityStartGateAutoStart = Count-Matches -Text $allLogText -Pattern 'AWE_START_GATE_AUTO_START'
-        unityExperimentStart = Count-Matches -Text $allLogText -Pattern 'AWE_EXPERIMENT_START'
+        unityValidationAutoTrace = Count-Matches -Text $allLogText -Pattern 'QQ_STIMULUS_VALIDATION_AUTO_TRACE'
+        unityValidationAutoStart = Count-Matches -Text $allLogText -Pattern 'QQ_STIMULUS_START_GATE_AUTO_START'
+        unityValidationFastVideo = Count-Matches -Text $allLogText -Pattern 'QQ_STIMULUS_VALIDATION_FAST_VIDEO'
+        unityStartGateReady = Count-Matches -Text $allLogText -Pattern 'QQ_STIMULUS_START_GATE_READY'
+        unityStartGateClicked = Count-Matches -Text $allLogText -Pattern 'QQ_STIMULUS_START_GATE_CLICKED'
+        unityStartGateAutoStart = Count-Matches -Text $allLogText -Pattern 'QQ_STIMULUS_START_GATE_AUTO_START'
+        unityExperimentStart = Count-Matches -Text $allLogText -Pattern 'QQ_STIMULUS_EXPERIMENT_START'
         unityVideoPause = Count-Matches -Text $allLogText -Pattern 'VIDEO_PAUSE_FOR_PANEL'
         unityVideoPrepare = Count-Matches -Text $allLogText -Pattern 'VIDEO_PREPARE_START'
         unityVideoPlay = Count-Matches -Text $allLogText -Pattern 'VIDEO_PLAY'
@@ -966,7 +966,7 @@ for ($trial = 1; $trial -le $TrialCount; $trial++) {
         unityVideoNonBlackFrame = Count-Matches -Text $allLogText -Pattern 'VIDEO_NONBLACK_FRAME'
         unityVideoLoopPoint = Count-Matches -Text $allLogText -Pattern 'VIDEO_LOOP_POINT|VIDEO_VALIDATION_LOOPPOINT_FALLBACK'
         unityPanelCompletion = Count-Matches -Text $allLogText -Pattern 'PANEL_COMPLETION_RECEIVED'
-        unityComplete = Count-Matches -Text $allLogText -Pattern 'AWE_DEMO_COMPLETE'
+        unityComplete = Count-Matches -Text $allLogText -Pattern 'QQ_STIMULUS_COMPLETE'
         questionnaireReplayStart = Count-Matches -Text $allLogText -Pattern 'MYQUESTIONNAIRE_COMMAND_REPLAY_START'
         questionnaireExportComplete = Count-Matches -Text $allLogText -Pattern 'MYQUESTIONNAIRE_EXPORT_COMPLETE'
         questionnairePendingIntentReturn = Count-Matches -Text $allLogText -Pattern 'MYQUESTIONNAIRE_CHAIN_RETURN_PENDING_INTENT'

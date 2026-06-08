@@ -9,27 +9,34 @@ contract first:
 XR app -> 2D panel -> same XR app via mq.returnPendingIntent
 ```
 
-The XR app owns semantic triggers and launches the panel with
-`mq.handoffSchema=mq.handoff.v1`, `mq.triggerId`, block metadata, and a
-`PendingIntent` targeting the same XR activity with
-`REORDER_TO_FRONT | SINGLE_TOP | NEW_TASK`. The panel saves exports before it
-returns. See `../docs/xr-questionnaire-panel-handoff.md`.
+The generated 2D questionnaire APK owns study logic. The XR/Unity app owns only
+stimulus presentation and the physical moment a passive trigger fires. It
+launches the panel with `mq.handoffSchema=mq.handoff.v1`, `mq.triggerId`,
+optional session metadata, and a `PendingIntent` targeting the same XR activity
+with `REORDER_TO_FRONT | SINGLE_TOP | NEW_TASK`. The panel saves exports before
+it returns. See `../docs/xr-questionnaire-panel-handoff.md`.
+
+Do not put questionnaire order, questionnaire type, scoring, participant state,
+block progression, or export behavior into Unity. The questionnaire APK
+interprets `mq.triggerId` against its own protocol state and decides which block
+to resume. `mq.blockId` and `mq.blockNumber` are developer fallbacks, not the
+normal Unity decision surface.
 
 For multi-APK experiments, use the standalone orchestrator APK as the plan
 owner when possible:
 
 ```text
-package: org.viscereality.orchestrator
-activity: org.viscereality.orchestrator.ExperimentOrchestratorActivity
-action: org.viscereality.orchestrator.BROKER
+package: org.questquestionnaire.orchestrator
+activity: org.questquestionnaire.orchestrator.ExperimentOrchestratorActivity
+action: org.questquestionnaire.orchestrator.BROKER
 ```
 
 The questionnaire app also keeps a compatible questionnaire-owned broker:
 
 ```text
-package: org.viscereality.questionnaires2d
-activity: org.viscereality.questionnaires2d.QuestChainBrokerActivity
-action: org.viscereality.questionnaires2d.BROKER
+package: org.questquestionnaire.questionnaires2d
+activity: org.questquestionnaire.questionnaires2d.QuestChainBrokerActivity
+action: org.questquestionnaire.questionnaires2d.BROKER
 ```
 
 Both broker styles accept commands such as:
@@ -58,12 +65,13 @@ Use the right link mode for the target APK:
 | Target type | Link mode | What it proves | Remaining gap |
 | --- | --- | --- | --- |
 | Existing compiled Unity APK | Wrapper hook | Orchestrator route, target launch request, questionnaire export safety | Scenario may not have reached real internal completion |
-| Rebuildable Unity source APK | Source hook | Real semantic callback from scenario end event | Requires correct Unity source/build profile |
+| Rebuildable Unity source APK | Passive source trigger | Real stimulus event emitted from Unity source | Requires correct Unity source/build profile |
 | Lab network command source | LSL bridge | External command can start/continue headset-owned plan | LSL should not own headset state |
 
 Wrapper links are good for smoke tests, timed segments, and legacy APKs. Source
-hooks are the stronger study route because the active Unity app can call back
-when the scenario truly finishes.
+triggers are the stronger study route because the active Unity app can emit the
+real stimulus event when the scenario truly finishes, while the 2D
+questionnaire APK still owns the questionnaire protocol.
 
 ## Validation Ladder
 
@@ -128,7 +136,7 @@ local renderers, Unity bridge static checks, APK handoff preflight, and Quest
 readiness, use:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\validate-builder-to-quest-workflow.ps1 -ConfigPath .\MyQuestionnaireVR-2D\QuestionnaireConfigs\generated\viscereality-maia2.config.json -RunQuestReadiness -Serial <quest-serial>
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\validate-builder-to-quest-workflow.ps1 -ConfigPath .\MyQuestionnaireVR-2D\QuestionnaireConfigs\generated\quest-questionnaire-maia2.config.json -RunQuestReadiness -Serial <quest-serial>
 ```
 
 The builder GUI's `Validate workflow` button calls the same path through the
@@ -152,13 +160,13 @@ Install and launch a questionnaire APK:
 
 ```powershell
 adb -s <serial> install -r -d .\apks\demographic-questionnaire\MyQuestionnaireVR-2D.apk
-adb -s <serial> shell am start -n org.viscereality.questionnaires2d/.MainActivity
+adb -s <serial> shell am start -n org.questquestionnaire.questionnaires2d/.MainActivity
 ```
 
 Launch temporal tracer command replay:
 
 ```powershell
-adb -s <serial> shell am start -n org.viscereality.temporaltracer2d/org.viscereality.temporaltracer2d.MainActivity --ez mq.autoTrace true --es mq.participantName AutoTemporal --es mq.participantId AUTO001 --es mq.language English --es mq.sessionId temporal-smoke
+adb -s <serial> shell am start -n org.questquestionnaire.temporaltracer2d/org.questquestionnaire.temporaltracer2d.MainActivity --ez mq.autoTrace true --es mq.participantName AutoTemporal --es mq.participantId AUTO001 --es mq.language English --es mq.sessionId temporal-smoke
 ```
 
 ## Controller Boundary

@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <queries>
         <intent>
-            <action android:name="org.viscereality.CHAIN_COMMAND" />
+            <action android:name="org.questquestionnaire.CHAIN_COMMAND" />
         </intent>
     </queries>
 
@@ -35,7 +35,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter>
-                <action android:name="org.viscereality.questionnaires2d.RUN" />
+                <action android:name="org.questquestionnaire.questionnaires2d.RUN" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <intent-filter>
@@ -63,7 +63,7 @@
             android:resizeableActivity="true"
             android:theme="@style/AppTheme">
             <intent-filter>
-                <action android:name="org.viscereality.questionnaires2d.BROKER" />
+                <action android:name="org.questquestionnaire.questionnaires2d.BROKER" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <intent-filter>

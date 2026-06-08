@@ -4,11 +4,11 @@ Native Android 2D panel app for Meta Horizon OS / Quest. This ports the Unity te
 
 ## App Contract
 
-- Package: `org.viscereality.temporaltracer2d`
+- Package: `org.questquestionnaire.temporaltracer2d`
 - Activity: `.MainActivity`
-- Intent action: `org.viscereality.temporaltracer2d.RUN`
+- Intent action: `org.questquestionnaire.temporaltracer2d.RUN`
 - Debug APK output: `Builds\TemporalExperienceTracerVR-2D.apk`
-- Device exports: `/sdcard/Android/data/org.viscereality.temporaltracer2d/files/TemporalTraceExports`
+- Device exports: `/sdcard/Android/data/org.questquestionnaire.temporaltracer2d/files/TemporalTraceExports`
 
 Launch extras mirror the questionnaire chain style: `mq.handoffSchema`,
 `mq.sessionId`, `mq.triggerId`, `mq.blockId`, `mq.blockNumber`,
@@ -86,7 +86,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\build-apk.ps1
 Quest auto replay launch example:
 
 ```powershell
-adb -s <serial> shell am start -n org.viscereality.temporaltracer2d/org.viscereality.temporaltracer2d.MainActivity `
+adb -s <serial> shell am start -n org.questquestionnaire.temporaltracer2d/org.questquestionnaire.temporaltracer2d.MainActivity `
   --ez mq.autoTrace true `
   --es mq.participantName AutoTemporal `
   --es mq.participantId AUTO001 `

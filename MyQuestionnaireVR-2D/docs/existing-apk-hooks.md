@@ -1,6 +1,6 @@
 # Existing APK Hooks
 
-Use this when chaining an already-built Viscereality APK such as Peripersonal Space Right.
+Use this when chaining an already-built Quest 2D Questionnaire stimulus APK such as Peripersonal Space Right.
 
 ## Hook Choices
 
@@ -11,13 +11,13 @@ Use the wrapper hook for closed or already-built APKs that you do not want to re
 The orchestrator launches:
 
 ```text
-org.viscereality.chainhookwrapper/.ChainHookActivity
+org.questquestionnaire.chainhookwrapper/.ChainHookActivity
 ```
 
 The wrapper then launches the real target app from chain-plan extras:
 
 ```text
-targetPackage=com.Viscereality.ViscerealityPeriPersonalSpaceRight
+targetPackage=org.questquestionnaire.stimulusdemo
 targetActivity=com.unity3d.player.UnityPlayerGameActivity
 ```
 
@@ -84,7 +84,7 @@ artifacts\quest-orchestrator-wrapper-chain-validation\20260605T035658Z\quest-orc
 Validated package/activity:
 
 ```text
-com.Viscereality.ViscerealityPeriPersonalSpaceRight/com.unity3d.player.UnityPlayerGameActivity
+org.questquestionnaire.stimulusdemo/com.unity3d.player.UnityPlayerGameActivity
 ```
 
 The orchestrator completed the chain, the wrapper received and launched the

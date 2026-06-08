@@ -36,7 +36,7 @@ powershell -NoProfile -ExecutionPolicy Bypass `
   -PictographicRepeats 3
 ```
 
-The generator writes `viscereality.chainlink.plan.v1` with numbered registered
+The generator writes `questquestionnaire.chainlink.plan.v1` with numbered registered
 blocks. ChainLink executes those blocks by reading `package`, `activity`,
 `action`, and `extras`; it does not special-case the package name.
 
@@ -75,7 +75,7 @@ PackageManager.getLaunchIntentForPackage(package)
 Hook route for source-controlled apps:
 
 ```text
-action = org.viscereality.CHAIN_COMMAND
+action = org.questquestionnaire.CHAIN_COMMAND
 extras:
   mq.command = nextBlock
   mq.chainId = ...
@@ -101,9 +101,9 @@ app/panel. That means:
 The hook should call:
 
 ```text
-action = org.viscereality.chainlink.COMMAND
-package = org.viscereality.chainlink
-activity = org.viscereality.chainlink.ChainLinkActivity
+action = org.questquestionnaire.chainlink.COMMAND
+package = org.questquestionnaire.chainlink
+activity = org.questquestionnaire.chainlink.ChainLinkActivity
 extra mq.command = nextBlock
 ```
 
@@ -129,8 +129,8 @@ Attach `ChainLinkControllerHook` to a GameObject in the foreground scene. When
 the configured left-controller button is pressed, it sends:
 
 ```text
-action = org.viscereality.chainlink.COMMAND
-component = org.viscereality.chainlink/.ChainLinkActivity
+action = org.questquestionnaire.chainlink.COMMAND
+component = org.questquestionnaire.chainlink/.ChainLinkActivity
 mq.command = nextBlock
 mq.triggerSource = unity-left-controller
 mq.triggerTimestampUtc = <UTC ISO-8601 timestamp>
@@ -156,7 +156,7 @@ launchOnly = ChainLink can launch/resume the APK, but needs another event source
 Every questionnaire invocation gets a unique run id and append-only files under:
 
 ```text
-/sdcard/Android/data/org.viscereality.questionnaires2d/files/QuestionnaireExports
+/sdcard/Android/data/org.questquestionnaire.questionnaires2d/files/QuestionnaireExports
 ```
 
 Each export includes:
@@ -183,7 +183,7 @@ Outputs:
 
 ```text
 Builds\MyQuestionnaireVR-2D.apk
-Builds\ViscerealityChainLink.apk
+Builds\QuestQuestionnaireChainLink.apk
 ```
 
 ## ChainLink Stress Harness

@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
 if ([string]::IsNullOrWhiteSpace($OutputApk)) {
-    $OutputApk = Join-Path $ProjectPath 'Builds\ViscerealitySourceHookStub.apk'
+    $OutputApk = Join-Path $ProjectPath 'Builds\QuestQuestionnaireSourceHookStub.apk'
 }
 
 $gradle = Join-Path $ProjectPath 'gradlew.bat'

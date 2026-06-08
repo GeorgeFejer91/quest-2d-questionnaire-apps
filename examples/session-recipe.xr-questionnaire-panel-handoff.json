@@ -1,6 +1,6 @@
 {
   "schemaVersion": "mq.xr_questionnaire_panel_handoff.recipe.v1",
-  "recipeId": "awe-great-dictator-pending-intent-handoff",
+  "recipeId": "quest-questionnaire-stimulus-pending-intent-handoff",
   "goal": "Prove XR focused -> 2D panel focused -> same XR app focused again without ADB foreground switching in the product path.",
   "strategyCandidates": [
     {
@@ -22,25 +22,25 @@
   ],
   "apps": {
     "xr": {
-      "package": "org.questionnairebuilder.stimulusdemo",
-      "activity": "org.questionnairebuilder.stimulusdemo.StimulusUnityPlayerGameActivity",
-      "project": "AweGreatDictatorUnity",
-      "catalog": "AweGreatDictatorUnity/Assets/StreamingAssets/mq/questionnaire-trigger-catalog.json"
+      "package": "org.questquestionnaire.stimulusdemo",
+      "activity": "org.questquestionnaire.stimulusdemo.StimulusUnityPlayerGameActivity",
+      "project": "QuestionnaireStimulusUnity",
+      "catalog": "QuestionnaireStimulusUnity/Assets/StreamingAssets/mq/questionnaire-trigger-catalog.json"
     },
     "questionnaire": {
-      "package": "org.viscereality.questionnaires2d",
-      "activity": "org.viscereality.questionnaires2d.MainActivity",
-      "action": "org.viscereality.questionnaires2d.RUN"
+      "package": "org.questquestionnaire.questionnaires2d",
+      "activity": "org.questquestionnaire.questionnaires2d.MainActivity",
+      "action": "org.questquestionnaire.questionnaires2d.RUN"
     },
     "temporalTracer": {
-      "package": "org.viscereality.temporaltracer2d",
-      "activity": "org.viscereality.temporaltracer2d.MainActivity",
-      "action": "org.viscereality.temporaltracer2d.RUN"
+      "package": "org.questquestionnaire.temporaltracer2d",
+      "activity": "org.questquestionnaire.temporaltracer2d.MainActivity",
+      "action": "org.questquestionnaire.temporaltracer2d.RUN"
     },
     "chainlink": {
-      "package": "org.viscereality.chainlink",
-      "activity": "org.viscereality.chainlink.ChainLinkActivity",
-      "action": "org.viscereality.chainlink.COMMAND"
+      "package": "org.questquestionnaire.chainlink",
+      "activity": "org.questquestionnaire.chainlink.ChainLinkActivity",
+      "action": "org.questquestionnaire.chainlink.COMMAND"
     }
   },
   "triggers": [
@@ -68,7 +68,7 @@
     }
   ],
   "localGates": [
-    "builder-smoke emits awe-great-dictator-handoff.config.json and ChainLink plan",
+    "builder-smoke emits quest-questionnaire-stimulus-handoff.config.json and ChainLink plan",
     "questionnaire config validates",
     "questionnaire APK generation runs with local Android render preview",
     "temporal tracer config validates",

@@ -57,8 +57,8 @@ compiler, validator, and fallback router. See
 
 | App | APK | Package | Launch action |
 | --- | --- | --- | --- |
-| Demographic questionnaire | `apks/demographic-questionnaire/MyQuestionnaireVR-2D.apk` | `org.viscereality.questionnaires2d` | `org.viscereality.questionnaires2d.RUN` |
-| Temporal experience tracer | `apks/temporal-experience-tracer/TemporalExperienceTracerVR-2D.apk` | `org.viscereality.temporaltracer2d` | `org.viscereality.temporaltracer2d.RUN` |
+| Demographic questionnaire | `apks/demographic-questionnaire/MyQuestionnaireVR-2D.apk` | `org.questquestionnaire.questionnaires2d` | `org.questquestionnaire.questionnaires2d.RUN` |
+| Temporal experience tracer | `apks/temporal-experience-tracer/TemporalExperienceTracerVR-2D.apk` | `org.questquestionnaire.temporaltracer2d` | `org.questquestionnaire.temporaltracer2d.RUN` |
 
 Install with ADB:
 

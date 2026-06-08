@@ -3,6 +3,18 @@
 Record changes that affect future AI-agent behavior or project constraints.
 Use absolute dates.
 
+## 2026-06-08
+
+- Updated the V2 builder rule: Block 1 is configurable and demographics is only
+  a suggested CSV-backed preload/template. Hosted/product mode may preselect
+  demographics for the demo path, but future agents must preserve user control
+  over Block 1 and must not convert Unity trigger metadata into questionnaire
+  routing decisions.
+- Updated the questionnaire block builder toward a Qualtrics-like CSV workflow:
+  scanned Unity triggers create later return-block slots; users add vertical
+  questionnaire elements per block, download type templates/preloads, upload
+  completed CSV/ZIP files, and map triggers from the 2D questionnaire protocol.
+
 ## 2026-06-06
 
 - Established the root `For-AI/` folder as the canonical AI-agent documentation
@@ -24,6 +36,30 @@ Use absolute dates.
 
 ## 2026-06-07
 
+- Renamed the project-facing brand and technical defaults for open-source
+  release readiness: use "Quest 2D Questionnaire Apps" / "Quest Questionnaire
+  Builder", `org.questquestionnaire.*` package namespaces,
+  `quest-questionnaire-*` questionnaire IDs, `questquestionnaire.*` schema
+  tags, `custom_slider` slider blocks, and neutral
+  `org.questquestionnaire.stimulusdemo` placeholders. Future agents should not
+  reintroduce legacy project, organization, personal, lab, or unrelated
+  Unity-study names into source, docs, generated defaults, or staged hosted UI.
+- Added the study-logic ownership directive: the generated 2D questionnaire APK
+  owns questionnaire order, trigger interpretation, participant/session state,
+  block progression, scoring, and exports. Unity/stimulus APKs are passive
+  trigger emitters and should send `mq.triggerId` only, with `mq.blockId`,
+  `mq.blockNumber`, and `mq.questionnaireMode` treated as legacy/developer
+  fallbacks rather than the product decision surface.
+- Added builder and companion validation warnings for Unity trigger catalogs
+  that contain questionnaire-routing hints such as `recommendedMode` or
+  `questionnaireMode`, preserving legacy behavior while steering V2 toward
+  questionnaire-owned protocol logic.
+- Added hosted-visible questionnaire CSV template controls and builder stress
+  coverage for type-oriented templates. Treat MAIA-2 as a preloaded named
+  questionnaire; generic CSV templates should describe question types such as
+  slider/VAS, Likert, multiple choice, text entry, and temporal tracer
+  dimensions. The current APK runtime supports uploaded slider/VAS items end
+  to end, while unsupported uploaded types must fail loudly until implemented.
 - Added Unity Quest video validation lessons covering real `VideoPlayer`
   markers, APK-internal video diagnostics, Unity batchmode pitfalls, APK
   manifest inspection, XR Simulation generated-file cleanup, and Horizon OS
@@ -51,7 +87,15 @@ Use absolute dates.
   questionnaire APK can default to demographics from Meta Home and then open
   the Unity APK with `finishBehavior=openNext`, while later Unity-triggered
   blocks still use `resumeCaller`.
-- Added `QuestionnaireConfigs/examples/awe-great-dictator-2d-first-demo.config.json`
+- Added V2 block-sequence support: the builder can configure a block 1
+  questionnaire sequence and a Unity-return sequence, serialize
+  `questionnaireSequence`, and keep Unity restricted to passive `mq.triggerId`
+  emission while the 2D APK chooses the next block from protocol state.
+- Added the template/metafile customization rule for the builder and the first
+  pictographic ZIP path: users can download placeholder PNGs plus a manifest,
+  replace them locally, reupload the ZIP, and generate config assets without a
+  bespoke pictographic UI.
+- Added `QuestionnaireConfigs/examples/quest-questionnaire-stimulus-2d-first-demo.config.json`
   and hardened Android tests so generated custom configs can run the full
   unit-test/APK/render/direct-handoff-preflight spine after assets are applied.
 - Updated the Universal Quest Handoff readiness audit to promote the latest
@@ -121,6 +165,16 @@ Use absolute dates.
   companion receipts and GUI receipt text, with builder smoke coverage so the
   website keeps showing the 2D-first/start-gate, controller-dialog,
   frozen-video/video-resume, and no Meta/ADB recovery rules.
+- Made hosted final-product builder loads automatically default generated APKs
+  to a demographics-first front door: `questionnaireFirst`, demographics,
+  `openNext` into the scanned Unity package/activity. Manifest trigger
+  assignments remain for later Unity-triggered blocks; when no demographics
+  manifest trigger exists, the front door uses the stable
+  `study_start_demographics` id.
+- Added participant-facing generated APK naming for questionnaire-first
+  builds: the builder/runtime config now carries `appDisplayName`, the APK
+  generator stamps Android `app_name`, and the first panel heading reads
+  `Start Experiment | <target APK label>`.
 - Added `operator-guardrail-receipts` to the local companion capability
   contract and hosted builder validator so the online GUI can detect older
   companions that do not expose checked operator guardrail receipt fields.
@@ -143,9 +197,9 @@ Use absolute dates.
 - Updated ChainLink's intended role: plan compiler, trigger-mapping validator,
   and fallback router. Direct XR -> 2D panel -> same XR `PendingIntent`
   handoff is the preferred strategy until headset trials disprove it.
-- Added the Chaplin/Awe demo stress target: trigger 1 launches a
+- Added the Quest questionnaire stimulus demo stress target: trigger 1 launches a
   demographics-only questionnaire before video playback, trigger 2 launches the
-  temporal experience tracer for awe after video completion.
+  temporal experience tracer after stimulus completion.
 - Added local handoff evidence files:
   `docs/xr-questionnaire-panel-handoff.md` and
   `examples/session-recipe.xr-questionnaire-panel-handoff.json`.
@@ -155,7 +209,7 @@ Use absolute dates.
 - Added `MyQuestionnaireVR-2D/tools/validate-builder-companion-workflow.ps1`;
   the full local companion pass on 2026-06-07 was
   `builder-companion-20260607T013607Z`, producing
-  `Builds/viscereality-maia2-1.0.0.apk` through `/api/generate-apk`.
+  `Builds/quest-questionnaire-maia2-1.0.0.apk` through `/api/generate-apk`.
 - Fixed the local companion for Windows PowerShell compatibility:
   pairing-token generation no longer requires `RandomNumberGenerator.Fill()`,
   and child-process stderr is captured as text before exit-code evaluation.
@@ -181,7 +235,7 @@ Use absolute dates.
 - Added companion endpoint `/api/validate-workflow` and a builder `Validate
   workflow` button so the hosted/offline GUI can trigger that matrix through
   trusted local PC software.
-- Rebuilt the local `AweGreatDictatorUnity` demo APK after fixing the custom
+- Rebuilt the local `QuestionnaireStimulusUnity` demo APK after fixing the custom
   Android manifest path; the earlier APK launched Unity's stock Activity even
   though the trigger catalog named the custom return Activity.
 - Converted companion workflow validation to a background job contract:

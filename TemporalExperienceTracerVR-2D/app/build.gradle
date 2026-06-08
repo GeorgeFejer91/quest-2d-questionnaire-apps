@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'org.viscereality.temporaltracer2d'
+    namespace 'org.questquestionnaire.temporaltracer2d'
     compileSdk 35
 
     defaultConfig {
-        applicationId 'org.viscereality.temporaltracer2d'
+        applicationId 'org.questquestionnaire.temporaltracer2d'
         minSdk 29
         targetSdk 35
         versionCode 1

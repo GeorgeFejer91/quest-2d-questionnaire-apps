@@ -1,22 +1,22 @@
 {
   "schemaVersion": "my-questionnaire-2d.chain-plan.v1",
   "chainId": "peripersonal-source-hook-candidate-smoke",
-  "questionnaireId": "viscereality-maia2",
+  "questionnaireId": "quest-questionnaire-maia2",
   "questionnaireVersion": "1.0.0",
   "defaultFinishBehavior": "resumeCaller",
   "steps": [
     {
       "id": "peripersonal-source-hook-candidate",
       "type": "scenario",
-      "package": "com.Viscereality.ViscerealityPeriPersonalSpaceRight.SourceHook",
+      "package": "org.questquestionnaire.stimulusdemo.sourcehook",
       "activity": "com.unity3d.player.UnityPlayerGameActivity",
-      "action": "org.viscereality.CHAIN_COMMAND",
+      "action": "org.questquestionnaire.CHAIN_COMMAND",
       "command": "startScenario",
       "extras": {
         "scenarioId": "peripersonal-source-hook-candidate",
         "trialId": "trial-01",
         "mq.sessionId": "peripersonal-source-hook-candidate-session",
-        "mq.experimentId": "viscereality-source-hook-validation",
+        "mq.experimentId": "questquestionnaire-source-hook-validation",
         "mq.scenarioId": "peripersonal-source-hook-candidate",
         "mq.trialId": "trial-01",
         "mq.participantId": "SourceHookP001",
@@ -28,11 +28,11 @@
     {
       "id": "questionnaire-after-source-hook-candidate",
       "type": "questionnaire",
-      "package": "org.viscereality.questionnaires2d",
+      "package": "org.questquestionnaire.questionnaires2d",
       "activity": ".MainActivity",
       "extras": {
         "mq.sessionId": "peripersonal-source-hook-candidate-session",
-        "mq.experimentId": "viscereality-source-hook-validation",
+        "mq.experimentId": "questquestionnaire-source-hook-validation",
         "mq.scenarioId": "peripersonal-source-hook-candidate",
         "mq.trialId": "trial-01",
         "mq.participantId": "SourceHookP001",

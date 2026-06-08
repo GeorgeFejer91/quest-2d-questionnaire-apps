@@ -44,7 +44,7 @@ if ([string]::IsNullOrWhiteSpace($TemporalTracerPath)) {
     $TemporalTracerPath = Join-Path $RepoRoot 'TemporalExperienceTracerVR-2D'
 }
 if ([string]::IsNullOrWhiteSpace($UnityDemoPath)) {
-    $UnityDemoPath = Join-Path $RepoRoot 'AweGreatDictatorUnity'
+    $UnityDemoPath = Join-Path $RepoRoot 'QuestionnaireStimulusUnity'
 }
 if ([string]::IsNullOrWhiteSpace($TemporalTracerApk)) {
     $TemporalTracerApk = Join-Path $TemporalTracerPath 'Builds\TemporalExperienceTracerVR-2D.apk'
@@ -469,11 +469,11 @@ function Test-PanelReturnContracts {
     }
 
     $questionnaireManifestPath = Join-Path $ProjectPath 'app\src\main\AndroidManifest.xml'
-    $questionnaireContextPath = Join-Path $ProjectPath 'app\src\main\java\org\viscereality\questionnaires2d\QuestionnaireLaunchContext.java'
-    $questionnaireMainPath = Join-Path $ProjectPath 'app\src\main\java\org\viscereality\questionnaires2d\MainActivity.java'
+    $questionnaireContextPath = Join-Path $ProjectPath 'app\src\main\java\org\questquestionnaire\questionnaires2d\QuestionnaireLaunchContext.java'
+    $questionnaireMainPath = Join-Path $ProjectPath 'app\src\main\java\org\questquestionnaire\questionnaires2d\MainActivity.java'
     $tracerManifestPath = Join-Path $TemporalTracerPath 'app\src\main\AndroidManifest.xml'
-    $tracerContextPath = Join-Path $TemporalTracerPath 'app\src\main\java\org\viscereality\temporaltracer2d\TemporalTracerLaunchContext.java'
-    $tracerMainPath = Join-Path $TemporalTracerPath 'app\src\main\java\org\viscereality\temporaltracer2d\MainActivity.java'
+    $tracerContextPath = Join-Path $TemporalTracerPath 'app\src\main\java\org\questquestionnaire\temporaltracer2d\TemporalTracerLaunchContext.java'
+    $tracerMainPath = Join-Path $TemporalTracerPath 'app\src\main\java\org\questquestionnaire\temporaltracer2d\MainActivity.java'
 
     $questionnaireManifest = Get-Text -Path $questionnaireManifestPath
     $questionnaireContext = Get-Text -Path $questionnaireContextPath
@@ -482,7 +482,7 @@ function Test-PanelReturnContracts {
     $tracerContext = Get-Text -Path $tracerContextPath
     $tracerMain = Get-Text -Path $tracerMainPath
 
-    Add-Check -Name 'questionnaire manifest panel activity' -Pass (Test-Text $questionnaireManifest 'android:name="\.MainActivity".*?android:exported="true".*?android:launchMode="singleTop".*?android:resizeableActivity="true".*?org\.viscereality\.questionnaires2d\.RUN') -Detail $questionnaireManifestPath
+    Add-Check -Name 'questionnaire manifest panel activity' -Pass (Test-Text $questionnaireManifest 'android:name="\.MainActivity".*?android:exported="true".*?android:launchMode="singleTop".*?android:resizeableActivity="true".*?org\.questquestionnaire\.questionnaires2d\.RUN') -Detail $questionnaireManifestPath
     Add-Check -Name 'questionnaire return extra and pending intent extraction' -Pass (Test-Text $questionnaireContext 'EXTRA_RETURN_PENDING_INTENT\s*=\s*"mq\.returnPendingIntent".*?pendingIntentExtra\(intent,\s*EXTRA_RETURN_PENDING_INTENT\)') -Detail $questionnaireContextPath
     Add-Check -Name 'questionnaire completion result extras' -Pass (Test-Text $questionnaireContext 'EXTRA_RESULT_STATUS.*?EXTRA_EXPORT_JSON_PATH.*?EXTRA_EXPORT_CSV_PATH.*?EXTRA_QUESTIONNAIRE_CONFIG_ID') -Detail 'Questionnaire completion extras include status, exports, and config id.'
     Add-Check -Name 'questionnaire sends return token' -Pass (Test-Text $questionnaireContext 'void\s+sendReturnPendingIntent.*?addCompletionExtras\(fillIn,\s*export,\s*record\).*?returnPendingIntent\.send\(context,\s*0,\s*fillIn\)') -Detail 'Questionnaire fills result extras before sending PendingIntent.'
@@ -490,7 +490,7 @@ function Test-PanelReturnContracts {
     Add-Check -Name 'questionnaire tries PendingIntent before fallback' -Pass (Test-Order $questionnaireMain 'launchContext\.sendReturnPendingIntent\(this,\s*export,\s*record\)' 'launchContext\.completionIntent\(this,\s*export,\s*record\)') -Detail 'Questionnaire return token is attempted before explicit caller fallback.'
     Add-Check -Name 'questionnaire pending intent log marker' -Pass (Test-Text $questionnaireMain 'MYQUESTIONNAIRE_CHAIN_RETURN_PENDING_INTENT') -Detail 'Direct validator can observe questionnaire PendingIntent return.'
 
-    Add-Check -Name 'temporal tracer manifest panel activity' -Pass (Test-Text $tracerManifest 'android:name="\.MainActivity".*?android:exported="true".*?android:launchMode="singleTop".*?android:resizeableActivity="true".*?org\.viscereality\.temporaltracer2d\.RUN') -Detail $tracerManifestPath
+    Add-Check -Name 'temporal tracer manifest panel activity' -Pass (Test-Text $tracerManifest 'android:name="\.MainActivity".*?android:exported="true".*?android:launchMode="singleTop".*?android:resizeableActivity="true".*?org\.questquestionnaire\.temporaltracer2d\.RUN') -Detail $tracerManifestPath
     Add-Check -Name 'temporal tracer return extra and pending intent extraction' -Pass (Test-Text $tracerContext 'EXTRA_RETURN_PENDING_INTENT\s*=\s*"mq\.returnPendingIntent".*?pendingIntentExtra\(intent,\s*EXTRA_RETURN_PENDING_INTENT\)') -Detail $tracerContextPath
     Add-Check -Name 'temporal tracer completion result extras' -Pass (Test-Text $tracerContext 'EXTRA_RESULT_STATUS.*?EXTRA_EXPORT_JSON_PATH.*?EXTRA_EXPORT_CSV_PATH.*?EXTRA_EXPORT_SVG_PATH.*?EXTRA_TRACER_CONFIG_ID') -Detail 'Tracer completion extras include status, JSON/CSV/SVG exports, and config id.'
     Add-Check -Name 'temporal tracer sends return token' -Pass (Test-Text $tracerContext 'void\s+sendReturnPendingIntent.*?addCompletionExtras\(fillIn,\s*lastExport,\s*config\).*?returnPendingIntent\.send\(context,\s*0,\s*fillIn\)') -Detail 'Tracer fills result extras before sending PendingIntent.'
@@ -553,6 +553,7 @@ function Test-TriggerBlockMapping {
     $registryBlocks = if ($registry) { @($registry.blocks) } else { @() }
     $sourceCatalog = if ($registry) { Get-Prop -Object $registry -Name 'sourceTriggerCatalog' } else { $null }
     $scenario = if ($registry) { Get-Prop -Object $registry -Name 'scenario' } else { $null }
+    $passiveTriggerWarnings = if ($mapping) { @((Get-Prop -Object $mapping -Name 'passiveTriggerWarnings' -Default @()) | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }) } else { @() }
 
     Add-Check -Name 'trigger mapping present' -Pass ($null -ne $mapping) -Detail 'Config must include triggerQuestionnaireMapping from the APK trigger catalog.'
     Add-Check -Name 'trigger mapping schema' -Pass ([string](Get-Prop $mapping 'schemaVersion') -eq 'mq.quest_questionnaire_trigger_mapping.v1') -Detail 'triggerQuestionnaireMapping.schemaVersion'
@@ -562,6 +563,7 @@ function Test-TriggerBlockMapping {
     Add-Check -Name 'block ids unique' -Pass (Test-Unique -Values @($enabledMappings | ForEach-Object { $_.blockId })) -Detail 'Each enabled trigger must have a stable block id.'
     Add-Check -Name 'registry has one block per enabled trigger' -Pass ($registryBlocks.Count -eq $enabledMappings.Count) -Detail "registryBlocks=$($registryBlocks.Count); enabledTriggers=$($enabledMappings.Count)"
     Add-Check -Name 'source catalog count matches mapping' -Pass ($null -ne $sourceCatalog -and [int](Get-Prop $sourceCatalog 'triggerCount' 0) -eq $mappingTriggers.Count) -Detail 'experimentBlockRegistry.sourceTriggerCatalog.triggerCount'
+    Add-Check -Name 'passive trigger catalog policy recorded' -Pass $true -Detail ($(if ($passiveTriggerWarnings.Count -gt 0) { "legacyStudyLogicWarnings=$($passiveTriggerWarnings.Count)" } else { 'Unity trigger catalog has no source-side questionnaire routing warnings.' }))
     Add-Check -Name 'scenario package/activity propagated' -Pass (
         -not [string]::IsNullOrWhiteSpace([string](Get-Prop $mapping 'scenarioPackage')) -and
         [string](Get-Prop $mapping 'scenarioPackage') -eq [string](Get-Prop $scenario 'package') -and
@@ -571,6 +573,9 @@ function Test-TriggerBlockMapping {
     foreach ($trigger in $enabledMappings) {
         $triggerId = [string]$trigger.triggerId
         $mode = [string]$trigger.questionnaireMode
+        if (-not [string]::IsNullOrWhiteSpace([string](Get-Prop -Object $trigger -Name 'sourceRecommendedMode'))) {
+            $passiveTriggerWarnings += "Trigger $triggerId source recommendedMode=$((Get-Prop -Object $trigger -Name 'sourceRecommendedMode'))"
+        }
         $block = @($registryBlocks | Where-Object { [string]$_.id -eq [string]$trigger.blockId } | Select-Object -First 1)
         $block = if ($block.Count -gt 0) { $block[0] } else { $null }
         Add-Check -Name "block exists for $triggerId" -Pass ($null -ne $block) -Detail "blockId=$($trigger.blockId)"
@@ -578,9 +583,9 @@ function Test-TriggerBlockMapping {
             continue
         }
 
-        $expectedPackage = if ($mode -eq 'temporalTracer') { 'org.viscereality.temporaltracer2d' } else { 'org.viscereality.questionnaires2d' }
-        $expectedAction = if ($mode -eq 'temporalTracer') { 'org.viscereality.temporaltracer2d.RUN' } else { 'org.viscereality.questionnaires2d.RUN' }
-        $expectedActivity = if ($mode -eq 'temporalTracer') { 'org.viscereality.temporaltracer2d.MainActivity' } else { 'org.viscereality.questionnaires2d.MainActivity' }
+        $expectedPackage = if ($mode -eq 'temporalTracer') { 'org.questquestionnaire.temporaltracer2d' } else { 'org.questquestionnaire.questionnaires2d' }
+        $expectedAction = if ($mode -eq 'temporalTracer') { 'org.questquestionnaire.temporaltracer2d.RUN' } else { 'org.questquestionnaire.questionnaires2d.RUN' }
+        $expectedActivity = if ($mode -eq 'temporalTracer') { 'org.questquestionnaire.temporaltracer2d.MainActivity' } else { 'org.questquestionnaire.questionnaires2d.MainActivity' }
         $expectedType = if ($mode -eq 'temporalTracer') { 'temporalTracer' } else { 'questionnaire' }
         $extras = Get-Prop -Object $block -Name 'extras'
 
@@ -605,7 +610,10 @@ function Test-TriggerBlockMapping {
         foreach ($exampleTrigger in $exampleTriggers) {
             $mapped = @($mappingTriggers | Where-Object { [string]$_.triggerId -eq [string]$exampleTrigger.triggerId } | Select-Object -First 1)
             $mapped = if ($mapped.Count -gt 0) { $mapped[0] } else { $null }
-            Add-Check -Name "example trigger mapped $($exampleTrigger.triggerId)" -Pass ($null -ne $mapped -and [string]$mapped.questionnaireMode -eq [string]$exampleTrigger.recommendedMode) -Detail "recommendedMode=$($exampleTrigger.recommendedMode)"
+            if (-not [string]::IsNullOrWhiteSpace([string]$exampleTrigger.recommendedMode) -and [string]$exampleTrigger.recommendedMode -ne 'none') {
+                $passiveTriggerWarnings += "Example catalog trigger $($exampleTrigger.triggerId) contains source recommendedMode=$($exampleTrigger.recommendedMode); V2 treats this as legacy metadata, not Unity-owned routing."
+            }
+            Add-Check -Name "example passive trigger present $($exampleTrigger.triggerId)" -Pass ($null -ne $mapped) -Detail 'Unity catalogs are checked for trigger ids only; questionnaire routing belongs to the 2D protocol.'
         }
     } else {
         Add-Check -Name 'example catalog available for comparison' -Pass ($null -ne $exampleCatalog) -Detail $exampleCatalogPath
@@ -622,6 +630,8 @@ function Test-TriggerBlockMapping {
         sourceApkName = if ($mapping) { Get-Prop $mapping 'sourceApkName' } else { '' }
         enabledTriggerCount = $enabledMappings.Count
         registryBlockCount = $registryBlocks.Count
+        passiveTriggerWarningCount = $passiveTriggerWarnings.Count
+        passiveTriggerWarnings = @($passiveTriggerWarnings)
         checks = $checkArray
         completedAt = (Get-Date).ToUniversalTime().ToString('o')
     }
@@ -657,7 +667,7 @@ $steps.Add([ordered]@{
 }) | Out-Null
 Add-Requirement `
     -Id 'trigger-block-mapping-contract' `
-    -Requirement 'The APK trigger catalog must compile into one enabled block per trigger, with stable block ids/numbers, correct questionnaire or tracer targets, and mq.handoff.v1 caller-return extras.' `
+    -Requirement 'The APK trigger catalog must compile into stable questionnaire-owned block routing while Unity remains a passive trigger emitter; source catalog questionnaire hints are legacy warnings, not Unity-owned study logic.' `
     -Status ([string]$triggerBlockMapping.Status) `
     -Evidence $triggerBlockMapping.SummaryPath
 

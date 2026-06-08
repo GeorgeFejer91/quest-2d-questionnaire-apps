@@ -69,7 +69,7 @@
       ]
     },
     {
-      "id": "viscereality",
+      "id": "custom_slider",
       "type": "slider",
       "expectedItemCount": 6,
       "min": 0,

@@ -278,7 +278,7 @@ $recommendedArchitecture = [ordered]@{
 }
 
 $summary = [ordered]@{
-    schemaVersion = 'viscereality.experiment-setup-validation.v1'
+    schemaVersion = 'questquestionnaire.experiment-setup-validation.v1'
     status = $overallStatus
     runId = $RunId
     projectPath = $ProjectPath

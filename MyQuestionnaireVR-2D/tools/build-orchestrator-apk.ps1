@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
 if ([string]::IsNullOrWhiteSpace($OutputApk)) {
-    $OutputApk = Join-Path $ProjectPath 'Builds\ViscerealityExperimentOrchestrator.apk'
+    $OutputApk = Join-Path $ProjectPath 'Builds\QuestQuestionnaireExperimentOrchestrator.apk'
 }
 
 $gradle = Join-Path $ProjectPath 'gradlew.bat'
@@ -29,7 +29,7 @@ New-Item -ItemType Directory -Force -Path (Split-Path -Parent $OutputApk) | Out-
 Copy-Item -LiteralPath $builtApk -Destination $OutputApk -Force
 
 $summary = [ordered]@{
-    schemaVersion = 'viscereality.orchestrator-build.v1'
+    schemaVersion = 'questquestionnaire.orchestrator-build.v1'
     status = 'pass'
     apk = (Resolve-Path -LiteralPath $OutputApk).Path
     bytes = (Get-Item -LiteralPath $OutputApk).Length

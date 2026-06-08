@@ -1,5 +1,5 @@
 questionnaireId,questionnaireVersion,appVersion,block,language,order,text,min,max,leftAnchor,rightAnchor
-demo-slider,1.0.0,1.0.0,viscereality,English,1,"I felt aware of my breathing.",0,100,"NO, not more than usual","YES, much more than usual"
-demo-slider,1.0.0,1.0.0,viscereality,English,2,"I felt aware of my body boundaries.",0,100,"NO, not more than usual","YES, much more than usual"
-demo-slider,1.0.0,1.0.0,viscereality,Deutsch,1,"Ich war mir meiner Atmung bewusst.",0,100,"NEIN, nicht mehr als sonst","JA, viel mehr als sonst"
-demo-slider,1.0.0,1.0.0,viscereality,Deutsch,2,"Ich war mir meiner Koerpergrenzen bewusst.",0,100,"NEIN, nicht mehr als sonst","JA, viel mehr als sonst"
+demo-slider,1.0.0,1.0.0,custom_slider,English,1,"I felt aware of my breathing.",0,100,"NO, not more than usual","YES, much more than usual"
+demo-slider,1.0.0,1.0.0,custom_slider,English,2,"I felt aware of my body boundaries.",0,100,"NO, not more than usual","YES, much more than usual"
+demo-slider,1.0.0,1.0.0,custom_slider,Deutsch,1,"Ich war mir meiner Atmung bewusst.",0,100,"NEIN, nicht mehr als sonst","JA, viel mehr als sonst"
+demo-slider,1.0.0,1.0.0,custom_slider,Deutsch,2,"Ich war mir meiner Koerpergrenzen bewusst.",0,100,"NEIN, nicht mehr als sonst","JA, viel mehr als sonst"

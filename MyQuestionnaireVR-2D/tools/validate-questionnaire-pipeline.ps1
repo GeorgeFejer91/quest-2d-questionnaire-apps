@@ -17,7 +17,7 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
-    $ConfigPath = Join-Path $ProjectPath 'QuestionnaireConfigs\viscereality-maia2.config.json'
+    $ConfigPath = Join-Path $ProjectPath 'QuestionnaireConfigs\quest-questionnaire-maia2.config.json'
 }
 if (-not (Test-Path -LiteralPath $ConfigPath)) {
     throw "Config not found: $ConfigPath"

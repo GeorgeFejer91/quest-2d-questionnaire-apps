@@ -31,9 +31,9 @@ Expose an explicit launch contract so Unity apps, ChainLink, or ADB can start
 the questionnaire deterministically:
 
 - package/activity, for example
-  `org.viscereality.questionnaires2d/.MainActivity`
+  `org.questquestionnaire.questionnaires2d/.MainActivity`
 - action, for example
-  `org.viscereality.questionnaires2d.RUN`
+  `org.questquestionnaire.questionnaires2d.RUN`
 - `launchMode="singleTop"` plus `onNewIntent()` so repeated invocations reset
   cleanly.
 
@@ -67,7 +67,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\render-questionnaire
 ```
 
 For device validation, install the APK, run command replay, pull exports, and
-verify counts. The default Viscereality contract expects demographics, 37
+verify counts. The default Quest 2D Questionnaire contract expects demographics, 37
 MAIA-2 answers, 8 MAIA-2 scores, 3 pictographic choices, and 42 slider answers
 when the full questionnaire mode is used. Chained modes may intentionally run
 only baseline or pictographic blocks, but they must still include timestamps,
@@ -111,9 +111,12 @@ points and normalized analysis points; CSV stores the normalized point series.
 
 ## Chain Unity APKs And 2D Apps
 
-ChainLink or the orchestrator owns experiment order, block numbers, app
-switching, and metadata propagation. The questionnaire owns questionnaire
-state and loss-safe data export.
+The generated 2D questionnaire APK is the study logic owner. Unity/stimulus
+APKs should stay passive: they present stimulus content and emit trigger IDs,
+but they must not decide questionnaire order, questionnaire type, scoring,
+participant state, block progression, or export behavior. The questionnaire APK
+owns participant/session state, completed blocks, the next pending block,
+trigger-to-block mapping, save-before-handoff behavior, and export indexing.
 
 Use the simplest reliable hook for each target APK:
 
@@ -125,19 +128,22 @@ Use the simplest reliable hook for each target APK:
   launch with a helper APK and use a manual or time gate when scenario
   completion cannot be proven.
 - Source hook for rebuildable Unity APKs: add a small Unity Android bridge that
-  detects the unused controller button inside the foreground Unity XR app and
-  emits the same ChainLink command that synthetic validation uses.
-- 2D-first launcher mode: for demographics-before-stimulus participant
+  detects the intended trigger moment inside the foreground Unity XR app and
+  emits `mq.triggerId` plus optional session metadata. Do not encode
+  questionnaire mode, block order, or scoring decisions in Unity.
+- 2D-first launcher mode: for questionnaire-before-stimulus participant
   studies, make the packaged questionnaire APK the default front door. It runs
-  demographics from a normal Meta Home launch, saves block 1, and then opens
-  the configured Unity package/activity with `finishBehavior=openNext`. Keep
-  this builder/config driven so each generated study APK can be pinned to its
-  Unity target without hard-coding one Unity app into reusable Android source.
-  Keep later raw input and triggers inside Unity.
-- For demographics-before-video studies, pair that 2D-first front door with a
+  configurable block 1 from a normal Meta Home launch, saves block 1, and then
+  opens the configured Unity package/activity with `finishBehavior=openNext`.
+  Demographics is a common block 1 preload, not a fixed rule. Keep this
+  builder/config driven so each generated study APK can be pinned to its Unity
+  target without hard-coding one Unity app into reusable Android source. Keep
+  later raw input and trigger emission inside Unity, while keeping trigger
+  interpretation inside the questionnaire APK.
+- For questionnaire-before-video studies, pair that 2D-first front door with a
   Unity `Start experiment` gate. The participant launches the questionnaire,
-  completes demographics, enters Unity, clicks the foreground start target, and
-  only then starts the video. This avoids making the first demographics block
+  completes the configured block 1, enters Unity, clicks the foreground start
+  target, and only then starts the video. This avoids making the first block
   depend on Unity background pause/resume behavior.
 - Manual gate: when a closed scenario cannot emit a real completion event, log
   that a human operator witnessed the transition before accepting the chain.

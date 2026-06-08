@@ -27,7 +27,9 @@ HTML/JavaScript UI with mode-specific visibility:
   download/status/install controls, connector URL/token fields, and Quest
   detection must remain reachable before an APK trigger manifest is loaded.
   Keep only APK-dependent actions such as Generate APK and Install APK gated on
-  the trigger catalog.
+  the trigger catalog. Sequential block gating must not disable the connector
+  URL, pairing token, Check backend button, Quest serial, or Detect Quest
+  controls.
 - Development-only controls such as workflow validation, direct handoff trials,
   replay/export stress runners, audit packets, raw logs, and pipeline commands
   may remain in the shared source for offline engineering, but must be hidden

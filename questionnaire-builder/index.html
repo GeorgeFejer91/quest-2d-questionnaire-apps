@@ -6004,24 +6004,8 @@
         }
         setStageGate(stage, manifestLoaded, "Ready", "Choose an existing APK before continuing.");
       });
-      setStageGate(
-        byId("runner-stage"),
-        runnerReady,
-        "Ready",
-        manifestLoaded
-          ? "Add at least one questionnaire element to every block before baking the questionnaire APK."
-          : "Choose an existing APK before baking the questionnaire APK."
-      );
-      setStageGate(
-        byId("install-stage"),
-        installReady,
-        "Ready",
-        !runnerReady
-          ? "Bake the questionnaire APK after all blocks have questionnaire elements."
-          : (!generatedQuestionnaireApkReady()
-            ? "Bake the questionnaire APK before loading APKs onto the headset."
-            : "Load a local scenario APK file before installing both APKs onto the headset.")
-      );
+      setStageGate(byId("runner-stage"), true, runnerReady ? "Ready" : (manifestLoaded ? "Finish blocks" : "Connect backend"));
+      setStageGate(byId("install-stage"), true, installReady ? "Ready" : (generatedQuestionnaireApkReady() ? "Stage scenario APK" : "Bake APK first"));
       document.querySelectorAll("[data-requires-apk-control]").forEach(control => {
         let controlReady = manifestLoaded;
         if (control.id === "generateApkAppButton") {

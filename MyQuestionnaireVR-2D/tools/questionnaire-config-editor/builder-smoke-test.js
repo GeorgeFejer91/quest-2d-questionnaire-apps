@@ -700,7 +700,10 @@ assert(html.includes('id="installProgress" class="operation-progress" hidden'), 
 assert(html.includes('startEstimatedOperationProgress("bake"'), "Bake action should show estimated progress while the companion generates the APK.");
 assert(html.includes('setInstallStatus("Starting Quest install sequence..."'), "Install action should write feedback in the headset section.");
 assert(html.includes("workflowBlockGateStates"), "Builder should keep a block-by-block sequential workflow gate.");
-assert(html.includes("Add at least one questionnaire element to every block before baking the questionnaire APK."), "Bake should stay locked until each block has a questionnaire element.");
+assert(html.includes('if (control.id === "generateApkAppButton")'), "Bake action should stay individually gated until blocks are complete.");
+assert(html.includes('if (control.id === "installApkAppButton")'), "Install action should stay individually gated until bake and scenario staging are complete.");
+assert(html.includes('setStageGate(byId("runner-stage"), true'), "Connector fields in the bake section must remain usable before block completion.");
+assert(html.includes('setStageGate(byId("install-stage"), true'), "Quest detection fields in the install section must remain usable before APK install is ready.");
 assert(html.includes('id="dependencyStatusButton" type="button">Dependency status'), "Dependency status should be available before APK load.");
 assert(html.includes('id="installDependenciesButton" type="button">Install dependencies'), "Dependency install should be available before APK load.");
 assert(html.includes('id="generateApkAppButton" class="primary" type="button" data-requires-apk-control'), "Generate APK should remain APK-gated.");

@@ -150,7 +150,9 @@ Hosted mode should hide developer-only pipeline sections marked with
 `data-dev-only`. Companion download links, dependency status/install controls,
 connector URL/token fields, and Quest detection should be reachable before an
 APK is loaded; only APK-dependent actions such as generating or installing the
-questionnaire APK should remain gated on the trigger manifest.
+questionnaire APK should remain gated on the trigger manifest. Sequential
+workflow gating must not lock the connector URL, pairing token, Check backend,
+Quest serial, or Detect Quest controls.
 The visible product GUI should expose only the user workflow: load/scan the
 scenario APK, build questionnaire elements inside the detected block segments,
 bake the generated questionnaire APK, and load the staged scenario APK plus the

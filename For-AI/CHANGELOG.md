@@ -14,6 +14,10 @@ Use absolute dates.
   scanned Unity triggers create later return-block slots; users add vertical
   questionnaire elements per block, download type templates/preloads, upload
   completed CSV/ZIP files, and map triggers from the 2D questionnaire protocol.
+- Added multi-trigger GUI regression coverage and public passive catalog
+  fixtures for 2, 3, and 4-trigger Unity/stimulus demos. Future builder changes
+  must preserve the rule that rendered block segments equal one configurable
+  Block 1 plus exactly one later return block per scanned passive trigger.
 
 ## 2026-06-06
 

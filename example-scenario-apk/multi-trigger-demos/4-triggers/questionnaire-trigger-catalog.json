@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "mq.quest_questionnaire_trigger_catalog.v1",
+  "catalogVersion": "1.0.0",
+  "scenarioId": "quest-questionnaire-stimulus-demo-4-triggers",
+  "package": "org.questquestionnaire.stimulusdemo4",
+  "activity": "org.questquestionnaire.stimulusdemo4.StimulusUnityPlayerGameActivity",
+  "label": "Questionnaire Stimulus Builder Demo 4 Triggers",
+  "triggers": [
+    {
+      "triggerId": "trigger_1_complete",
+      "label": "After trigger 1",
+      "description": "Passive Unity event 1. The generated questionnaire APK decides which configured block resumes next."
+    },
+    {
+      "triggerId": "trigger_2_complete",
+      "label": "After trigger 2",
+      "description": "Passive Unity event 2. The generated questionnaire APK decides which configured block resumes next."
+    },
+    {
+      "triggerId": "trigger_3_complete",
+      "label": "After trigger 3",
+      "description": "Passive Unity event 3. The generated questionnaire APK decides which configured block resumes next."
+    },
+    {
+      "triggerId": "trigger_4_complete",
+      "label": "After trigger 4",
+      "description": "Passive Unity event 4. The generated questionnaire APK decides which configured block resumes next."
+    }
+  ]
+}

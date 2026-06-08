@@ -8,6 +8,11 @@ on-headset APK chain with the 2D questionnaire panel app:
   Quest controller and emits a passive `mq.triggerId` event.
 - `ChainLinkTimedTrigger.cs`: optional scene component that fires the same
   chain action from a Unity timer, without requiring controller input.
+- `QuestQuestionnairePassiveTriggerDemo.cs`: optional scene component for
+  simple 2/3/4-trigger stimulus demos. Configure a list of passive trigger ids
+  such as `trigger_1_complete`, `trigger_2_complete`, and
+  `trigger_3_complete`; the questionnaire APK decides which block each event
+  resumes.
 
 Unity/stimulus APKs should stay passive in the product architecture. They may
 present stimulus content and emit simple trigger events, but they should not
@@ -77,6 +82,16 @@ The timer is the quickest way to prove the switching mechanism in-device before
 adding the physical controller gate. Once the timer path works, the controller
 hook only has to emit the same passive trigger intent.
 
+## Drop-In Multi-Trigger Demo
+
+For testing builder scans against more than one trigger, add
+`QuestQuestionnairePassiveTriggerDemo` to a GameObject and configure its
+`Triggers` list. The public fixtures under
+`example-scenario-apk/multi-trigger-demos/` provide matching catalogs for 2,
+3, and 4 passive trigger ids. The component can launch the questionnaire APK
+directly with `mq.triggerId` or send a ChainLink trigger command, but it does
+not choose questionnaire modules, block order, scoring, or export behavior.
+
 ## Drop-In ChainLink Controller Hook
 
 For the common ChainLink flow, add `ChainLinkControllerHook` to a GameObject in
@@ -100,6 +115,10 @@ mq.triggerId = <configured passive trigger id>
 mq.triggerTimestampUtc = <UTC ISO-8601 timestamp>
 mq.triggerTimestampUnixMs = <milliseconds since epoch>
 ```
+
+Legacy next-block calls use `org.questquestionnaire.chainlink.COMMAND` with
+`mq.command = nextBlock`; new V2 source triggers should prefer
+`mq.command = trigger` plus `mq.triggerId`.
 
 This is the reliable route for controller-triggered APK switches. Android and
 Horizon OS do not deliver another immersive APK's controller events to a

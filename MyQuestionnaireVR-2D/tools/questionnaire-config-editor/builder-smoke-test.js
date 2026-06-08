@@ -3,6 +3,7 @@ const path = require("path");
 const vm = require("vm");
 
 const root = path.resolve(__dirname, "..", "..");
+const repoRoot = path.resolve(root, "..");
 const htmlPath = path.join(__dirname, "index.html");
 const csvPath = path.join(root, "QuestionnaireConfigs", "examples", "two-item-slider-template.csv");
 const outputDirArgIndex = process.argv.indexOf("--output-dir");
@@ -267,6 +268,150 @@ function storedZip(entries) {
     cursor += chunk.length;
   });
   return bytes;
+}
+
+function readJsonFile(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+function multiTriggerCatalogPath(triggerCount) {
+  return path.join(
+    repoRoot,
+    "example-scenario-apk",
+    "multi-trigger-demos",
+    `${triggerCount}-triggers`,
+    "questionnaire-trigger-catalog.json"
+  );
+}
+
+function readMultiTriggerCatalog(triggerCount) {
+  return readJsonFile(multiTriggerCatalogPath(triggerCount));
+}
+
+function assertPassiveMultiTriggerCatalog(catalog, triggerCount) {
+  assert(catalog.schemaVersion === "mq.quest_questionnaire_trigger_catalog.v1", `${triggerCount}-trigger catalog schema mismatch.`);
+  assert(catalog.package === `org.questquestionnaire.stimulusdemo${triggerCount}`, `${triggerCount}-trigger catalog package should use the product brand.`);
+  assert(Array.isArray(catalog.triggers) && catalog.triggers.length === triggerCount, `${triggerCount}-trigger catalog should declare exactly ${triggerCount} triggers.`);
+  catalog.triggers.forEach((trigger, index) => {
+    const number = index + 1;
+    assert(trigger.triggerId === `trigger_${number}_complete`, `${triggerCount}-trigger catalog trigger ${number} id mismatch.`);
+    assert(trigger.label === `After trigger ${number}`, `${triggerCount}-trigger catalog trigger ${number} label mismatch.`);
+    ["recommendedMode", "questionnaireMode", "blockId", "blockNumber", "questionnaireType", "flowMode"].forEach(field => {
+      assert(!Object.prototype.hasOwnProperty.call(trigger, field), `${triggerCount}-trigger catalog must not encode Unity-side study logic field ${field}.`);
+    });
+  });
+}
+
+function blockSegmentCount(html) {
+  return (html.match(/class="block-segment study-block"/g) || []).length;
+}
+
+function assertRenderedBlocks(test, triggerCount, label) {
+  const blockHtml = test.document.getElementById("triggerMappingList").innerHTML;
+  assert(blockSegmentCount(blockHtml) === triggerCount + 1, `${label}: GUI should render Block 1 plus ${triggerCount} scanned return blocks.`);
+  assert(blockHtml.includes('id="block-segment-startup"'), `${label}: startup block segment missing.`);
+  assert(blockHtml.includes("Before experiment/running APK"), `${label}: startup label should use experiment/running APK wording.`);
+  assert(!/before video|after video|Video complete/i.test(blockHtml), `${label}: block labels must not use video-specific wording.`);
+  for (let index = 0; index < triggerCount; index += 1) {
+    const number = index + 1;
+    assert(blockHtml.includes(`id="block-segment-trigger-${index}"`), `${label}: trigger block ${index} segment missing.`);
+    assert(blockHtml.includes(`After trigger ${number}`), `${label}: trigger block ${number} label missing.`);
+  }
+}
+
+function assignSingleModulePerTrigger(test, triggerCount) {
+  const modules = ["slider", "pictographic", "demographics", "maia2"];
+  for (let index = 0; index < triggerCount; index += 1) {
+    const selected = modules[index % modules.length];
+    test.document.getElementById(`triggerMode${index}`).value = selected;
+    modules.forEach(module => {
+      test.document.getElementById(`triggerModule${index}_${module}`).checked = module === selected;
+    });
+  }
+  test.context.__api.refresh();
+  return modules.slice(0, triggerCount);
+}
+
+function runMultiTriggerGuiScenario(triggerCount) {
+  const test = loadEditor();
+  const catalog = readMultiTriggerCatalog(triggerCount);
+  assertPassiveMultiTriggerCatalog(catalog, triggerCount);
+  test.context.__api.applyTriggerCatalog(catalog, `${triggerCount}-trigger-demo.json`);
+  assertRenderedBlocks(test, triggerCount, `${triggerCount}-trigger GUI catalog`);
+
+  const unassigned = test.context.__api.buildConfig();
+  const unassignedQuality = test.context.__api.qualityReport(unassigned);
+  assert(unassigned.chainDefaults.startMode === "questionnaireFirst", `${triggerCount}-trigger catalog should default to questionnaire-first participant flow.`);
+  assert(unassigned.chainDefaults.nextPackage === catalog.package, `${triggerCount}-trigger catalog should target the scanned running APK package.`);
+  assert(unassigned.triggerQuestionnaireMapping.triggers.length === triggerCount, `${triggerCount}-trigger catalog should create ${triggerCount} trigger mappings.`);
+  assert(unassigned.triggerQuestionnaireMapping.passiveTriggerWarnings.length === 0, `${triggerCount}-trigger catalog should be passive-only.`);
+  assert(unassigned.triggerQuestionnaireMapping.triggers.every(trigger => trigger.questionnaireMode === "none"), `${triggerCount}-trigger catalog should leave return blocks unassigned.`);
+  assert(unassigned.experimentBlockRegistry.sourceTriggerCatalog.triggerCount === triggerCount, `${triggerCount}-trigger registry should remember source trigger count.`);
+  assert(unassigned.experimentBlockRegistry.blocks.length === 0, `${triggerCount}-trigger unassigned scan should not create runnable return blocks.`);
+  assert(unassignedQuality.status === "fail", `${triggerCount}-trigger unassigned scan should fail until return blocks are assigned.`);
+
+  const assignedModules = assignSingleModulePerTrigger(test, triggerCount);
+  const assigned = test.context.__api.buildConfig();
+  const assignedQuality = test.context.__api.qualityReport(assigned);
+  const assignedPlan = test.context.__api.buildChainPlan(assigned);
+  assert(assigned.triggerQuestionnaireMapping.triggers.length === triggerCount, `${triggerCount}-trigger assigned mapping count mismatch.`);
+  assert(assigned.triggerQuestionnaireMapping.triggers.every(trigger => trigger.enabled), `${triggerCount}-trigger assigned mappings should all be enabled.`);
+  assert(assigned.triggerQuestionnaireMapping.triggers.every(trigger => trigger.questionnaireSequence.length === 1), `${triggerCount}-trigger stress should assign one questionnaire element per return block.`);
+  assert(assigned.experimentBlockRegistry.blocks.length === triggerCount, `${triggerCount}-trigger assigned registry should contain one block per passive trigger.`);
+  assert(assigned.experimentBlockRegistry.blocks.every(block => block.type === "questionnaire"), `${triggerCount}-trigger assigned registry should keep all study logic inside the questionnaire APK.`);
+  assert(assigned.experimentBlockRegistry.blocks.every(block => block.package === "org.questquestionnaire.questionnaires2d"), `${triggerCount}-trigger assigned registry should never route questionnaire work to Unity.`);
+  assert(assigned.experimentBlockRegistry.blocks.every(block => block.trigger.type === "apkManifestTrigger"), `${triggerCount}-trigger assigned blocks should be keyed by passive APK manifest triggers.`);
+  assert(assigned.experimentBlockRegistry.blocks.every(block => block.extras && block.extras["mq.triggerId"]), `${triggerCount}-trigger assigned blocks should pass mq.triggerId.`);
+  assert(assigned.experimentBlockRegistry.blocks.every(block => !block.extras["mq.blockId"] && !block.extras["mq.blockNumber"]), `${triggerCount}-trigger assigned Unity-return extras should prefer triggerId over block routing fallbacks.`);
+  assignedModules.forEach((module, index) => {
+    assert(assigned.triggerQuestionnaireMapping.triggers[index].questionnaireSequence.join(",") === module, `${triggerCount}-trigger mapping ${index + 1} module mismatch.`);
+    assert(assigned.experimentBlockRegistry.blocks[index].extras["mq.questionnaireSequence"] === module, `${triggerCount}-trigger registry ${index + 1} sequence extra mismatch.`);
+  });
+  assert(assignedQuality.status === "pass", `${triggerCount}-trigger assigned catalog should pass quality report.`);
+  assert(assignedPlan.blockRegistry.blocks.length === triggerCount, `${triggerCount}-trigger ChainLink plan should embed one return block per trigger.`);
+  assert(!JSON.stringify(assigned.experimentBlockRegistry.sourceTriggerCatalog).includes("questionnaireMode"), `${triggerCount}-trigger source catalog metadata should not smuggle questionnaire behavior.`);
+
+  return {
+    triggerCount,
+    catalogPath: multiTriggerCatalogPath(triggerCount),
+    blockSegmentCount: blockSegmentCount(test.document.getElementById("triggerMappingList").innerHTML),
+    unassignedQualityStatus: unassignedQuality.status,
+    assignedQualityStatus: assignedQuality.status,
+    assignedModules,
+    assignedRegisteredBlocks: assigned.experimentBlockRegistry.blocks.length,
+    assigned,
+    assignedQuality
+  };
+}
+
+async function runMultiTriggerApkUploadScenario(triggerCount) {
+  const test = loadEditor();
+  const catalog = readMultiTriggerCatalog(triggerCount);
+  const bytes = storedZip({
+    "assets/mq/questionnaire-trigger-catalog.json": JSON.stringify(catalog)
+  });
+  const fileName = `quest-questionnaire-stimulus-demo-${triggerCount}-triggers.apk`;
+  const file = {
+    name: fileName,
+    async arrayBuffer() {
+      return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    }
+  };
+  await test.context.__api.loadTriggerCatalogFile(file);
+  assertRenderedBlocks(test, triggerCount, `${triggerCount}-trigger APK upload`);
+  assignSingleModulePerTrigger(test, triggerCount);
+  const config = test.context.__api.buildConfig();
+  const quality = test.context.__api.qualityReport(config);
+  assert(config.triggerQuestionnaireMapping.triggers.length === triggerCount, `${triggerCount}-trigger APK upload scan trigger count mismatch.`);
+  assert(config.experimentBlockRegistry.blocks.length === triggerCount, `${triggerCount}-trigger APK upload scan registry block count mismatch.`);
+  assert(quality.status === "pass", `${triggerCount}-trigger APK upload assigned config should pass quality report.`);
+  assert(test.document.getElementById("stagedScenarioApkPath").value === `C:\\staged\\${fileName}`, `${triggerCount}-trigger APK upload should stage the source APK.`);
+  return {
+    triggerCount,
+    blockSegmentCount: blockSegmentCount(test.document.getElementById("triggerMappingList").innerHTML),
+    qualityStatus: quality.status,
+    stagedScenarioApkPath: test.document.getElementById("stagedScenarioApkPath").value
+  };
 }
 
 function csvCell(value) {
@@ -895,6 +1040,8 @@ const duplicateQuality = context.__api.qualityReport(duplicate);
 assert(duplicateQuality.status === "fail", "Duplicate item quality report should fail.");
 assert(duplicateQuality.issues.some(issue => issue.text.includes("duplicates another item")), "Duplicate item issue was not reported.");
 
+const multiTriggerGuiStressResults = [2, 3, 4].map(runMultiTriggerGuiScenario);
+
 const summary = {
   status: "pass",
   defaultQuestionnaireId: initial.questionnaireId,
@@ -927,6 +1074,16 @@ const summary = {
     temporalTracer: unsupportedTemporalTracerError
   },
   duplicateGuardrailStatus: duplicateQuality.status,
+  multiTriggerGuiStressStatus: "pass",
+  multiTriggerGuiStressResults: multiTriggerGuiStressResults.map(result => ({
+    triggerCount: result.triggerCount,
+    catalogPath: result.catalogPath,
+    blockSegmentCount: result.blockSegmentCount,
+    unassignedQualityStatus: result.unassignedQualityStatus,
+    assignedQualityStatus: result.assignedQualityStatus,
+    assignedModules: result.assignedModules,
+    assignedRegisteredBlocks: result.assignedRegisteredBlocks
+  })),
   qualityReportDownloadAction: "pass",
   blockRegistryDownloadAction: "pass",
   chainPlanDownloadAction: "pass",
@@ -978,10 +1135,13 @@ async function runApkUploadScanScenario() {
 
 async function finish() {
   const apkUploadScan = await runApkUploadScanScenario();
+  const multiTriggerApkUploadResults = await Promise.all([2, 3, 4].map(runMultiTriggerApkUploadScenario));
   summary.apkUploadScanAction = "pass";
   summary.apkUploadTriggerCount = apkUploadScan.triggerCount;
   summary.apkUploadBlockSegmentCount = apkUploadScan.blockSegmentCount;
   summary.apkUploadStagedScenarioApkPath = apkUploadScan.stagedScenarioApkPath;
+  summary.multiTriggerApkUploadScanStatus = "pass";
+  summary.multiTriggerApkUploadResults = multiTriggerApkUploadResults;
 
 if (outputDir) {
   fs.mkdirSync(outputDir, { recursive: true });
@@ -1021,6 +1181,18 @@ if (outputDir) {
   fs.writeFileSync(importedQualityPath, `${JSON.stringify(importedQuality, null, 2)}\n`, "utf8");
   fs.writeFileSync(stressConfigPath, `${JSON.stringify(stressConfig, null, 2)}\n`, "utf8");
   fs.writeFileSync(stressQualityPath, `${JSON.stringify(stressQuality, null, 2)}\n`, "utf8");
+  summary.multiTriggerConfigs = [];
+  multiTriggerGuiStressResults.forEach(result => {
+    const configPath = path.join(outputDir, `multi-trigger-${result.triggerCount}.config.json`);
+    const qualityPath = path.join(outputDir, `multi-trigger-${result.triggerCount}.quality-report.json`);
+    fs.writeFileSync(configPath, `${JSON.stringify(result.assigned, null, 2)}\n`, "utf8");
+    fs.writeFileSync(qualityPath, `${JSON.stringify(result.assignedQuality, null, 2)}\n`, "utf8");
+    summary.multiTriggerConfigs.push({
+      triggerCount: result.triggerCount,
+      config: configPath,
+      qualityReport: qualityPath
+    });
+  });
   ["slider", "likert", "multipleChoice", "textEntry", "temporalTracer"].forEach(kind => {
     fs.writeFileSync(path.join(outputDir, `questionnaire-${kind}-template.csv`), context.__api.csvTemplateText(kind), "utf8");
   });

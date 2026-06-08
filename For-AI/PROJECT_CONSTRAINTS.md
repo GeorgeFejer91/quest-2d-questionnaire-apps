@@ -159,6 +159,13 @@ generated questionnaire APK onto the Quest. Do not expose standalone
 raw config/JSON, raw routing, block id/save namespace, or review/output stages
 in the product surface. Those controls may remain hidden as developer-only DOM
 or scripts when necessary for tests and internal workflows.
+The product workflow should be sequential and visibly gated: load/scan APK is
+segment 0, Block 1 is segment 1, later return blocks follow the trigger order,
+and users should not be able to bake until every block has at least one
+questionnaire element. Headset install should remain unavailable until a
+questionnaire APK was baked and a local scenario APK file is staged. Long
+operations such as bake and Quest install should show local status/progress in
+the section where the user clicked.
 Block segment count is derived as `1 + scanned passive Unity trigger count`.
 Block 1 always exists after any valid scenario APK/catalog is loaded because
 completion of block 1 launches the loaded Unity/stimulus APK by default. Each

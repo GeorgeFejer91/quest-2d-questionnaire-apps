@@ -439,3 +439,9 @@ Use absolute dates.
   and direct handoff claims must use explicit headset serials, record readiness
   and wake evidence, and leave the physical gate blocked/pending when the
   headset remains asleep or Horizon launch-check dialogs are focused.
+- Added the builder's sequential product gate: APK scan is segment 0, Block 1
+  is segment 1, later return blocks unlock in trigger order only after the
+  previous block has a questionnaire element, bake unlocks after all blocks are
+  specified, and headset install unlocks after bake plus a staged local
+  scenario APK. Bake and install now require visible local progress/status in
+  their own sections.

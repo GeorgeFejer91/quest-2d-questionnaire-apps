@@ -56,6 +56,13 @@ Workflow constraint:
   pipeline, raw routing, raw config/JSON, or output review sections to normal
   users. Keep only basic status feedback beside the four product steps: load
   APK, build blocks, bake questionnaire APK, and load both APKs onto the Quest.
+- The visible product workflow should guide users sequentially. Load/scan APK
+  is segment 0, Block 1 is segment 1, and later trigger-return blocks continue
+  that numbering. A later block should stay grayed out until the previous block
+  has at least one questionnaire element. Baking should stay unavailable until
+  every block has at least one element, and headset install should stay
+  unavailable until a questionnaire APK was baked and a local scenario APK is
+  staged.
 - Block segment count is `1 + scanned passive Unity trigger count`. Block 1 is
   always created after any valid scenario APK/catalog load, because completing
   block 1 launches the loaded Unity/stimulus APK by default. Each passive Unity

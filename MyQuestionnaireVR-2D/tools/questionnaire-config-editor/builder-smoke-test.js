@@ -40,6 +40,29 @@ class Element {
     this.checked = false;
     this.children = [];
     this.listeners = {};
+    this.attributes = {};
+    this.style = {};
+    this.classList = {
+      add: (...names) => {
+        const classes = new Set(this.className.split(/\s+/).filter(Boolean));
+        names.forEach(name => classes.add(name));
+        this.className = [...classes].join(" ");
+      },
+      remove: (...names) => {
+        const remove = new Set(names);
+        this.className = this.className.split(/\s+/).filter(Boolean).filter(name => !remove.has(name)).join(" ");
+      },
+      contains: name => this.className.split(/\s+/).filter(Boolean).includes(name),
+      toggle: (name, force) => {
+        const shouldAdd = typeof force === "boolean" ? force : !this.classList.contains(name);
+        if (shouldAdd) {
+          this.classList.add(name);
+        } else {
+          this.classList.remove(name);
+        }
+        return shouldAdd;
+      }
+    };
     this._innerHTML = "";
     this._textContent = "";
     if (id) {
@@ -84,6 +107,18 @@ class Element {
 
   addEventListener(type, listener) {
     this.listeners[type] = listener;
+  }
+
+  setAttribute(name, value) {
+    this.attributes[name] = String(value);
+  }
+
+  getAttribute(name) {
+    return this.attributes[name] || null;
+  }
+
+  removeAttribute(name) {
+    delete this.attributes[name];
   }
 
   click() {
@@ -172,7 +207,9 @@ function loadEditor() {
     DecompressionStream,
     Response,
     setTimeout,
-    clearTimeout
+    clearTimeout,
+    setInterval,
+    clearInterval
   };
   context.window = context;
   vm.createContext(context);
@@ -323,11 +360,13 @@ function assertRenderedBlocks(test, triggerCount, label) {
   const blockHtml = test.document.getElementById("triggerMappingList").innerHTML;
   assert(blockSegmentCount(blockHtml) === triggerCount + 1, `${label}: GUI should render Block 1 plus ${triggerCount} scanned return blocks.`);
   assert(blockHtml.includes('id="block-segment-startup"'), `${label}: startup block segment missing.`);
+  assert(blockHtml.includes("<h2>1. Block 1</h2>"), `${label}: Block 1 should be workflow segment 1 after the zero-based load step.`);
   assert(blockHtml.includes("Before experiment/running APK"), `${label}: startup label should use experiment/running APK wording.`);
   assert(!/before video|after video|Video complete/i.test(blockHtml), `${label}: block labels must not use video-specific wording.`);
   for (let index = 0; index < triggerCount; index += 1) {
     const number = index + 1;
     assert(blockHtml.includes(`id="block-segment-trigger-${index}"`), `${label}: trigger block ${index} segment missing.`);
+    assert(blockHtml.includes(`<h2>${index + 2}. Block ${index + 2}</h2>`), `${label}: trigger return block ${index + 2} should use zero-based workflow numbering.`);
     assert(blockHtml.includes(`After trigger ${number}`), `${label}: trigger block ${number} label missing.`);
   }
 }
@@ -651,6 +690,17 @@ assert(html.includes("hosted-final-product"), "Hosted GUI should include final-p
 assert(html.includes("data-dev-only"), "Hosted GUI should mark development-only controls.");
 assert(html.includes('runnerStage.removeAttribute("data-requires-apk")'), "Hosted product mode should keep companion setup available before APK load.");
 assert(html.includes("shouldUseHostedQuestionnaireFirstDefaults"), "Hosted product mode should auto-select 2D-first editable block defaults after APK load.");
+assert(html.includes("<h2>0. Load APK and scan triggers</h2>"), "Visible workflow numbering should start at segment 0 for APK load.");
+assert(html.includes('id="navApk" class="nav-link" href="#apk-stage"'), "Workflow nav should include the zero-based APK load step.");
+assert(html.includes('<span class="nav-number">00</span>'), "Workflow nav should number APK load as 00.");
+assert(html.includes('id="bakeProgress" class="operation-progress" hidden'), "Bake step should include a progress bar.");
+assert(html.includes('aria-label="Questionnaire APK bake progress"'), "Bake progress bar should be accessible.");
+assert(html.includes('id="installStatus" class="issue">Install not started.'), "Headset load section should have local install feedback.");
+assert(html.includes('id="installProgress" class="operation-progress" hidden'), "Headset load section should include an install progress bar.");
+assert(html.includes('startEstimatedOperationProgress("bake"'), "Bake action should show estimated progress while the companion generates the APK.");
+assert(html.includes('setInstallStatus("Starting Quest install sequence..."'), "Install action should write feedback in the headset section.");
+assert(html.includes("workflowBlockGateStates"), "Builder should keep a block-by-block sequential workflow gate.");
+assert(html.includes("Add at least one questionnaire element to every block before baking the questionnaire APK."), "Bake should stay locked until each block has a questionnaire element.");
 assert(html.includes('id="dependencyStatusButton" type="button">Dependency status'), "Dependency status should be available before APK load.");
 assert(html.includes('id="installDependenciesButton" type="button">Install dependencies'), "Dependency install should be available before APK load.");
 assert(html.includes('id="generateApkAppButton" class="primary" type="button" data-requires-apk-control'), "Generate APK should remain APK-gated.");
@@ -744,8 +794,11 @@ context.__api.applyTriggerCatalog({
 const zeroTriggerHtml = document.getElementById("triggerMappingList").innerHTML;
 assert((zeroTriggerHtml.match(/class="block-segment study-block"/g) || []).length === 1, "A loaded zero-trigger APK should still create the default Block 1 segment.");
 assert(zeroTriggerHtml.includes('id="block-segment-startup"'), "The default Block 1 segment should have a stable anchor.");
+assert(zeroTriggerHtml.includes("<h2>1. Block 1</h2>"), "The default Block 1 segment should be numbered 1 after zero-based APK load.");
 assert(zeroTriggerHtml.includes("Block 1"), "The default Block 1 card should be visible after a zero-trigger APK load.");
 assert(document.getElementById("triggerSummary").textContent.includes("0 passive Unity return triggers"), "Zero-trigger summary should explain that only Block 1 is needed.");
+assert(document.getElementById("runnerStageTitle").textContent === "2. Bake questionnaire APK", "Zero-trigger bake step should be numbered 2.");
+assert(document.getElementById("installStageTitle").textContent === "3. Load APKs onto headset", "Zero-trigger install step should be numbered 3.");
 
 const sequenceSource = context.__api.runHeadsetSequenceWithApp.toString();
 assertOrderedText(sequenceSource, [

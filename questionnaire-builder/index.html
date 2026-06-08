@@ -243,6 +243,77 @@
       pointer-events: none;
     }
 
+    .block-segment.locked .stage-state {
+      color: var(--danger);
+      border-color: #e4b8b2;
+      background: #fff7f6;
+    }
+
+    .block-segment.locked .locked-message {
+      display: block;
+    }
+
+    .block-segment.locked .stage-body {
+      max-height: 180px;
+      overflow: hidden;
+      opacity: 0.38;
+      pointer-events: none;
+    }
+
+    .operation-progress {
+      display: grid;
+      gap: 6px;
+      margin: 10px 0 14px;
+    }
+
+    .operation-progress-track {
+      position: relative;
+      height: 12px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #e9ebe6;
+    }
+
+    .operation-progress-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--accent);
+      transition: width 220ms ease;
+    }
+
+    .operation-progress.indeterminate .operation-progress-fill {
+      width: 42%;
+      animation: operation-progress-slide 1.25s ease-in-out infinite;
+    }
+
+    .operation-progress.ok .operation-progress-fill {
+      background: var(--ok);
+    }
+
+    .operation-progress.warn .operation-progress-fill {
+      background: #a16207;
+    }
+
+    .operation-progress.error .operation-progress-fill {
+      background: var(--danger);
+    }
+
+    .operation-progress-text {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @keyframes operation-progress-slide {
+      0% {
+        transform: translateX(-120%);
+      }
+      100% {
+        transform: translateX(260%);
+      }
+    }
+
     .panel {
       background: var(--panel);
       border: 1px solid var(--line);
@@ -761,12 +832,12 @@
 
       <nav class="workflow-nav">
         <a id="navApk" class="nav-link" href="#apk-stage">
-          <span class="nav-number">01</span>
+          <span class="nav-number">00</span>
           <span>Load APK</span>
           <span id="navApkState" class="nav-state">Required</span>
         </a>
         <a id="navTriggers" class="nav-link locked" href="#block-segment-startup">
-          <span id="navTriggersNumber" class="nav-number">02</span>
+          <span id="navTriggersNumber" class="nav-number">01</span>
           <span id="navTriggersLabel">Block 1</span>
           <span id="navTriggersState" class="nav-state">Locked</span>
         </a>
@@ -782,12 +853,12 @@
           <span id="navProjectState" class="nav-state">Locked</span>
         </a>
         <a id="navRunner" class="nav-link locked" href="#runner-stage">
-          <span id="navRunnerNumber" class="nav-number">03</span>
+          <span id="navRunnerNumber" class="nav-number">02</span>
           <span id="navRunnerLabel">Bake APK</span>
           <span id="navRunnerState" class="nav-state">Locked</span>
         </a>
         <a id="navInstall" class="nav-link locked" href="#install-stage">
-          <span id="navInstallNumber" class="nav-number">04</span>
+          <span id="navInstallNumber" class="nav-number">03</span>
           <span id="navInstallLabel">Load headset</span>
           <span id="navInstallState" class="nav-state">Locked</span>
         </a>
@@ -832,7 +903,7 @@
       <section id="apk-stage" class="stage">
         <div class="stage-heading">
           <div>
-            <h2>1. Load APK and scan triggers</h2>
+            <h2>0. Load APK and scan triggers</h2>
             <p class="subtle">Start by loading the scenario APK. The builder scans its trigger manifest and counts the questionnaire trigger events it contains.</p>
           </div>
           <div id="apkStageState" class="stage-state">Waiting for APK</div>
@@ -1148,7 +1219,7 @@
       <section id="runner-stage" class="stage" data-requires-apk>
         <div class="stage-heading">
           <div>
-            <h2 id="runnerStageTitle">3. Bake questionnaire APK</h2>
+            <h2 id="runnerStageTitle">2. Bake questionnaire APK</h2>
             <p id="runnerStageSubtitle" class="subtle">Generate the configured questionnaire APK through the local companion on this PC.</p>
           </div>
           <div class="stage-state">Locked</div>
@@ -1170,6 +1241,12 @@
               </label>
             </div>
             <div id="appBackendStatus" class="issue">Backend not checked.</div>
+            <div id="bakeProgress" class="operation-progress" hidden aria-live="polite">
+              <div id="bakeProgressTrack" class="operation-progress-track" role="progressbar" aria-label="Questionnaire APK bake progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div id="bakeProgressFill" class="operation-progress-fill"></div>
+              </div>
+              <div id="bakeProgressText" class="operation-progress-text">Ready.</div>
+            </div>
             <div id="workflowReceiptStatus" class="issue" hidden></div>
             <div id="artifactPreviewStrip" class="artifact-preview-strip" hidden></div>
             <div class="compact-grid">
@@ -1244,7 +1321,7 @@
       <section id="install-stage" class="stage" data-requires-apk>
         <div class="stage-heading">
           <div>
-            <h2 id="installStageTitle">4. Load APKs onto headset</h2>
+            <h2 id="installStageTitle">3. Load APKs onto headset</h2>
             <p id="installStageSubtitle" class="subtle">Install the staged scenario APK and the generated questionnaire APK on the connected Quest.</p>
           </div>
           <div class="stage-state">Locked</div>
@@ -1268,6 +1345,13 @@
             <div class="button-row" style="margin-top: 10px;">
               <button id="questReadinessButton" type="button">Detect Quest</button>
               <button id="installApkAppButton" class="primary" type="button" data-requires-apk-control>Install both APKs on Quest</button>
+            </div>
+            <div id="installStatus" class="issue">Install not started.</div>
+            <div id="installProgress" class="operation-progress" hidden aria-live="polite">
+              <div id="installProgressTrack" class="operation-progress-track" role="progressbar" aria-label="Quest APK install progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div id="installProgressFill" class="operation-progress-fill"></div>
+              </div>
+              <div id="installProgressText" class="operation-progress-text">Ready.</div>
             </div>
           </div>
         </div>
@@ -1928,6 +2012,10 @@
     function applyTriggerCatalog(catalog, sourceApkName = "") {
       triggerCatalog = normalizeTriggerCatalog(catalog, sourceApkName);
       triggerCatalogWarnings = triggerCatalog.passiveTriggerWarnings || [];
+      lastGeneratedApkPath = "";
+      hideOperationProgress("bake");
+      hideOperationProgress("install");
+      setInstallStatus("Install not started.", "");
       const existingById = new Map(triggerMappings.map(mapping => [String(mapping.triggerId).toLowerCase(), mapping]));
       triggerMappings = triggerCatalog.triggers.map((trigger, index) => ({
         ...defaultTriggerMapping(trigger, index),
@@ -2069,10 +2157,10 @@
 
     function updateWorkflowStepNumbers() {
       const blockCount = visibleBlockSegmentCount();
-      const bakeNumber = blockCount + 2;
-      const installNumber = blockCount + 3;
+      const bakeNumber = blockCount + 1;
+      const installNumber = blockCount + 2;
       if (byId("navTriggersNumber")) {
-        byId("navTriggersNumber").textContent = segmentNumber(2);
+        byId("navTriggersNumber").textContent = segmentNumber(1);
       }
       if (byId("navTriggersLabel")) {
         byId("navTriggersLabel").textContent = "Block 1";
@@ -2102,7 +2190,7 @@
         const blockNumber = index + 2;
         return `
           <a id="navTriggerBlock${index}" class="nav-link ${unlocked ? "" : "locked"}" href="#block-segment-trigger-${index}" aria-disabled="${unlocked ? "false" : "true"}">
-            <span class="nav-number">${segmentNumber(index + 3)}</span>
+            <span class="nav-number">${segmentNumber(index + 2)}</span>
             <span>Block ${blockNumber}</span>
             <span class="nav-state">${unlocked ? "Ready" : "Locked"}</span>
           </a>
@@ -2429,7 +2517,7 @@
     function renderBlockCard({ blockKind, index = 0, title, kicker, subtitle, mapping = null }) {
       const options = elementOptionsForBlock(blockKind, index, mapping);
       const addDisabled = availableElementTypesForBlock(blockKind, index, mapping).length === 0 ? " disabled" : "";
-      const stepNumber = blockKind === "startup" ? 2 : index + 3;
+      const stepNumber = blockKind === "startup" ? 1 : index + 2;
       const segmentId = blockKind === "startup" ? "block-segment-startup" : `block-segment-trigger-${index}`;
       const subtitleElement = blockKind === "startup"
         ? `<p id="triggerSummary" class="subtle">${escapeHtml(subtitle)}</p>`
@@ -2445,6 +2533,7 @@
             </div>
             <div class="stage-state">Ready</div>
           </div>
+          <div class="locked-message issue error">Finish the previous block before editing this block.</div>
           <div class="stage-body">
             <div class="panel">
               <div class="questionnaire-stack">
@@ -2576,6 +2665,7 @@
       if (field) {
         field.value = lastScenarioApkPath;
       }
+      updateWorkflowGate();
     }
 
     function bytesToBase64(bytes) {
@@ -4949,22 +5039,22 @@
         document.body.classList.add("hosted-final-product");
       }
       if (byId("navRunnerNumber")) {
-        byId("navRunnerNumber").textContent = "03";
+        byId("navRunnerNumber").textContent = "02";
       }
       if (byId("navRunnerLabel")) {
         byId("navRunnerLabel").textContent = "Bake APK";
       }
       if (byId("navInstallNumber")) {
-        byId("navInstallNumber").textContent = "04";
+        byId("navInstallNumber").textContent = "03";
       }
       if (byId("runnerStageTitle")) {
-        byId("runnerStageTitle").textContent = "3. Bake questionnaire APK";
+        byId("runnerStageTitle").textContent = "2. Bake questionnaire APK";
       }
       if (byId("runnerStageSubtitle")) {
         byId("runnerStageSubtitle").textContent = "Generate the configured questionnaire APK through the local companion on this PC.";
       }
       if (byId("installStageTitle")) {
-        byId("installStageTitle").textContent = "4. Load APKs onto headset";
+        byId("installStageTitle").textContent = "3. Load APKs onto headset";
       }
       if (byId("installStageSubtitle")) {
         byId("installStageSubtitle").textContent = "Install the staged scenario APK first, then the generated questionnaire APK on the connected Quest.";
@@ -5050,6 +5140,122 @@
       const status = byId("appBackendStatus");
       status.className = `issue ${level}`;
       status.textContent = text;
+    }
+
+    function setInstallStatus(text, level = "") {
+      const status = byId("installStatus");
+      if (!status) {
+        return;
+      }
+      status.className = `issue ${level}`;
+      status.textContent = text;
+    }
+
+    function operationProgressElements(kind) {
+      const root = byId(`${kind}Progress`);
+      const track = byId(`${kind}ProgressTrack`);
+      const fill = byId(`${kind}ProgressFill`);
+      const text = byId(`${kind}ProgressText`);
+      return { root, track, fill, text };
+    }
+
+    function setOperationProgress(kind, percent, text = "", level = "") {
+      const elements = operationProgressElements(kind);
+      if (!elements.root || !elements.track || !elements.fill || !elements.text) {
+        return;
+      }
+      const value = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+      elements.root.hidden = false;
+      elements.root.className = `operation-progress ${level || ""}`.trim();
+      elements.track.setAttribute("aria-valuenow", String(value));
+      elements.track.removeAttribute("aria-valuetext");
+      elements.fill.style.width = `${value}%`;
+      elements.text.textContent = text || `${value}%`;
+    }
+
+    function setOperationProgressIndeterminate(kind, text = "", level = "") {
+      const elements = operationProgressElements(kind);
+      if (!elements.root || !elements.track || !elements.fill || !elements.text) {
+        return;
+      }
+      elements.root.hidden = false;
+      elements.root.className = `operation-progress indeterminate ${level || ""}`.trim();
+      elements.track.removeAttribute("aria-valuenow");
+      elements.track.setAttribute("aria-valuetext", text || "In progress");
+      elements.fill.style.width = "";
+      elements.text.textContent = text || "Working...";
+    }
+
+    function hideOperationProgress(kind) {
+      const elements = operationProgressElements(kind);
+      if (!elements.root || !elements.track || !elements.fill || !elements.text) {
+        return;
+      }
+      elements.root.hidden = true;
+      elements.root.className = "operation-progress";
+      elements.track.setAttribute("aria-valuenow", "0");
+      elements.track.removeAttribute("aria-valuetext");
+      elements.fill.style.width = "0%";
+      elements.text.textContent = "Ready.";
+    }
+
+    function estimatedProgress(startedAt, floor = 10, ceiling = 90, expectedMs = 180000) {
+      const elapsed = Math.max(0, Date.now() - Number(startedAt || Date.now()));
+      const ratio = Math.min(1, elapsed / Math.max(1000, expectedMs));
+      return floor + ((ceiling - floor) * ratio);
+    }
+
+    function explicitProgressPercent(data) {
+      const candidates = [
+        data?.progressPercent,
+        data?.percentComplete,
+        data?.progress?.percent,
+        data?.progress?.percentComplete,
+        data?.jobReceipt?.progressPercent,
+        data?.generationReceipt?.progressPercent
+      ];
+      for (const candidate of candidates) {
+        const value = Number(candidate);
+        if (!Number.isFinite(value)) {
+          continue;
+        }
+        return value <= 1 ? value * 100 : value;
+      }
+      return null;
+    }
+
+    function updateOperationProgressFromJob(kind, data, startedAt, options = {}) {
+      const status = data?.jobStatus || data?.status || "";
+      const level = status === "failed" || status === "error" ? "error" : "";
+      if (status && status !== "running") {
+        const doneLevel = level || (options.successLevel || "ok");
+        setOperationProgress(kind, 100, options.completeText || "Finished.", doneLevel);
+        return;
+      }
+      const explicit = explicitProgressPercent(data);
+      const fallback = estimatedProgress(
+        startedAt,
+        options.floor ?? 12,
+        options.ceiling ?? 92,
+        options.expectedMs ?? 180000
+      );
+      const percent = explicit === null ? fallback : explicit;
+      setOperationProgress(kind, percent, options.runningText || "Working...", level);
+    }
+
+    function startEstimatedOperationProgress(kind, startedAt, options = {}) {
+      return window.setInterval(() => {
+        setOperationProgress(
+          kind,
+          estimatedProgress(
+            startedAt,
+            options.floor ?? 10,
+            options.ceiling ?? 90,
+            options.expectedMs ?? 180000
+          ),
+          options.text || "Working..."
+        );
+      }, options.intervalMs || 1200);
     }
 
     function setAppBackendLog(value) {
@@ -5608,17 +5814,24 @@
       return Boolean(triggerCatalog);
     }
 
+    function setControlWorkflowDisabled(control, disabled) {
+      if (!control) {
+        return;
+      }
+      if (disabled) {
+        if (!control.disabled) {
+          control.dataset.workflowDisabled = "true";
+        }
+        control.disabled = true;
+      } else if (control.dataset.workflowDisabled === "true") {
+        control.disabled = false;
+        delete control.dataset.workflowDisabled;
+      }
+    }
+
     function setDisabledTree(root, disabled) {
       root.querySelectorAll("input, select, textarea, button").forEach(control => {
-        if (disabled) {
-          if (!control.disabled) {
-            control.dataset.workflowDisabled = "true";
-          }
-          control.disabled = true;
-        } else if (control.dataset.workflowDisabled === "true") {
-          control.disabled = false;
-          delete control.dataset.workflowDisabled;
-        }
+        setControlWorkflowDisabled(control, disabled);
       });
     }
 
@@ -5634,47 +5847,172 @@
       }
     }
 
+    function setStageGate(stage, unlocked, stateText = "Ready", lockedText = "") {
+      if (!stage) {
+        return;
+      }
+      stage.classList.toggle("locked", !unlocked);
+      const state = stage.querySelector(".stage-state");
+      if (state) {
+        state.textContent = unlocked ? stateText : "Locked";
+      }
+      const lockedMessage = stage.querySelector(".locked-message");
+      if (lockedMessage && lockedText) {
+        lockedMessage.textContent = lockedText;
+      }
+      const body = stage.querySelector(".stage-body");
+      if (body) {
+        setDisabledTree(body, !unlocked);
+      }
+    }
+
+    function blockHasQuestionnaireElements(blockKind, index, mapping = null) {
+      return allElementsForBlock(blockKind, index, mapping).length > 0;
+    }
+
+    function workflowBlockGateStates() {
+      if (!hasTriggerManifest()) {
+        return [];
+      }
+      const descriptors = [
+        { id: "block-segment-startup", navId: "Triggers", blockKind: "startup", index: 0, label: "Block 1", mapping: null },
+        ...triggerMappings.map((mapping, index) => ({
+          id: `block-segment-trigger-${index}`,
+          navId: `TriggerBlock${index}`,
+          blockKind: "trigger",
+          index,
+          label: `Block ${index + 2}`,
+          mapping
+        }))
+      ];
+      let previousComplete = true;
+      return descriptors.map(descriptor => {
+        const complete = blockHasQuestionnaireElements(
+          descriptor.blockKind,
+          descriptor.index,
+          descriptor.mapping
+        );
+        const state = {
+          ...descriptor,
+          unlocked: previousComplete,
+          complete
+        };
+        previousComplete = previousComplete && complete;
+        return state;
+      });
+    }
+
+    function allVisibleBlocksConfigured(blockStates = workflowBlockGateStates()) {
+      return blockStates.length > 0 && blockStates.every(state => state.complete);
+    }
+
+    function generatedQuestionnaireApkReady() {
+      return Boolean(String(lastGeneratedApkPath || "").trim());
+    }
+
+    function stagedScenarioApkReady() {
+      return Boolean(String(lastScenarioApkPath || byId("stagedScenarioApkPath")?.value || "").trim());
+    }
+
+    function applyBlockGateState(state) {
+      const segment = byId(state.id);
+      if (!segment) {
+        return;
+      }
+      segment.classList.toggle("locked", !state.unlocked);
+      const stageState = segment.querySelector(".stage-state");
+      if (stageState) {
+        stageState.textContent = state.complete ? "Ready" : (state.unlocked ? "Add questionnaire" : "Locked");
+      }
+      const message = segment.querySelector(".locked-message");
+      if (message) {
+        message.textContent = state.index === 0 && state.blockKind === "startup"
+          ? "Load an APK or demo before editing Block 1."
+          : `Finish the previous block before editing ${state.label}.`;
+      }
+      const body = segment.querySelector(".stage-body");
+      if (body) {
+        setDisabledTree(body, !state.unlocked);
+      }
+    }
+
+    function updateDynamicBlockNavStates(blockStates) {
+      blockStates.forEach(state => {
+        const link = byId(`nav${state.navId}`);
+        const navState = byId(`nav${state.navId}State`) || link?.querySelector(".nav-state");
+        if (link) {
+          link.classList.toggle("locked", !state.unlocked);
+          link.setAttribute("aria-disabled", state.unlocked ? "false" : "true");
+        }
+        if (navState) {
+          navState.textContent = state.complete ? "Ready" : (state.unlocked ? "Add questionnaire" : "Locked");
+        }
+      });
+    }
+
     function updateWorkflowGate() {
       if (typeof document.querySelectorAll !== "function") {
         return;
       }
-      const unlocked = hasTriggerManifest();
+      const manifestLoaded = hasTriggerManifest();
+      const blockStates = workflowBlockGateStates();
+      const blocksConfigured = allVisibleBlocksConfigured(blockStates);
+      const runnerReady = manifestLoaded && blocksConfigured;
+      const installReady = runnerReady && generatedQuestionnaireApkReady() && stagedScenarioApkReady();
       updateWorkflowStepNumbers();
       renderDynamicBlockNavLinks();
+      setStageGate(byId("trigger-stage"), manifestLoaded, "Ready", "Choose an existing APK before editing trigger blocks.");
+      blockStates.forEach(applyBlockGateState);
       document.querySelectorAll("[data-requires-apk]").forEach(stage => {
-        stage.classList.toggle("locked", !unlocked);
-        const state = stage.querySelector(".stage-state");
-        if (state) {
-          state.textContent = unlocked ? "Ready" : "Locked";
+        if (["trigger-stage", "runner-stage", "install-stage"].includes(stage.id)) {
+          return;
         }
-        const body = stage.querySelector(".stage-body");
-        if (body) {
-          setDisabledTree(body, !unlocked);
-        }
+        setStageGate(stage, manifestLoaded, "Ready", "Choose an existing APK before continuing.");
       });
+      setStageGate(
+        byId("runner-stage"),
+        runnerReady,
+        "Ready",
+        manifestLoaded
+          ? "Add at least one questionnaire element to every block before baking the questionnaire APK."
+          : "Choose an existing APK before baking the questionnaire APK."
+      );
+      setStageGate(
+        byId("install-stage"),
+        installReady,
+        "Ready",
+        !runnerReady
+          ? "Bake the questionnaire APK after all blocks have questionnaire elements."
+          : (!generatedQuestionnaireApkReady()
+            ? "Bake the questionnaire APK before loading APKs onto the headset."
+            : "Load a local scenario APK file before installing both APKs onto the headset.")
+      );
       document.querySelectorAll("[data-requires-apk-control]").forEach(control => {
-        if (!unlocked) {
-          if (!control.disabled) {
-            control.dataset.workflowDisabled = "true";
-          }
-          control.disabled = true;
-        } else if (control.dataset.workflowDisabled === "true") {
-          control.disabled = false;
-          delete control.dataset.workflowDisabled;
+        let controlReady = manifestLoaded;
+        if (control.id === "generateApkAppButton") {
+          controlReady = runnerReady;
         }
+        if (control.id === "installApkAppButton") {
+          controlReady = installReady;
+        }
+        setControlWorkflowDisabled(control, !controlReady);
       });
       if (byId("apkStageState")) {
-        byId("apkStageState").textContent = unlocked ? "Manifest loaded" : "Waiting for APK";
+        byId("apkStageState").textContent = manifestLoaded ? "Manifest loaded" : "Waiting for APK";
       }
       if (byId("navApkState")) {
-        byId("navApkState").textContent = unlocked ? "Done" : "Required";
+        byId("navApkState").textContent = manifestLoaded ? "Done" : "Required";
       }
-      const navIds = isHostedFinalProductPage()
-        ? ["Triggers", "Install"]
-        : ["Triggers", "Runner", "Install"];
-      navIds.forEach(id => setNavState(id, unlocked));
-      if (isHostedFinalProductPage()) {
-        setNavState("Runner", true);
+      updateDynamicBlockNavStates(blockStates);
+      setNavState("Runner", runnerReady);
+      setNavState("Install", installReady);
+      if (byId("navRunnerState")) {
+        byId("navRunnerState").textContent = runnerReady ? "Ready" : (manifestLoaded ? "Finish blocks" : "Locked");
+      }
+      if (byId("navInstallState")) {
+        byId("navInstallState").textContent = installReady
+          ? "Ready"
+          : (!manifestLoaded ? "Locked" : (generatedQuestionnaireApkReady() ? "Stage scenario APK" : "Bake APK first"));
       }
       updateEvidenceBundleButton();
     }
@@ -5871,12 +6209,21 @@
       return `Quest APK install ${data?.installStatus || data?.jobStatus}; summary: ${data?.summaryPath || "not written yet"}`;
     }
 
-    async function pollInstallApkJob(runId) {
+    async function pollInstallApkJob(runId, progressOptions = {}) {
       const startedAt = Date.now();
       const timeoutMs = 10 * 60 * 1000;
       while (Date.now() - startedAt < timeoutMs) {
         const data = await callAppBackend(`/api/install-apk-job?runId=${encodeURIComponent(runId)}`);
         setAppBackendStatus(installJobText(data), installJobLevel(data));
+        setInstallStatus(installJobText(data), installJobLevel(data));
+        updateOperationProgressFromJob("install", data, startedAt, {
+          floor: progressOptions.floor ?? 15,
+          ceiling: progressOptions.ceiling ?? 90,
+          expectedMs: progressOptions.expectedMs ?? 90000,
+          runningText: progressOptions.runningText || installJobText(data),
+          completeText: progressOptions.completeText || installJobText(data),
+          successLevel: installJobLevel(data) || "ok"
+        });
         setWorkflowReceiptStatus(data);
         setAppBackendLog(data);
         if (data.jobStatus !== "running") {
@@ -5887,22 +6234,30 @@
       throw new Error(`Timed out waiting for APK install job ${runId}.`);
     }
 
-    async function installApkPathWithApp(apkPath, label) {
+    async function installApkPathWithApp(apkPath, label, progressOptions = {}) {
       if (!apkPath) {
         throw new Error(`${label} path is missing.`);
       }
       setAppBackendStatus(`Starting Quest install for ${label}...`, "");
+      setInstallStatus(`Starting Quest install for ${label}...`, "");
+      setOperationProgress(
+        "install",
+        progressOptions.startPercent ?? 10,
+        progressOptions.runningText || `Starting Quest install for ${label}...`
+      );
       const data = await callAppBackend("/api/install-apk", {
         apk: apkPath,
         questSerial: byId("workflowQuestSerial").value.trim(),
         waitSeconds: 0
       });
       setAppBackendStatus(installJobText(data), installJobLevel(data));
+      setInstallStatus(installJobText(data), installJobLevel(data));
       setWorkflowReceiptStatus(data);
       setAppBackendLog(data);
       if (data.jobStatus === "running" && (data.runId || data.jobId)) {
-        const finalData = await pollInstallApkJob(data.runId || data.jobId);
+        const finalData = await pollInstallApkJob(data.runId || data.jobId, progressOptions);
         setAppBackendStatus(installJobText(finalData), installJobLevel(finalData));
+        setInstallStatus(installJobText(finalData), installJobLevel(finalData));
         setWorkflowReceiptStatus(finalData);
         setAppBackendLog(finalData);
         return finalData;
@@ -6231,6 +6586,7 @@
     async function checkQuestReadinessWithApp() {
       try {
         setAppBackendStatus("Checking connected Quest over ADB...", "");
+        setInstallStatus("Checking connected Quest over ADB...", "");
         const serialInput = byId("workflowQuestSerial");
         const data = await callAppBackend("/api/quest-readiness", {
           questSerial: serialInput.value.trim(),
@@ -6240,9 +6596,11 @@
           serialInput.value = data.targetSerial;
         }
         setAppBackendStatus(formatQuestReadiness(data), questReadinessLevel(data));
+        setInstallStatus(formatQuestReadiness(data), questReadinessLevel(data));
         setAppBackendLog(data);
       } catch (error) {
         setAppBackendStatus(error.message || String(error), "error");
+        setInstallStatus(error.message || String(error), "error");
         setAppBackendLog(error.backendData || error.message || String(error));
       }
     }
@@ -6296,23 +6654,50 @@
     }
 
     async function generateApkWithApp() {
+      const button = byId("generateApkAppButton");
+      const wasDisabled = button.disabled;
+      const startedAt = Date.now();
+      let progressTimer = null;
+      button.disabled = true;
       try {
+        lastGeneratedApkPath = "";
+        updateWorkflowGate();
         setAppBackendStatus("Generating questionnaire APK. This can take several minutes...", "");
+        setOperationProgress("bake", 8, "Preparing questionnaire config...");
+        progressTimer = startEstimatedOperationProgress("bake", startedAt, {
+          floor: 12,
+          ceiling: 88,
+          expectedMs: 240000,
+          text: "Generating questionnaire APK. This can take several minutes..."
+        });
         setWorkflowReceiptStatus(null);
         const data = await callAppBackend("/api/generate-apk", {
           config: buildConfig(),
           runTests: byId("appRunTests").checked,
           renderPreview: byId("appRenderPreview").checked
         });
+        if (progressTimer) {
+          window.clearInterval(progressTimer);
+          progressTimer = null;
+        }
+        setOperationProgress("bake", 94, "Finalizing APK receipt...");
         lastGeneratedApkPath = data.apk || expectedGeneratedApkPath();
         setAppBackendStatus(data.apk ? `Generated APK: ${data.apk}` : `APK generation finished for ${data.configPath}.`, "ok");
         setWorkflowReceiptStatus(data);
         await showArtifactPreviews(data);
+        setOperationProgress("bake", 100, data.apk ? `Generated APK: ${data.apk}` : "Questionnaire APK generated.", "ok");
         setAppBackendLog(data);
       } catch (error) {
+        if (progressTimer) {
+          window.clearInterval(progressTimer);
+        }
         setAppBackendStatus(error.message || String(error), "error");
+        setOperationProgress("bake", 100, error.message || String(error), "error");
         setWorkflowReceiptStatus(error.backendData || null);
         setAppBackendLog(error.backendData || error.message || String(error));
+      } finally {
+        button.disabled = wasDisabled;
+        updateWorkflowGate();
       }
     }
 
@@ -6326,10 +6711,27 @@
         if (!scenarioApkPath) {
           throw new Error("Load a local scenario APK file first so the builder can install both APKs onto the headset. The repository example catalog does not include an installable APK file.");
         }
+        setInstallStatus("Starting Quest install sequence...", "");
+        setOperationProgress("install", 5, "Preparing Quest install sequence...");
         setWorkflowReceiptStatus(null);
-        const scenarioInstall = await installApkPathWithApp(scenarioApkPath, "scenario APK");
-        const questionnaireInstall = await installApkPathWithApp(questionnaireApkPath, "questionnaire APK");
+        const scenarioInstall = await installApkPathWithApp(scenarioApkPath, "scenario APK", {
+          startPercent: 12,
+          floor: 15,
+          ceiling: 45,
+          runningText: "Installing scenario APK on Quest...",
+          completeText: "Scenario APK install finished."
+        });
+        setOperationProgress("install", 52, "Scenario APK installed. Starting questionnaire APK...");
+        const questionnaireInstall = await installApkPathWithApp(questionnaireApkPath, "questionnaire APK", {
+          startPercent: 58,
+          floor: 60,
+          ceiling: 95,
+          runningText: "Installing generated questionnaire APK on Quest...",
+          completeText: "Questionnaire APK install finished."
+        });
         setAppBackendStatus("Installed scenario APK and generated questionnaire APK on Quest.", "ok");
+        setInstallStatus("Installed scenario APK and generated questionnaire APK on Quest.", "ok");
+        setOperationProgress("install", 100, "Installed both APKs on Quest.", "ok");
         setWorkflowReceiptStatus(questionnaireInstall);
         setAppBackendLog({
           status: "ok",
@@ -6339,6 +6741,8 @@
         });
       } catch (error) {
         setAppBackendStatus(error.message || String(error), "error");
+        setInstallStatus(error.message || String(error), "error");
+        setOperationProgress("install", 100, error.message || String(error), "error");
         setWorkflowReceiptStatus(error.backendData || null);
         setAppBackendLog(error.backendData || error.message || String(error));
       } finally {

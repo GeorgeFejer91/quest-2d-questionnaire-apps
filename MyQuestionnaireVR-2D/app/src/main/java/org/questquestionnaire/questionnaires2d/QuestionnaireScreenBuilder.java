@@ -231,6 +231,37 @@ final class QuestionnaireScreenBuilder {
         return new SliderScreen(base.root, base.backButton, valueText, seekBar, useCurrent, next);
     }
 
+    TemporalTraceScreen temporalTraceScreen(
+        QuestionnaireData.RuntimeTemporalDimension dimension,
+        int index,
+        int total,
+        boolean complete) {
+
+        BaseScreen base = base("Temporal Experience Tracer", true);
+        body(base.content, String.format(Locale.US, "%d / %d", index + 1, total));
+        question(base.content, dimension.dimensionLabel);
+        if (dimension.dimensionDescription != null && !dimension.dimensionDescription.trim().isEmpty()) {
+            body(base.content, dimension.dimensionDescription);
+        }
+
+        TraceCanvasView canvas = new TraceCanvasView(context);
+        canvas.configure(dimension.axis);
+        base.content.addView(canvas, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(320)));
+
+        TextView status = body(base.content, complete ? "Trace complete." : "Start in the blue area just left of the 0 axis.");
+        status.setContentDescription("temporal-tracer.status");
+
+        Button clear = button("Clear trace", false);
+        clear.setContentDescription("temporal-tracer.clear");
+
+        Button saveNext = button(index == total - 1 ? "Save trace" : "Save trace and next", true);
+        saveNext.setContentDescription("temporal-tracer.save-next");
+        saveNext.setEnabled(complete);
+        base.footer.addView(clear, footerButtonLayout(false));
+        base.footer.addView(saveNext, footerButtonLayout(false));
+        return new TemporalTraceScreen(base.root, base.backButton, canvas, status, clear, saveNext);
+    }
+
     SavedScreen savedScreen(String title, String message) {
         BaseScreen base = base(title, false);
         body(base.content, message);
@@ -513,6 +544,24 @@ final class QuestionnaireScreenBuilder {
             this.seekBar = seekBar;
             this.useCurrent = useCurrent;
             this.next = next;
+        }
+    }
+
+    static final class TemporalTraceScreen {
+        final LinearLayout root;
+        final Button backButton;
+        final TraceCanvasView canvas;
+        final TextView status;
+        final Button clear;
+        final Button saveNext;
+
+        TemporalTraceScreen(LinearLayout root, Button backButton, TraceCanvasView canvas, TextView status, Button clear, Button saveNext) {
+            this.root = root;
+            this.backButton = backButton;
+            this.canvas = canvas;
+            this.status = status;
+            this.clear = clear;
+            this.saveNext = saveNext;
         }
     }
 

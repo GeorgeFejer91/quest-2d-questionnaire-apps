@@ -54,16 +54,19 @@ final class QuestionnaireLaunchContext {
     static final String FINISH_OPEN_NEXT = "openNext";
     static final String FINISH_STAY_SAVED = "staySaved";
     static final String HANDOFF_SCHEMA_V1 = "mq.handoff.v1";
+    static final String MODE_NONE = "none";
     static final String MODE_FULL = "full";
     static final String MODE_DEMOGRAPHICS = "demographics";
     static final String MODE_BASELINE = "baseline";
     static final String MODE_PICTOGRAPHIC = "pictographic";
     static final String MODE_MAIA2 = "maia2";
     static final String MODE_SLIDER = "slider";
+    static final String MODE_TEMPORAL_TRACER = "temporalTracer";
     static final String MODULE_DEMOGRAPHICS = "demographics";
     static final String MODULE_MAIA2 = "maia2";
     static final String MODULE_PICTOGRAPHIC = "pictographic";
     static final String MODULE_SLIDER = "slider";
+    static final String MODULE_TEMPORAL_TRACER = "temporalTracer";
 
     final String runId;
     final String sessionId;
@@ -251,6 +254,10 @@ final class QuestionnaireLaunchContext {
 
     boolean shouldRunSlider() {
         return questionnaireSequence.contains(MODULE_SLIDER);
+    }
+
+    boolean shouldRunTemporalTracer() {
+        return questionnaireSequence.contains(MODULE_TEMPORAL_TRACER);
     }
 
     String questionnaireSequenceCsv() {
@@ -457,11 +464,13 @@ final class QuestionnaireLaunchContext {
 
     private static String normalizeQuestionnaireMode(String value) {
         String cleaned = clean(value);
-        if (MODE_DEMOGRAPHICS.equals(cleaned)
+        if (MODE_NONE.equals(cleaned)
+            || MODE_DEMOGRAPHICS.equals(cleaned)
             || MODE_BASELINE.equals(cleaned)
             || MODE_PICTOGRAPHIC.equals(cleaned)
             || MODE_MAIA2.equals(cleaned)
             || MODE_SLIDER.equals(cleaned)
+            || MODE_TEMPORAL_TRACER.equals(cleaned)
             || MODE_FULL.equals(cleaned)) {
             return cleaned;
         }
@@ -484,7 +493,9 @@ final class QuestionnaireLaunchContext {
     private static List<String> sequenceForMode(String mode) {
         List<String> sequence = new ArrayList<>();
         String cleaned = normalizeQuestionnaireMode(mode);
-        if (MODE_DEMOGRAPHICS.equals(cleaned)) {
+        if (MODE_NONE.equals(cleaned)) {
+            return sequence;
+        } else if (MODE_DEMOGRAPHICS.equals(cleaned)) {
             sequence.add(MODULE_DEMOGRAPHICS);
         } else if (MODE_BASELINE.equals(cleaned)) {
             sequence.add(MODULE_DEMOGRAPHICS);
@@ -495,11 +506,14 @@ final class QuestionnaireLaunchContext {
             sequence.add(MODULE_PICTOGRAPHIC);
         } else if (MODE_SLIDER.equals(cleaned)) {
             sequence.add(MODULE_SLIDER);
+        } else if (MODE_TEMPORAL_TRACER.equals(cleaned)) {
+            sequence.add(MODULE_TEMPORAL_TRACER);
         } else {
             sequence.add(MODULE_DEMOGRAPHICS);
             sequence.add(MODULE_MAIA2);
             sequence.add(MODULE_PICTOGRAPHIC);
             sequence.add(MODULE_SLIDER);
+            sequence.add(MODULE_TEMPORAL_TRACER);
         }
         return sequence;
     }
@@ -516,12 +530,14 @@ final class QuestionnaireLaunchContext {
             appendModule(sequence, MODULE_MAIA2);
             appendModule(sequence, MODULE_PICTOGRAPHIC);
             appendModule(sequence, MODULE_SLIDER);
+            appendModule(sequence, MODULE_TEMPORAL_TRACER);
             return;
         }
         if ((MODULE_DEMOGRAPHICS.equals(cleaned)
             || MODULE_MAIA2.equals(cleaned)
             || MODULE_PICTOGRAPHIC.equals(cleaned)
-            || MODULE_SLIDER.equals(cleaned))
+            || MODULE_SLIDER.equals(cleaned)
+            || MODULE_TEMPORAL_TRACER.equals(cleaned))
             && !sequence.contains(cleaned)) {
             sequence.add(cleaned);
         }

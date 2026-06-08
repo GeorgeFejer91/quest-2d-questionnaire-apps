@@ -133,6 +133,8 @@ final class QuestionnaireData {
         final List<RuntimePictographicPrompt> prompts = new ArrayList<>();
         final List<RuntimeScoreGroup> scoreGroups = new ArrayList<>();
         final List<String> choices = new ArrayList<>();
+        RuntimeTemporalAxis temporalAxis = RuntimeTemporalAxis.defaults();
+        final List<RuntimeTemporalDimension> temporalDimensions = new ArrayList<>();
 
         static RuntimeBlock fromJson(JSONObject json) throws JSONException {
             RuntimeBlock block = new RuntimeBlock();
@@ -213,6 +215,21 @@ final class QuestionnaireData {
                 }
             }
 
+            JSONObject temporalAxisJson = json.optJSONObject("axis");
+            if (temporalAxisJson != null) {
+                block.temporalAxis = RuntimeTemporalAxis.fromJson(temporalAxisJson, block.temporalAxis);
+            }
+
+            JSONArray dimensionsJson = json.optJSONArray("dimensions");
+            if (dimensionsJson != null) {
+                for (int i = 0; i < dimensionsJson.length(); i++) {
+                    JSONObject dimensionJson = dimensionsJson.optJSONObject(i);
+                    if (dimensionJson != null) {
+                        block.temporalDimensions.add(RuntimeTemporalDimension.fromJson(dimensionJson, block.temporalAxis, i));
+                    }
+                }
+            }
+
             return block;
         }
     }
@@ -251,6 +268,109 @@ final class QuestionnaireData {
         String id;
         String label;
         final List<Integer> items = new ArrayList<>();
+    }
+
+    static final class RuntimeTemporalAxis {
+        int viewBoxWidth = 1000;
+        int viewBoxHeight = 100;
+        double xMin = 0.0;
+        double xMax = 10.0;
+        String xUnit = "min";
+        double yMin = 0.0;
+        double yMax = 100.0;
+        String yMinLabel = "No, not more than usual";
+        String yMaxLabel = "Yes, very much more than usual";
+        double startGatePercent = 5.0;
+        double endGatePercent = 95.0;
+        int targetSampleCount = 1000;
+        double strokeWidth = 2.5;
+        int traceColor = rgb(40, 209, 124);
+        int axisColor = rgb(244, 245, 247);
+        int gridColor = rgb(127, 135, 148);
+        final List<String> xBins = new ArrayList<>();
+        final List<String> yBins = new ArrayList<>();
+
+        static RuntimeTemporalAxis defaults() {
+            RuntimeTemporalAxis axis = new RuntimeTemporalAxis();
+            axis.xBins.add("0");
+            axis.xBins.add("2");
+            axis.xBins.add("4");
+            axis.xBins.add("6");
+            axis.xBins.add("8");
+            axis.xBins.add("10 min");
+            axis.yBins.add(axis.yMaxLabel);
+            axis.yBins.add("Middle");
+            axis.yBins.add(axis.yMinLabel);
+            return axis;
+        }
+
+        static RuntimeTemporalAxis fromJson(JSONObject json, RuntimeTemporalAxis fallback) {
+            RuntimeTemporalAxis base = fallback != null ? fallback : defaults();
+            RuntimeTemporalAxis axis = new RuntimeTemporalAxis();
+            axis.viewBoxWidth = Math.max(10, json.optInt("viewBoxWidth", base.viewBoxWidth));
+            axis.viewBoxHeight = Math.max(10, json.optInt("viewBoxHeight", base.viewBoxHeight));
+            axis.xMin = json.optDouble("xMin", base.xMin);
+            axis.xMax = json.optDouble("xMax", base.xMax);
+            axis.xUnit = json.optString("xUnit", base.xUnit);
+            axis.yMin = json.optDouble("yMin", base.yMin);
+            axis.yMax = json.optDouble("yMax", base.yMax);
+            axis.yMinLabel = json.optString("yMinLabel", base.yMinLabel);
+            axis.yMaxLabel = json.optString("yMaxLabel", base.yMaxLabel);
+            axis.startGatePercent = TemporalTraceMath.clamp(json.optDouble("startGatePercent", base.startGatePercent), 0.0, 49.0);
+            axis.endGatePercent = TemporalTraceMath.clamp(json.optDouble("endGatePercent", base.endGatePercent), 51.0, 100.0);
+            axis.targetSampleCount = Math.max(2, json.optInt("targetSampleCount", base.targetSampleCount));
+            axis.strokeWidth = Math.max(0.1, json.optDouble("strokeWidth", base.strokeWidth));
+            axis.traceColor = parseColor(json.optString("traceColor", ""), base.traceColor);
+            axis.axisColor = parseColor(json.optString("axisColor", ""), base.axisColor);
+            axis.gridColor = parseColor(json.optString("gridColor", ""), base.gridColor);
+            axis.xBins.addAll(nonEmptyStringList(json, "xBins", base.xBins));
+            axis.yBins.addAll(nonEmptyStringList(json, "yBins", base.yBins));
+            if (axis.xBins.isEmpty()) {
+                axis.xBins.addAll(defaults().xBins);
+            }
+            if (axis.yBins.isEmpty()) {
+                axis.yBins.add(axis.yMaxLabel);
+                axis.yBins.add("Middle");
+                axis.yBins.add(axis.yMinLabel);
+            }
+            return axis;
+        }
+
+        double xAxisAt(double u) {
+            return xMin + TemporalTraceMath.clamp(u, 0.0, 1.0) * (xMax - xMin);
+        }
+
+        double yAxisAt(double v) {
+            return yMin + TemporalTraceMath.clamp(v, 0.0, 1.0) * (yMax - yMin);
+        }
+    }
+
+    static final class RuntimeTemporalDimension {
+        String id;
+        String language = "English";
+        int order;
+        String dimensionLabel;
+        String dimensionDescription;
+        boolean required = true;
+        String audioFile = "";
+        RuntimeTemporalAxis axis;
+
+        static RuntimeTemporalDimension fromJson(JSONObject json, RuntimeTemporalAxis fallbackAxis, int index) {
+            RuntimeTemporalDimension dimension = new RuntimeTemporalDimension();
+            dimension.id = json.optString("id", "trace_" + (index + 1));
+            dimension.language = json.optString("language", "English");
+            dimension.order = json.optInt("order", index + 1);
+            dimension.dimensionLabel = json.optString("dimensionLabel", json.optString("label", dimension.id));
+            dimension.dimensionDescription = json.optString("dimensionDescription", json.optString("description", ""));
+            dimension.required = json.optBoolean("required", true);
+            dimension.audioFile = json.optString("audioFile", "");
+            JSONObject axisJson = json.optJSONObject("axis");
+            dimension.axis = axisJson != null ? RuntimeTemporalAxis.fromJson(axisJson, fallbackAxis) : fallbackAxis;
+            if (dimension.axis == null) {
+                dimension.axis = RuntimeTemporalAxis.defaults();
+            }
+            return dimension;
+        }
     }
 
     static final class RuntimeExportSettings {
@@ -402,6 +522,22 @@ final class QuestionnaireData {
         final List<Maia2ScaleScore> maia2Scores = new ArrayList<>();
         final List<PictographicSelection> pictographicSelections = new ArrayList<>();
         final List<QuestionnaireAnswer> questionnaireAnswers = new ArrayList<>();
+        final List<TemporalTraceExport> temporalTraces = new ArrayList<>();
+    }
+
+    static final class TemporalTraceExport {
+        int order;
+        String dimensionId = "";
+        String dimensionLabel = "";
+        String dimensionDescription = "";
+        String audioFile = "";
+        int rawPointCount;
+        int resampledPointCount;
+        String svgPath = "";
+        String csvPath = "";
+        String jsonPath = "";
+        String responseTimestampUtc = "";
+        long responseTimestampUnixMs;
     }
 
     static final class LocalizedUiText {
@@ -481,6 +617,40 @@ final class QuestionnaireData {
             }
         }
         return values;
+    }
+
+    private static List<String> nonEmptyStringList(JSONObject json, String key, List<String> fallback) {
+        List<String> values = stringList(json, key);
+        return values.isEmpty() && fallback != null ? new ArrayList<>(fallback) : values;
+    }
+
+    private static int parseColor(String value, int fallback) {
+        if (value == null || value.trim().isEmpty()) {
+            return fallback;
+        }
+        try {
+            String clean = value.trim();
+            if (clean.startsWith("#")) {
+                clean = clean.substring(1);
+            }
+            long parsed = Long.parseLong(clean, 16);
+            if (clean.length() == 6) {
+                return (int) (0xff000000L | parsed);
+            }
+            if (clean.length() == 8) {
+                return (int) parsed;
+            }
+            return fallback;
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
+    }
+
+    private static int rgb(int red, int green, int blue) {
+        return (int) (0xff000000L
+            | ((red & 0xffL) << 16)
+            | ((green & 0xffL) << 8)
+            | (blue & 0xffL));
     }
 
     private static String defaultPrompt(String id, String language) {

@@ -108,6 +108,7 @@ final class QuestionnaireExporter {
         root.put("maia2Scores", maiaScoresToJson(record.maia2Scores));
         root.put("pictographicSelections", pictographicToJson(record.pictographicSelections));
         root.put("questionnaireAnswers", questionnaireAnswersToJson(record.questionnaireAnswers));
+        root.put("temporalTraces", temporalTracesToJson(record.temporalTraces));
         return root;
     }
 
@@ -176,6 +177,19 @@ final class QuestionnaireExporter {
             headers.add(prefix + "_timestamp_unix_ms");
         }
 
+        for (QuestionnaireData.TemporalTraceExport trace : record.temporalTraces) {
+            String prefix = String.format(Locale.US, "temporal_trace_%03d", trace.order);
+            headers.add(prefix + "_dimension_id");
+            headers.add(prefix + "_label");
+            headers.add(prefix + "_raw_point_count");
+            headers.add(prefix + "_resampled_point_count");
+            headers.add(prefix + "_svg_path");
+            headers.add(prefix + "_csv_path");
+            headers.add(prefix + "_json_path");
+            headers.add(prefix + "_timestamp_utc");
+            headers.add(prefix + "_timestamp_unix_ms");
+        }
+
         QuestionnaireData.ParticipantInfo participant = record.participant;
         List<String> values = new ArrayList<>();
         values.add(record.timestampUtc);
@@ -237,6 +251,18 @@ final class QuestionnaireExporter {
             values.add(Integer.toString(answer.score));
             values.add(answer.responseTimestampUtc);
             values.add(Long.toString(answer.responseTimestampUnixMs));
+        }
+
+        for (QuestionnaireData.TemporalTraceExport trace : record.temporalTraces) {
+            values.add(trace.dimensionId);
+            values.add(trace.dimensionLabel);
+            values.add(Integer.toString(trace.rawPointCount));
+            values.add(Integer.toString(trace.resampledPointCount));
+            values.add(trace.svgPath);
+            values.add(trace.csvPath);
+            values.add(trace.jsonPath);
+            values.add(trace.responseTimestampUtc);
+            values.add(Long.toString(trace.responseTimestampUnixMs));
         }
 
         return joinCsv(headers) + System.lineSeparator() + joinCsv(values) + System.lineSeparator();
@@ -316,6 +342,27 @@ final class QuestionnaireExporter {
         return array;
     }
 
+    private static JSONArray temporalTracesToJson(List<QuestionnaireData.TemporalTraceExport> traces) throws JSONException {
+        JSONArray array = new JSONArray();
+        for (QuestionnaireData.TemporalTraceExport trace : traces) {
+            JSONObject json = new JSONObject();
+            json.put("order", trace.order);
+            json.put("dimensionId", trace.dimensionId);
+            json.put("dimensionLabel", trace.dimensionLabel);
+            json.put("dimensionDescription", trace.dimensionDescription);
+            json.put("audioFile", trace.audioFile);
+            json.put("rawPointCount", trace.rawPointCount);
+            json.put("resampledPointCount", trace.resampledPointCount);
+            json.put("svgPath", trace.svgPath);
+            json.put("csvPath", trace.csvPath);
+            json.put("jsonPath", trace.jsonPath);
+            json.put("responseTimestampUtc", trace.responseTimestampUtc);
+            json.put("responseTimestampUnixMs", trace.responseTimestampUnixMs);
+            array.put(json);
+        }
+        return array;
+    }
+
     private static File writeDraft(Context context, QuestionnaireData.SessionRecord record, String status, ExportResult result) throws IOException, JSONException {
         String runId = sanitizeFileName(!isBlank(record.runId) ? record.runId : TimeUtil.newRunId());
         File draft = new File(inProgressFolder(context), runId + "_draft.json");
@@ -356,6 +403,7 @@ final class QuestionnaireExporter {
         index.put("blockId", record.blockId);
         index.put("saveNamespace", record.saveNamespace);
         index.put("questionnaireSequence", record.questionnaireSequence);
+        index.put("temporalTraceCount", record.temporalTraces.size());
         index.put("jsonPath", result.jsonFile.getAbsolutePath());
         index.put("csvPath", result.csvFile.getAbsolutePath());
         File indexFile = new File(folder, SESSION_INDEX_NAME);
@@ -517,6 +565,26 @@ final class QuestionnaireExporter {
                 headers.add(prefix + "_timestamp_unix_ms");
             }
         }
+
+        JSONArray temporalTraces = record.optJSONArray("temporalTraces");
+        if (temporalTraces != null) {
+            for (int i = 0; i < temporalTraces.length(); i++) {
+                JSONObject trace = temporalTraces.optJSONObject(i);
+                if (trace == null) {
+                    continue;
+                }
+                String prefix = String.format(Locale.US, "temporal_trace_%03d", trace.optInt("order", i + 1));
+                headers.add(prefix + "_dimension_id");
+                headers.add(prefix + "_label");
+                headers.add(prefix + "_raw_point_count");
+                headers.add(prefix + "_resampled_point_count");
+                headers.add(prefix + "_svg_path");
+                headers.add(prefix + "_csv_path");
+                headers.add(prefix + "_json_path");
+                headers.add(prefix + "_timestamp_utc");
+                headers.add(prefix + "_timestamp_unix_ms");
+            }
+        }
     }
 
     private static JSONObject flattenRecordForCombinedCsv(JSONObject record) throws JSONException {
@@ -594,6 +662,26 @@ final class QuestionnaireExporter {
                 values.put(prefix + "_score_0_100", answer.optString("score", ""));
                 values.put(prefix + "_timestamp_utc", answer.optString("responseTimestampUtc", ""));
                 values.put(prefix + "_timestamp_unix_ms", answer.optString("responseTimestampUnixMs", ""));
+            }
+        }
+
+        JSONArray temporalTraces = record.optJSONArray("temporalTraces");
+        if (temporalTraces != null) {
+            for (int i = 0; i < temporalTraces.length(); i++) {
+                JSONObject trace = temporalTraces.optJSONObject(i);
+                if (trace == null) {
+                    continue;
+                }
+                String prefix = String.format(Locale.US, "temporal_trace_%03d", trace.optInt("order", i + 1));
+                values.put(prefix + "_dimension_id", trace.optString("dimensionId", ""));
+                values.put(prefix + "_label", trace.optString("dimensionLabel", ""));
+                values.put(prefix + "_raw_point_count", trace.optString("rawPointCount", ""));
+                values.put(prefix + "_resampled_point_count", trace.optString("resampledPointCount", ""));
+                values.put(prefix + "_svg_path", trace.optString("svgPath", ""));
+                values.put(prefix + "_csv_path", trace.optString("csvPath", ""));
+                values.put(prefix + "_json_path", trace.optString("jsonPath", ""));
+                values.put(prefix + "_timestamp_utc", trace.optString("responseTimestampUtc", ""));
+                values.put(prefix + "_timestamp_unix_ms", trace.optString("responseTimestampUnixMs", ""));
             }
         }
         return values;

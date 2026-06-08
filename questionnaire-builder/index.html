@@ -854,6 +854,7 @@
             <input id="block1ModuleMaia2" type="checkbox">
             <input id="block1ModulePictographic" type="checkbox">
             <input id="block1ModuleSlider" type="checkbox">
+            <input id="block1ModuleTemporalTracer" type="checkbox">
           </div>
           <div id="legacyTemplateControls" class="hidden-protocol-controls" aria-hidden="true">
             <div id="questionnairePalette" class="palette" aria-label="Questionnaire block palette"></div>
@@ -861,6 +862,7 @@
               <option value="demographics">Demographics fields</option>
               <option value="slider">Slider / VAS items</option>
               <option value="likert">Likert items</option>
+              <option value="temporalTracer">Temporal experience tracer</option>
               <option value="multipleChoice">Multiple choice items</option>
               <option value="textEntry">Text entry items</option>
             </select>
@@ -895,6 +897,10 @@
             <label class="toggle-row">
               <input id="includePictographic" type="checkbox" checked>
               <span>Include pictographic embodiment scales</span>
+            </label>
+            <label class="toggle-row">
+              <input id="includeTemporalTracer" type="checkbox">
+              <span>Include temporal experience tracer block</span>
             </label>
             <div id="blockList" class="block-list"></div>
           </div>
@@ -1041,7 +1047,7 @@
               </label>
               <label>
                 Default questionnaire sequence
-                <input id="chainQuestionnaireSequence" placeholder="demographics, likert, pictographic, slider">
+                <input id="chainQuestionnaireSequence" placeholder="demographics, likert, pictographic, slider, temporalTracer">
               </label>
               <label>
                 Default trigger id
@@ -1287,6 +1293,7 @@
       { id: "maia2", type: "likert", label: "Likert preload" },
       { id: "pictographic", type: "pictographic", label: "Pictographic" },
       { id: "custom_slider", type: "slider", label: "Custom slider" },
+      { id: "temporal_tracer", type: "temporalTracer", label: "Temporal tracer" },
       { id: "end", type: "blackScreen", label: "Black screen end" }
     ];
 
@@ -1455,8 +1462,8 @@
       "assets/bin/Data/StreamingAssets/questionnaire-trigger-catalog.json"
     ];
 
-    const triggerQuestionnaireModes = ["none", "demographics", "baseline", "maia2", "pictographic", "slider", "full"];
-    const questionnaireModules = ["demographics", "maia2", "pictographic", "slider"];
+    const triggerQuestionnaireModes = ["none", "demographics", "baseline", "maia2", "pictographic", "slider", "temporalTracer", "full"];
+    const questionnaireModules = ["demographics", "maia2", "pictographic", "slider", "temporalTracer"];
     const questionnaireModeLabels = {
       none: "Skip",
       demographics: "Demographics",
@@ -1528,15 +1535,15 @@
         preloadOptions: [["template", "Template only"]]
       },
       temporalTracer: {
-        label: "Temporal tracer",
-        detail: "Dimension template for temporal experience tracing.",
+        label: "Temporal Experience Tracer",
+        detail: "CSV-uploaded trace dimensions with axis labels, bins, optional audio, and SVG/CSV/JSON export.",
         templateKind: "temporalTracer",
-        uploadType: "csvUnsupported",
+        uploadType: "csv",
         preloadOptions: [["default", "Temporal tracer template"]]
       }
     };
-    const startupElementTypes = ["demographics", "likert", "pictographic", "slider"];
-    const triggerElementTypes = ["demographics", "likert", "pictographic", "slider"];
+    const startupElementTypes = ["demographics", "likert", "pictographic", "slider", "temporalTracer"];
+    const triggerElementTypes = ["demographics", "likert", "pictographic", "slider", "temporalTracer"];
     const templateOnlyElementTypes = ["multipleChoice", "textEntry"];
     const maia2PreloadItems = [
       "When I am tense I notice where the tension is located in my body.",
@@ -1579,6 +1586,7 @@
     ];
     let selectedQuestionnaireMode = "pictographic";
     let customPictographicPrompts = null;
+    let customTemporalTracerDimensions = null;
 
     function byId(id) {
       return document.getElementById(id);
@@ -1590,7 +1598,8 @@
         block.id === "custom_slider" ||
         block.id === "end" ||
         (block.id === "maia2" && byId("includeMaia").checked) ||
-        (block.id === "pictographic" && byId("includePictographic").checked));
+        (block.id === "pictographic" && byId("includePictographic").checked) ||
+        (block.id === "temporal_tracer" && byId("includeTemporalTracer").checked));
     }
 
     function normalizeBlocks(currentBlocks = blocks) {
@@ -1680,7 +1689,9 @@
       if (key === "maia2") return "maia2";
       if (key === "pictographic") return "pictographic";
       if (key === "slider") return "slider";
+      if (key === "temporalTracer") return "temporalTracer";
       if (key === "demographics,maia2,pictographic,slider") return "full";
+      if (key === "demographics,maia2,pictographic,slider,temporalTracer") return "full";
       const fallbackSequence = normalizeQuestionnaireSequence([], fallbackMode).join(",");
       return fallbackSequence && fallbackSequence === key ? fallbackMode : "full";
     }
@@ -1691,6 +1702,7 @@
       if (byId("block1ModuleMaia2").checked) sequence.push("maia2");
       if (byId("block1ModulePictographic").checked) sequence.push("pictographic");
       if (byId("block1ModuleSlider").checked) sequence.push("slider");
+      if (byId("block1ModuleTemporalTracer").checked) sequence.push("temporalTracer");
       return sequence;
     }
 
@@ -1700,6 +1712,7 @@
       byId("block1ModuleMaia2").checked = normalized.includes("maia2");
       byId("block1ModulePictographic").checked = normalized.includes("pictographic");
       byId("block1ModuleSlider").checked = normalized.includes("slider");
+      byId("block1ModuleTemporalTracer").checked = normalized.includes("temporalTracer");
       byId("chainQuestionnaireSequence").value = normalized.join(",");
       byId("chainQuestionnaireMode").value = legacyModeForSequence(normalized, fallbackMode);
     }
@@ -1912,9 +1925,6 @@
 
     function triggerQuestionnaireSequence(index, fallbackMode = "none") {
       const mode = byId(`triggerMode${index}`).value || fallbackMode || "none";
-      if (mode === "temporalTracer") {
-        return [];
-      }
       const sequence = [];
       questionnaireModules.forEach(module => {
         const checkbox = byId(`triggerModule${index}_${module}`);
@@ -1938,7 +1948,7 @@
       });
       const select = byId(`triggerMode${index}`);
       if (select) {
-        select.value = fallbackMode === "temporalTracer" ? "temporalTracer" : legacyModeForSequence(normalized, fallbackMode);
+        select.value = legacyModeForSequence(normalized, fallbackMode);
       }
       updateTriggerDropZone(index);
     }
@@ -1955,7 +1965,7 @@
         const languageElement = byId(`triggerLanguage${index}`);
         const rawMode = modeElement.value || "none";
         const sequence = triggerQuestionnaireSequence(index, rawMode);
-        const mode = rawMode === "temporalTracer" ? "temporalTracer" : legacyModeForSequence(sequence, rawMode);
+        const mode = legacyModeForSequence(sequence, rawMode);
         return {
           ...mapping,
           enabled: mode !== "none" || sequence.length > 0,
@@ -2094,8 +2104,8 @@
       const sequence = triggerQuestionnaireSequence(index, mode);
       zone.classList.toggle("empty", mode === "none" && sequence.length === 0);
       zone.innerHTML = `
-        <div class="block-label">${escapeHtml(mode === "temporalTracer" ? questionnaireModeLabel(mode) : questionnaireSequenceLabel(sequence, mode))}</div>
-        <div class="subtle">${escapeHtml(mode === "temporalTracer" ? questionnaireModeDetail(mode) : "Modules run in this trigger block.")}</div>
+        <div class="block-label">${escapeHtml(questionnaireSequenceLabel(sequence, mode))}</div>
+        <div class="subtle">${escapeHtml("Modules run in this trigger block.")}</div>
       `;
     }
 
@@ -2154,18 +2164,13 @@
       }
       const select = byId(`triggerMode${index}`);
       const mode = select ? select.value || "none" : "none";
-      if (mode === "temporalTracer") {
-        return [{ type: "temporalTracer", id: "temporalTracer", templateOnly: false }];
-      }
       return triggerQuestionnaireSequence(index, mode).map(type => ({ type, id: type, templateOnly: false }));
     }
 
     function allElementsForBlock(blockKind, index, mapping = null) {
       const runtimeElements = mapping
-        ? (mapping.questionnaireMode === "temporalTracer"
-          ? [{ type: "temporalTracer", id: "temporalTracer", templateOnly: false }]
-          : normalizeQuestionnaireSequence(mapping.questionnaireSequence || [], mapping.questionnaireMode || "none")
-            .map(type => ({ type, id: type, templateOnly: false })))
+        ? normalizeQuestionnaireSequence(mapping.questionnaireSequence || [], mapping.questionnaireMode || "none")
+          .map(type => ({ type, id: type, templateOnly: false }))
         : selectedRuntimeElements(blockKind, index);
       return [
         ...runtimeElements,
@@ -2179,12 +2184,10 @@
           demographics: "block1ModuleDemographics",
           maia2: "block1ModuleMaia2",
           pictographic: "block1ModulePictographic",
-          slider: "block1ModuleSlider"
+          slider: "block1ModuleSlider",
+          temporalTracer: "block1ModuleTemporalTracer"
         };
         return ids[type] ? byId(ids[type]) : null;
-      }
-      if (type === "temporalTracer") {
-        return byId(`triggerMode${index}`);
       }
       return byId(`triggerModule${index}_${type}`);
     }
@@ -2201,19 +2204,6 @@
       if (!control) {
         return;
       }
-      if (type === "temporalTracer") {
-        control.value = selected ? "temporalTracer" : "none";
-        if (selected) {
-          questionnaireModules.forEach(module => {
-            const checkbox = byId(`triggerModule${index}_${module}`);
-            if (checkbox) {
-              checkbox.checked = false;
-            }
-          });
-        }
-        return;
-      }
-
       control.checked = selected;
       if (blockKind === "trigger") {
         const modeControl = byId(`triggerMode${index}`);
@@ -2239,6 +2229,9 @@
       }
       if (runtimeType === "pictographic") {
         byId("includePictographic").checked = true;
+      }
+      if (runtimeType === "temporalTracer") {
+        byId("includeTemporalTracer").checked = true;
       }
       refreshBlockBuilderAfterEdit();
     }
@@ -2348,6 +2341,7 @@
           <input id="triggerModule${index}_maia2" type="checkbox">
           <input id="triggerModule${index}_pictographic" type="checkbox">
           <input id="triggerModule${index}_slider" type="checkbox">
+          <input id="triggerModule${index}_temporalTracer" type="checkbox">
           <input id="triggerBlockNumber${index}" value="${escapeHtml(mapping.blockNumber)}">
           <input id="triggerLanguage${index}" value="${escapeHtml(mapping.language || "")}">
           <input id="triggerBlockId${index}" value="${escapeHtml(mapping.blockId)}">
@@ -2511,13 +2505,43 @@
       return btoa(binary);
     }
 
+    async function stageScenarioApkFileChunked(file) {
+      const chunkSize = 1024 * 1024;
+      const chunkCount = Math.max(1, Math.ceil(file.size / chunkSize));
+      const uploadId = `builder-scenario-apk-${new Date().toISOString().replace(/[:.]/g, "")}-${Math.random().toString(36).slice(2, 8)}`;
+      let data = null;
+      for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex += 1) {
+        const start = chunkIndex * chunkSize;
+        const end = Math.min(file.size, start + chunkSize);
+        const bytes = new Uint8Array(await file.slice(start, end).arrayBuffer());
+        setStagedScenarioApkStatus(`Staging scenario APK for headset install: chunk ${chunkIndex + 1} of ${chunkCount}.`, "");
+        data = await callAppBackend("/api/stage-scenario-apk-chunk", {
+          fileName: file.name,
+          uploadId,
+          chunkIndex,
+          chunkCount,
+          totalBytes: file.size,
+          base64: bytesToBase64(bytes)
+        });
+      }
+      if (!data || data.complete !== true) {
+        throw new Error("Scenario APK chunk upload did not complete.");
+      }
+      return data;
+    }
+
     async function stageScenarioApkFile(file) {
-      const buffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      const data = await callAppBackend("/api/stage-scenario-apk", {
-        fileName: file.name,
-        base64: bytesToBase64(bytes)
-      });
+      const largeApkThreshold = 8 * 1024 * 1024;
+      const data = file.size > largeApkThreshold
+        ? await stageScenarioApkFileChunked(file)
+        : await (async () => {
+          const buffer = await file.arrayBuffer();
+          const bytes = new Uint8Array(buffer);
+          return callAppBackend("/api/stage-scenario-apk", {
+            fileName: file.name,
+            base64: bytesToBase64(bytes)
+          });
+        })();
       lastScenarioApkName = data.fileName || file.name;
       setStagedScenarioApkPath(data.apk || "");
       setStagedScenarioApkStatus(`Scenario APK staged for headset install: ${lastScenarioApkName}.`, "ok");
@@ -2592,6 +2616,46 @@
       return entries;
     }
 
+    function normalizeApkZipPath(name) {
+      return String(name || "")
+        .replace(/\\/g, "/")
+        .replace(/^\/+/, "")
+        .replace(/^\.\//, "")
+        .toLowerCase();
+    }
+
+    function triggerCatalogEntryRank(entry) {
+      const name = normalizeApkZipPath(entry.name);
+      const exactIndex = triggerCatalogPaths.map(normalizeApkZipPath).indexOf(name);
+      if (exactIndex >= 0) {
+        return exactIndex;
+      }
+      if (name.endsWith("/assets/streamingassets/mq/questionnaire-trigger-catalog.json")) {
+        return 100;
+      }
+      if (name.endsWith("/streamingassets/mq/questionnaire-trigger-catalog.json")) {
+        return 110;
+      }
+      if (name.endsWith("/mq/questionnaire-trigger-catalog.json")) {
+        return 120;
+      }
+      if (name.endsWith("/streamingassets/questionnaire-trigger-catalog.json")) {
+        return 130;
+      }
+      if (name.endsWith("/questionnaire-trigger-catalog.json") || name === "questionnaire-trigger-catalog.json") {
+        return 140;
+      }
+      return -1;
+    }
+
+    function findTriggerCatalogEntry(entries) {
+      const candidates = entries
+        .map((entry, index) => ({ entry, index, rank: triggerCatalogEntryRank(entry) }))
+        .filter(candidate => candidate.rank >= 0)
+        .sort((left, right) => left.rank - right.rank || left.index - right.index);
+      return candidates.length > 0 ? candidates[0].entry : null;
+    }
+
     async function inflateRaw(bytes) {
       if (typeof DecompressionStream !== "function") {
         throw new Error("This browser cannot inflate compressed APK entries. Use a catalog JSON file or a stored zip entry.");
@@ -2623,14 +2687,16 @@
     async function extractTriggerCatalogFromApk(file) {
       const buffer = await file.arrayBuffer();
       const entries = zipEntries(buffer);
-      const entry = entries.find(candidate => triggerCatalogPaths.includes(candidate.name))
-        || entries.find(candidate => candidate.name.endsWith("/mq/questionnaire-trigger-catalog.json"))
-        || entries.find(candidate => candidate.name.endsWith("/questionnaire-trigger-catalog.json"));
+      const entry = findTriggerCatalogEntry(entries);
       if (!entry) {
-        throw new Error("No questionnaire trigger catalog was found in the APK.");
+        throw new Error("No questionnaire trigger catalog was found in the APK. Expected questionnaire-trigger-catalog.json under Unity StreamingAssets or assets/mq.");
       }
       const bytes = await readZipEntry(buffer, entry);
-      return JSON.parse(new TextDecoder().decode(bytes));
+      try {
+        return JSON.parse(new TextDecoder().decode(bytes));
+      } catch (error) {
+        throw new Error(`Questionnaire trigger catalog in ${entry.name} is not valid JSON.`);
+      }
     }
 
     async function loadTriggerCatalogFile(file) {
@@ -2685,6 +2751,12 @@
       if (normalized.includes("slider")) {
         outputs.sliderAnswers = numberValue("sliderExpectedCount", 42);
       }
+      if (normalized.includes("temporalTracer")) {
+        outputs.temporalTraceSvg = true;
+        outputs.temporalTraceCsv = true;
+        outputs.temporalTraceJson = true;
+        outputs.temporalTraceDimensions = temporalTracerDimensionsForConfig().length;
+      }
       return outputs;
     }
 
@@ -2713,7 +2785,11 @@
           maia2Answers: 37,
           maia2Scores: 8,
           pictographicSelections: (customPictographicPrompts || pictographicDefaults).length,
-          sliderAnswers: numberValue("sliderExpectedCount", 42)
+          sliderAnswers: numberValue("sliderExpectedCount", 42),
+          temporalTraceSvg: true,
+          temporalTraceCsv: true,
+          temporalTraceJson: true,
+          temporalTraceDimensions: temporalTracerDimensionsForConfig().length
         };
       }
       return {};
@@ -2733,22 +2809,15 @@
       const questionnairePackage = "org.questquestionnaire.questionnaires2d";
       const questionnaireActivity = "org.questquestionnaire.questionnaires2d.MainActivity";
       const questionnaireAction = "org.questquestionnaire.questionnaires2d.RUN";
-      const temporalTracerPackage = "org.questquestionnaire.temporaltracer2d";
-      const temporalTracerActivity = "org.questquestionnaire.temporaltracer2d.MainActivity";
-      const temporalTracerAction = "org.questquestionnaire.temporaltracer2d.RUN";
       const triggerFinishBehavior = defaults.startMode === "questionnaireFirst" ? "resumeCaller" : (defaults.finishBehavior || "resumeCaller");
       const mappedTriggers = readTriggerMappingsFromDom()
         .filter(mapping => mapping.enabled && (mapping.questionnaireMode !== "none" || (mapping.questionnaireSequence || []).length > 0));
 
       if (triggerMappings.length > 0 || triggerCatalog) {
         const triggerBlocks = mappedTriggers.map((mapping, index) => {
-          const temporal = mapping.questionnaireMode === "temporalTracer";
-          const sequence = temporal ? [] : normalizeQuestionnaireSequence(mapping.questionnaireSequence, mapping.questionnaireMode);
-          const mode = temporal ? "temporalTracer" : legacyModeForSequence(sequence, mapping.questionnaireMode);
-          const packageName = temporal ? temporalTracerPackage : questionnairePackage;
-          const activityName = temporal ? temporalTracerActivity : questionnaireActivity;
-          const actionName = temporal ? temporalTracerAction : questionnaireAction;
-          const modeExtras = temporal ? {} : {
+          const sequence = normalizeQuestionnaireSequence(mapping.questionnaireSequence, mapping.questionnaireMode);
+          const mode = legacyModeForSequence(sequence, mapping.questionnaireMode);
+          const modeExtras = {
             "mq.questionnaireMode": mode,
             "mq.questionnaireSequence": sequence.join(","),
             "mq.flowMode": mode
@@ -2757,20 +2826,20 @@
             number: /^\d{3}$/.test(String(mapping.blockNumber || "")) ? mapping.blockNumber : blockNumber(index),
             blockId: mapping.blockId,
             id: mapping.blockId || `trigger_${safeFileStem(mapping.triggerId, `trigger-${index + 1}`)}`,
-            type: temporal ? "temporalTracer" : "questionnaire",
+            type: "questionnaire",
             label: mapping.label || `Trigger ${mapping.triggerId}`,
             trigger: {
               type: "apkManifestTrigger",
               triggerId: mapping.triggerId,
               foregroundPackage: scenarioPackage
             },
-            package: packageName,
-            activity: activityName,
-            action: actionName,
+            package: questionnairePackage,
+            activity: questionnaireActivity,
+            action: questionnaireAction,
             questionnaireMode: mode,
             questionnaireSequence: sequence,
             saveNamespace: mapping.saveNamespace || `trigger_${safeFileStem(mapping.triggerId, `trigger-${index + 1}`)}`,
-            expectedOutputs: temporal ? expectedOutputsForQuestionnaireMode(mapping.questionnaireMode) : expectedOutputsForQuestionnaireSequence(sequence, mode),
+            expectedOutputs: expectedOutputsForQuestionnaireSequence(sequence, mode),
             extras: {
               ...modeExtras,
               "mq.handoffSchema": "mq.handoff.v1",
@@ -3126,6 +3195,80 @@
       return block;
     }
 
+    function splitPipeLabels(value) {
+      return String(value || "")
+        .split("|")
+        .map(label => label.trim())
+        .filter(Boolean);
+    }
+
+    function temporalTracerDefaultDimensions() {
+      return [
+        {
+          id: "trace_001",
+          language: "English",
+          order: 1,
+          dimensionLabel: "Presence",
+          dimensionDescription: "Trace how present the participant felt over the running APK.",
+          required: true,
+          audioFile: "",
+          axis: {
+            xMin: 0,
+            xMax: 10,
+            xUnit: "min",
+            yMin: 0,
+            yMax: 100,
+            yMinLabel: "Absent",
+            yMaxLabel: "Intense",
+            xBins: ["0", "2", "4", "6", "8", "10 min"],
+            yBins: ["Intense", "Moderate", "Absent"],
+            targetSampleCount: 1000
+          }
+        }
+      ];
+    }
+
+    function temporalTracerDimensionsForConfig() {
+      return (Array.isArray(customTemporalTracerDimensions) && customTemporalTracerDimensions.length > 0
+        ? customTemporalTracerDimensions
+        : temporalTracerDefaultDimensions()).map((dimension, index) => ({
+          id: dimension.id || `trace_${index + 1}`,
+          language: dimension.language || "English",
+          order: Number(dimension.order || index + 1),
+          dimensionLabel: dimension.dimensionLabel || `Trace ${index + 1}`,
+          dimensionDescription: dimension.dimensionDescription || "",
+          required: dimension.required !== false,
+          audioFile: dimension.audioFile || "",
+          axis: {
+            xMin: Number(dimension.axis?.xMin ?? 0),
+            xMax: Number(dimension.axis?.xMax ?? 10),
+            xUnit: dimension.axis?.xUnit || "min",
+            yMin: Number(dimension.axis?.yMin ?? 0),
+            yMax: Number(dimension.axis?.yMax ?? 100),
+            yMinLabel: dimension.axis?.yMinLabel || "No, not more than usual",
+            yMaxLabel: dimension.axis?.yMaxLabel || "Yes, very much more than usual",
+            xBins: Array.isArray(dimension.axis?.xBins) && dimension.axis.xBins.length > 0 ? dimension.axis.xBins : ["0", "2", "4", "6", "8", "10 min"],
+            yBins: Array.isArray(dimension.axis?.yBins) && dimension.axis.yBins.length > 0 ? dimension.axis.yBins : [
+              dimension.axis?.yMaxLabel || "Yes, very much more than usual",
+              "Middle",
+              dimension.axis?.yMinLabel || "No, not more than usual"
+            ],
+            targetSampleCount: Math.max(2, Number(dimension.axis?.targetSampleCount || 1000))
+          }
+        }));
+    }
+
+    function temporalTracerBlock() {
+      const dimensions = temporalTracerDimensionsForConfig();
+      const axis = dimensions[0]?.axis || temporalTracerDefaultDimensions()[0].axis;
+      return {
+        id: "temporal_tracer",
+        type: "temporalTracer",
+        axis,
+        dimensions
+      };
+    }
+
     function requiredModulesFromProtocol() {
       const required = new Set(startupQuestionnaireSequence());
       readTriggerMappingsFromDom().forEach(mapping => {
@@ -3141,6 +3284,9 @@
       }
       if (required.has("pictographic")) {
         byId("includePictographic").checked = true;
+      }
+      if (required.has("temporalTracer")) {
+        byId("includeTemporalTracer").checked = true;
       }
     }
 
@@ -3180,6 +3326,7 @@
         maia2: maiaBlock,
         pictographic: pictographicBlock,
         custom_slider: sliderBlock,
+        temporal_tracer: temporalTracerBlock,
         end: () => ({ id: "end", type: "blackScreen" })
       };
 
@@ -3222,7 +3369,7 @@
       const finishBehavior = config.chainDefaults?.finishBehavior || "staySaved";
       const allowedStartModes = ["unityFirst", "questionnaireFirst"];
       const startMode = config.chainDefaults?.startMode || "unityFirst";
-      const allowedDefaultQuestionnaireModes = ["", "none", "demographics", "baseline", "maia2", "pictographic", "slider", "full"];
+      const allowedDefaultQuestionnaireModes = ["", "none", "demographics", "baseline", "maia2", "pictographic", "slider", "temporalTracer", "full"];
       const allowedQuestionnaireModules = new Set(questionnaireModules);
       const defaultQuestionnaireMode = config.chainDefaults?.questionnaireMode || "";
       const defaultSequence = normalizeQuestionnaireSequence(config.chainDefaults?.questionnaireSequence || [], defaultQuestionnaireMode);
@@ -3233,7 +3380,7 @@
         issues.push({ level: "error", text: "Study start mode must be unityFirst or questionnaireFirst." });
       }
       if (!allowedDefaultQuestionnaireModes.includes(defaultQuestionnaireMode)) {
-        issues.push({ level: "error", text: "Default questionnaire mode must be none, demographics, baseline, maia2, pictographic, slider, full, or blank." });
+        issues.push({ level: "error", text: "Default questionnaire mode must be none, demographics, baseline, maia2, pictographic, slider, temporalTracer, full, or blank." });
       }
       (config.chainDefaults?.questionnaireSequence || []).forEach(module => {
         if (!allowedQuestionnaireModules.has(module)) {
@@ -3248,6 +3395,9 @@
       }
       if (defaultSequence.some(module => module === "slider") && !config.blocks.some(block => block.id === "custom_slider")) {
         issues.push({ level: "error", text: "Default questionnaire sequence includes slider, but the slider block is not packaged." });
+      }
+      if (defaultSequence.some(module => module === "temporalTracer") && !config.blocks.some(block => block.id === "temporal_tracer")) {
+        issues.push({ level: "error", text: "Default questionnaire sequence includes temporal tracer, but the temporal tracer block is not packaged." });
       }
       if (config.chainDefaults?.blockNumber && !/^\d{3}$/.test(String(config.chainDefaults.blockNumber))) {
         issues.push({ level: "error", text: "Default block number must use three digits." });
@@ -3342,6 +3492,9 @@
           if (triggerSequence.some(module => module === "slider") && !config.blocks.some(block => block.id === "custom_slider")) {
             issues.push({ level: "error", text: `Trigger ${triggerId || "unknown"} needs packaged slider content.` });
           }
+          if (triggerSequence.some(module => module === "temporalTracer") && !config.blocks.some(block => block.id === "temporal_tracer")) {
+            issues.push({ level: "error", text: `Trigger ${triggerId || "unknown"} needs packaged temporal tracer content.` });
+          }
           if (trigger.enabled && mode === "none") {
             issues.push({ level: "warn", text: `Trigger ${triggerId} is enabled but mapped to none.` });
           }
@@ -3397,6 +3550,17 @@
       if (pictographic && pictographic.prompts.length < 1) {
         issues.push({ level: "error", text: "The pictographic block should have at least 1 prompt when included." });
       }
+      const temporal = config.blocks.find(block => block.id === "temporal_tracer");
+      if (temporal) {
+        if (!Array.isArray(temporal.dimensions) || temporal.dimensions.length < 1) {
+          issues.push({ level: "error", text: "The temporal tracer block should have at least 1 dimension when included." });
+        }
+        (temporal.dimensions || []).forEach((dimension, index) => {
+          if (!dimension.dimensionLabel) {
+            issues.push({ level: "error", text: `Temporal tracer dimension ${index + 1} needs a dimensionLabel.` });
+          }
+        });
+      }
 
       if (issues.length === 0) {
         issues.push({ level: "ok", text: "Local editor checks pass. Run the PowerShell validator before building." });
@@ -3424,6 +3588,7 @@
     function itemCounts(config) {
       const maia = config.blocks.find(block => block.id === "maia2");
       const pictographic = config.blocks.find(block => block.id === "pictographic");
+      const temporal = config.blocks.find(block => block.id === "temporal_tracer");
       const english = sliderItemsFor(config, "English");
       const deutsch = sliderItemsFor(config, "Deutsch");
       const slider = config.blocks.find(block => block.id === "custom_slider");
@@ -3432,6 +3597,7 @@
         maia: Number(maia?.expectedItemCount || 0),
         pictographic: Array.isArray(pictographic?.prompts) ? pictographic.prompts.length : 0,
         slider: sliderCount,
+        temporalTracer: Array.isArray(temporal?.dimensions) ? temporal.dimensions.length : 0,
         english: english.length,
         deutsch: deutsch.length
       };
@@ -3443,6 +3609,11 @@
       (pictographic?.prompts || []).forEach(prompt => {
         if (prompt.promptEnglish) texts.push(prompt.promptEnglish);
         if (prompt.promptDeutsch) texts.push(prompt.promptDeutsch);
+      });
+      const temporal = config.blocks.find(block => block.id === "temporal_tracer");
+      (temporal?.dimensions || []).forEach(dimension => {
+        if (dimension.dimensionLabel) texts.push(dimension.dimensionLabel);
+        if (dimension.dimensionDescription) texts.push(dimension.dimensionDescription);
       });
       return texts.reduce((longest, value) => Math.max(longest, value.length), 0);
     }
@@ -3487,7 +3658,7 @@
 
     function experienceGuardrails(config) {
       const counts = itemCounts(config);
-      const totalAnswerScreens = counts.maia + counts.pictographic + counts.slider;
+      const totalAnswerScreens = counts.maia + counts.pictographic + counts.slider + counts.temporalTracer;
       const longest = longestItemLength(config);
       const experienceIssues = [];
       if (counts.english > 0 && counts.deutsch > 0 && counts.english !== counts.deutsch) {
@@ -3512,7 +3683,7 @@
 
     function qualityReport(config) {
       const counts = itemCounts(config);
-      const totalAnswerScreens = counts.maia + counts.pictographic + counts.slider;
+      const totalAnswerScreens = counts.maia + counts.pictographic + counts.slider + counts.temporalTracer;
       const estimatedMinutes = Math.max(1, Math.ceil((totalAnswerScreens * 8 + 55) / 60));
       const validationIssues = validate(config).filter(issue => issue.level !== "ok");
       const experienceIssues = experienceGuardrails(config).filter(issue => issue.level !== "ok");
@@ -3759,6 +3930,7 @@
       const byBlockId = new Map((config.blocks || []).map(block => [block.id, block]));
       byId("includeMaia").checked = byBlockId.has("maia2");
       byId("includePictographic").checked = byBlockId.has("pictographic");
+      byId("includeTemporalTracer").checked = byBlockId.has("temporal_tracer");
       blocks = blockDefaults
         .filter(block => byBlockId.has(block.id))
         .sort((left, right) => {
@@ -3807,6 +3979,16 @@
         } else {
           setPictographicZipStatus(`Loaded ${customPictographicPrompts.length} pictographic prompt${customPictographicPrompts.length === 1 ? "" : "s"} from config.`, "ok");
         }
+      }
+
+      const temporal = byBlockId.get("temporal_tracer");
+      if (temporal && Array.isArray(temporal.dimensions)) {
+        customTemporalTracerDimensions = temporal.dimensions.map(dimension => ({
+          ...dimension,
+          axis: { ...(dimension.axis || temporal.axis || {}) }
+        }));
+      } else {
+        customTemporalTracerDimensions = null;
       }
 
       makeBlockList();
@@ -3897,6 +4079,16 @@
       return "";
     }
 
+    function csvFirstNonEmpty(record, names) {
+      for (const name of names) {
+        const value = csvValue(record, [name]);
+        if (value) {
+          return value;
+        }
+      }
+      return "";
+    }
+
     function csvNumber(record, names) {
       const raw = csvValue(record, names);
       if (!raw) {
@@ -3914,6 +4106,9 @@
       }
       if (["maia", "maia2", "likert", "customlikert", "custom_likert"].includes(key)) {
         return "maia2";
+      }
+      if (["temporaltracer", "temporal_tracer", "temporalexperience", "temporal_experience", "trace", "tracer"].includes(key)) {
+        return "temporal_tracer";
       }
       return key;
     }
@@ -3956,7 +4151,20 @@
         "leftAnchor",
         "rightAnchor",
         "choices",
-        "branchingTag"
+        "branchingTag",
+        "dimensionLabel",
+        "dimensionDescription",
+        "xMin",
+        "xMax",
+        "xUnit",
+        "yMin",
+        "yMax",
+        "yMinLabel",
+        "yMaxLabel",
+        "xBins",
+        "yBins",
+        "audioFile",
+        "targetSampleCount"
       ];
       const templates = {
         slider: [
@@ -3996,8 +4204,8 @@
         ],
         temporalTracer: [
           header,
-          ["custom-tracer-demo", "1.0.0", "1.0.0", "temporal_tracer", "temporalTracer", "trace_anxiety", "English", "1", "Anxiety", "true", "", "0", "100", "No, not more than usual", "Yes, very much more than usual", "", "audio=anxiety.wav"],
-          ["custom-tracer-demo", "1.0.0", "1.0.0", "temporal_tracer", "temporalTracer", "trace_presence", "English", "2", "Presence", "true", "", "0", "100", "Absent", "Intense", "", "audio=presence.wav"]
+          ["custom-tracer-demo", "1.0.0", "1.0.0", "temporal_tracer", "temporalTracer", "trace_anxiety", "English", "1", "", "true", "", "", "", "", "", "", "audio=anxiety.wav", "Anxiety", "Trace anxiety intensity over the running APK.", "0", "10", "min", "0", "100", "No, not more than usual", "Yes, very much more than usual", "0|2|4|6|8|10 min", "Yes, very much more than usual|Middle|No, not more than usual", "anxiety.wav", "1000"],
+          ["custom-tracer-demo", "1.0.0", "1.0.0", "temporal_tracer", "temporalTracer", "trace_presence", "English", "2", "", "true", "", "", "", "", "", "", "audio=presence.wav", "Presence", "Trace presence intensity over the running APK.", "0", "10", "min", "0", "100", "Absent", "Intense", "0|2|4|6|8|10 min", "Intense|Middle|Absent", "presence.wav", "1000"]
         ]
       };
       return templates[kind] || templates.slider;
@@ -4217,6 +4425,59 @@
         });
     }
 
+    function branchingTagValue(record, key) {
+      const wanted = String(key || "").toLowerCase();
+      const raw = csvValue(record, ["branchingTag", "metadata", "meta"]);
+      for (const part of raw.split(/[;|]/)) {
+        const [left, ...right] = part.split("=");
+        if (left && left.trim().toLowerCase() === wanted) {
+          return right.join("=").trim();
+        }
+      }
+      return "";
+    }
+
+    function temporalTracerDimensionsFromCsvRecords(records) {
+      return records
+        .slice()
+        .sort((left, right) => csvOrder(left) - csvOrder(right) || left.__index - right.__index)
+        .map((record, index) => {
+          const id = safeFileStem(csvValue(record, ["itemId", "id", "dimensionId"]) || `trace_${index + 1}`, `trace_${index + 1}`);
+          const explicitLabel = csvValue(record, ["dimensionLabel", "label"]);
+          const legacyPrompt = csvValue(record, ["prompt", "text", "itemText", "question"]);
+          const label = explicitLabel || legacyPrompt || id;
+          const description = csvValue(record, ["dimensionDescription", "description", "message"]);
+          const yMin = csvNumber(record, ["yMin", "yMinimum"]);
+          const yMax = csvNumber(record, ["yMax", "yMaximum"]);
+          const legacyMin = csvNumber(record, ["min", "minimum"]);
+          const legacyMax = csvNumber(record, ["max", "maximum"]);
+          const xMin = csvNumber(record, ["xMin", "xMinimum"]);
+          const xMax = csvNumber(record, ["xMax", "xMaximum"]);
+          const targetSampleCount = csvNumber(record, ["targetSampleCount", "sampleCount", "samples"]);
+          return {
+            id,
+            language: normalizeLanguage(csvValue(record, ["language", "lang", "locale"]) || "English"),
+            order: csvOrder(record) === Number.MAX_SAFE_INTEGER ? index + 1 : csvOrder(record),
+            dimensionLabel: label,
+            dimensionDescription: description || (explicitLabel ? legacyPrompt : ""),
+            required: csvBoolean(record, ["required", "isRequired"], true),
+            audioFile: csvValue(record, ["audioFile", "audio", "audioPath"]) || branchingTagValue(record, "audio"),
+            axis: {
+              xMin: xMin ?? 0,
+              xMax: xMax ?? 10,
+              xUnit: csvValue(record, ["xUnit", "durationUnit"]) || "min",
+              yMin: yMin ?? legacyMin ?? 0,
+              yMax: yMax ?? legacyMax ?? 100,
+              yMinLabel: csvValue(record, ["yMinLabel", "bottomLabel", "leftAnchor", "anchorLeft"]) || "No, not more than usual",
+              yMaxLabel: csvValue(record, ["yMaxLabel", "topLabel", "rightAnchor", "anchorRight"]) || "Yes, very much more than usual",
+              xBins: splitPipeLabels(csvValue(record, ["xBins", "verticalBins", "xLabels"])) || [],
+              yBins: splitPipeLabels(csvValue(record, ["yBins", "horizontalBins", "yLabels"])) || [],
+              targetSampleCount: targetSampleCount ?? 1000
+            }
+          };
+        });
+    }
+
     function setCsvStatus(text, level = "") {
       const status = byId("csvStatus");
       status.hidden = !text;
@@ -4265,10 +4526,11 @@
       const germanRows = [];
       const maiaRows = [];
       const demographicsRows = [];
+      const temporalRows = [];
       const unsupported = [];
 
       records.forEach(record => {
-        const textValue = csvValue(record, ["text", "itemText", "question", "prompt"]);
+        const textValue = csvFirstNonEmpty(record, ["text", "itemText", "question", "prompt", "dimensionLabel", "dimensionDescription"]);
         if (!textValue) {
           return;
         }
@@ -4309,6 +4571,16 @@
             return;
           }
           demographicsRows.push(record);
+          return;
+        }
+
+        if (block === "temporal_tracer" || format === "temporaltracer") {
+          const temporalFormats = new Set(["", "temporaltracer", "trace", "tracer", "temporalexperience", "temporalexperienceunit"]);
+          if (!temporalFormats.has(format)) {
+            unsupported.push(`row ${record.__rowNumber}: unsupported temporal tracer format`);
+            return;
+          }
+          temporalRows.push(record);
           return;
         }
 
@@ -4369,9 +4641,15 @@
         byId("block1ModuleDemographics").checked = true;
       }
 
-      if ((englishItems.length > 0 || germanItems.length > 0) && maiaItems.length === 0) {
+      if (temporalRows.length > 0) {
+        customTemporalTracerDimensions = temporalTracerDimensionsFromCsvRecords(temporalRows);
+        byId("includeTemporalTracer").checked = true;
+      }
+
+      if ((englishItems.length > 0 || germanItems.length > 0) && maiaItems.length === 0 && temporalRows.length === 0) {
         byId("includeMaia").checked = false;
         byId("includePictographic").checked = false;
+        byId("includeTemporalTracer").checked = false;
       }
 
       blocks = normalizeBlocks(blocks);
@@ -4392,7 +4670,7 @@
 
       refresh();
       renderTriggerMappingList();
-      const loaded = `${englishItems.length} English slider, ${germanItems.length} Deutsch slider, ${maiaItems.length} Likert, ${demographicsRows.length} demographics fields`;
+      const loaded = `${englishItems.length} English slider, ${germanItems.length} Deutsch slider, ${maiaItems.length} Likert, ${demographicsRows.length} demographics fields, ${temporalRows.length} temporal tracer dimensions`;
       setCsvStatus(warnings.length > 0 ? `${loaded}. ${warnings.join(" ")}` : `${loaded}.`, warnings.length > 0 ? "error" : "ok");
     }
 
@@ -6381,7 +6659,7 @@
       setStartupQuestionnaireSequence(byId("chainQuestionnaireSequence").value, byId("chainQuestionnaireMode").value.trim() || "none");
       refresh();
     });
-    ["block1ModuleDemographics", "block1ModuleMaia2", "block1ModulePictographic", "block1ModuleSlider"].forEach(id => {
+    ["block1ModuleDemographics", "block1ModuleMaia2", "block1ModulePictographic", "block1ModuleSlider", "block1ModuleTemporalTracer"].forEach(id => {
       byId(id).addEventListener("change", () => {
         const sequence = startupQuestionnaireSequence();
         byId("chainQuestionnaireSequence").value = sequence.join(",");
@@ -6403,6 +6681,11 @@
       refresh();
     });
     byId("includePictographic").addEventListener("change", () => {
+      blocks = normalizeBlocks(blocks);
+      makeBlockList();
+      refresh();
+    });
+    byId("includeTemporalTracer").addEventListener("change", () => {
       blocks = normalizeBlocks(blocks);
       makeBlockList();
       refresh();

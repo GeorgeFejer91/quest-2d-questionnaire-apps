@@ -57,6 +57,8 @@ public final class RenderQuestionnaireVisualsTest {
         QuestionnaireData.RuntimeBlock pictographicBlock = config.findBlock("pictographic");
         List<QuestionnaireData.RuntimePictographicPrompt> prompts = pictographicBlock != null ? pictographicBlock.prompts : java.util.Collections.emptyList();
         QuestionnaireData.RuntimeBlock sliderBlock = config.findBlock("custom_slider");
+        QuestionnaireData.RuntimeBlock temporalBlock = config.findBlock("temporal_tracer");
+        List<QuestionnaireData.RuntimeTemporalDimension> temporalDimensions = temporalBlock != null ? temporalBlock.temporalDimensions : java.util.Collections.emptyList();
         QuestionnaireScreenBuilder builder = new QuestionnaireScreenBuilder(context);
 
         String runId = System.getProperty("questionnaire.render.runId", "");
@@ -117,6 +119,14 @@ public final class RenderQuestionnaireVisualsTest {
                     true,
                     sliderBlock != null && sliderBlock.anchors != null ? sliderBlock.anchors.left : null,
                     sliderBlock != null && sliderBlock.anchors != null ? sliderBlock.anchors.right : null).root));
+                List<QuestionnaireData.RuntimeTemporalDimension> localizedTemporal = temporalDimensionsForLanguage(temporalDimensions, language);
+                if (!localizedTemporal.isEmpty()) {
+                    renders.put(renderOne(output, dimension, "temporal-tracer-first", "temporal-tracer", language, builder.temporalTraceScreen(
+                        localizedTemporal.get(0),
+                        0,
+                        localizedTemporal.size(),
+                        true).root));
+                }
                 renders.put(renderOne(output, dimension, "saved-confirmation", "saved", language, builder.savedScreen(
                     uiText.thankYou,
                     "Questionnaire data saved locally on the headset.\n\nCSV:\n/device/QuestionnaireExports/fixture.csv\n\nJSON:\n/device/QuestionnaireExports/fixture.json").root));
@@ -135,13 +145,29 @@ public final class RenderQuestionnaireVisualsTest {
         summary.put("expectedCounts", new JSONObject()
             .put("maia2", maia.size())
             .put("pictographic", prompts.size())
-            .put("custom_slider", QuestionnaireLoader.loadQuestions(context, "English").size()));
+            .put("custom_slider", QuestionnaireLoader.loadQuestions(context, "English").size())
+            .put("temporalTracer", temporalDimensionsForLanguage(temporalDimensions, "English").size()));
         summary.put("renders", renders);
 
         File summaryFile = new File(output, "render-summary.json");
         try (FileOutputStream stream = new FileOutputStream(summaryFile)) {
             stream.write(summary.toString(2).getBytes(java.nio.charset.StandardCharsets.UTF_8));
         }
+    }
+
+    private static List<QuestionnaireData.RuntimeTemporalDimension> temporalDimensionsForLanguage(
+        List<QuestionnaireData.RuntimeTemporalDimension> dimensions,
+        String language) {
+        if (dimensions.isEmpty()) {
+            return dimensions;
+        }
+        List<QuestionnaireData.RuntimeTemporalDimension> localized = new ArrayList<>();
+        for (QuestionnaireData.RuntimeTemporalDimension dimension : dimensions) {
+            if (language.equalsIgnoreCase(dimension.language)) {
+                localized.add(dimension);
+            }
+        }
+        return localized.isEmpty() ? dimensions : localized;
     }
 
     private JSONObject renderOne(File output, Dimension dimension, String stage, String screenId, String language, View root) throws Exception {
@@ -522,6 +548,17 @@ public final class RenderQuestionnaireVisualsTest {
                 } else {
                     result.passes.put("pictographic image visible");
                 }
+            }
+        }
+
+        if (stage.startsWith("temporal-tracer")) {
+            TraceCanvasView canvas = findFirst(root, TraceCanvasView.class);
+            if (canvas == null) {
+                result.failures.put("temporal tracer canvas missing");
+            } else if (canvas.getWidth() < 300 || canvas.getHeight() < 240) {
+                result.failures.put("temporal tracer canvas too small");
+            } else {
+                result.passes.put("temporal tracer canvas visible");
             }
         }
 

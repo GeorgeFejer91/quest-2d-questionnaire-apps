@@ -143,6 +143,51 @@ function Get-AppDisplayName {
     return "Start Experiment | $targetLabel"
 }
 
+function Convert-TemporalAxis {
+    param([object]$Axis)
+
+    if ($null -eq $Axis) {
+        return $null
+    }
+
+    return [ordered]@{
+        xMin = if ($Axis.PSObject.Properties.Name -contains 'xMin' -and $null -ne $Axis.xMin) { [double]$Axis.xMin } else { 0 }
+        xMax = if ($Axis.PSObject.Properties.Name -contains 'xMax' -and $null -ne $Axis.xMax) { [double]$Axis.xMax } else { 10 }
+        xUnit = if ($Axis.xUnit) { [string]$Axis.xUnit } else { 'min' }
+        yMin = if ($Axis.PSObject.Properties.Name -contains 'yMin' -and $null -ne $Axis.yMin) { [double]$Axis.yMin } else { 0 }
+        yMax = if ($Axis.PSObject.Properties.Name -contains 'yMax' -and $null -ne $Axis.yMax) { [double]$Axis.yMax } else { 100 }
+        yMinLabel = if ($Axis.yMinLabel) { [string]$Axis.yMinLabel } else { '' }
+        yMaxLabel = if ($Axis.yMaxLabel) { [string]$Axis.yMaxLabel } else { '' }
+        xBins = @($Axis.xBins | Where-Object { $null -ne $_ } | ForEach-Object { [string]$_ })
+        yBins = @($Axis.yBins | Where-Object { $null -ne $_ } | ForEach-Object { [string]$_ })
+        targetSampleCount = if ($Axis.PSObject.Properties.Name -contains 'targetSampleCount' -and $null -ne $Axis.targetSampleCount) { [int]$Axis.targetSampleCount } else { 1000 }
+    }
+}
+
+function Convert-TemporalDimensions {
+    param(
+        [object[]]$Dimensions,
+        [object]$FallbackAxis
+    )
+
+    $converted = @()
+    foreach ($dimension in @($Dimensions)) {
+        if ($null -eq $dimension) { continue }
+        $axis = if ($dimension.PSObject.Properties.Name -contains 'axis' -and $null -ne $dimension.axis) { $dimension.axis } else { $FallbackAxis }
+        $converted += [ordered]@{
+            id = if ($dimension.id) { [string]$dimension.id } else { '' }
+            language = if ($dimension.language) { [string]$dimension.language } else { 'English' }
+            order = if ($dimension.PSObject.Properties.Name -contains 'order' -and $null -ne $dimension.order) { [int]$dimension.order } else { $converted.Count + 1 }
+            dimensionLabel = Get-FirstText @($dimension.dimensionLabel, $dimension.label, $dimension.prompt)
+            dimensionDescription = Get-FirstText @($dimension.dimensionDescription, $dimension.description)
+            required = if ($dimension.PSObject.Properties.Name -contains 'required') { [bool]$dimension.required } else { $true }
+            audioFile = if ($dimension.audioFile) { [string]$dimension.audioFile } else { '' }
+            axis = Convert-TemporalAxis -Axis $axis
+        }
+    }
+    return ,@($converted)
+}
+
 function Set-AndroidAppName {
     param([string]$DisplayName)
 
@@ -245,6 +290,18 @@ foreach ($block in @($config.blocks)) {
         $anchors = [ordered]@{ left = $block.anchors.left; right = $block.anchors.right }
     }
 
+    $temporalAxis = if ($block.PSObject.Properties.Name -contains 'axis') { Convert-TemporalAxis -Axis $block.axis } else { $null }
+    $temporalDimensions = if ($block.PSObject.Properties.Name -contains 'dimensions') {
+        Convert-TemporalDimensions -Dimensions @($block.dimensions) -FallbackAxis $block.axis
+    } else {
+        @()
+    }
+    $choices = if ($block.PSObject.Properties.Name -contains 'choices' -and $null -ne $block.choices) {
+        @($block.choices | Where-Object { $null -ne $_ })
+    } else {
+        @()
+    }
+
     $runtimeBlocks += [ordered]@{
         id = $block.id
         type = $block.type
@@ -256,7 +313,9 @@ foreach ($block in @($config.blocks)) {
         languageSources = $languageSources
         prompts = $prompts
         scoreGroups = $scoreGroups
-        choices = @($block.choices)
+        choices = @($choices)
+        axis = $temporalAxis
+        dimensions = @($temporalDimensions)
     }
 }
 

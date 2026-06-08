@@ -135,6 +135,7 @@ function Get-ExportCounts {
             maia2Scores = $null
             pictographicSelections = $null
             questionnaireAnswers = $null
+            temporalTraceCount = $null
             questionnaireConfigId = $null
             participant = $null
             language = $null
@@ -147,6 +148,7 @@ function Get-ExportCounts {
         maia2Scores = @($Record.maia2Scores).Count
         pictographicSelections = @($Record.pictographicSelections).Count
         questionnaireAnswers = @($Record.questionnaireAnswers).Count
+        temporalTraceCount = @($Record.temporalTraces).Count
         questionnaireConfigId = $Record.questionnaireConfigId
         participant = $Record.participant.name
         language = $Record.participant.language
@@ -158,19 +160,21 @@ function Get-ExpectedCounts {
 
     $runtimeConfigPath = Join-Path $ProjectPath 'app\src\main\assets\questionnaire\QuestionnaireConfig.json'
     if (-not (Test-Path -LiteralPath $runtimeConfigPath)) {
-        return [ordered]@{ maia2Answers = 37; maia2Scores = 8; pictographicSelections = 3; questionnaireAnswers = 42 }
+        return [ordered]@{ maia2Answers = 37; maia2Scores = 8; pictographicSelections = 3; questionnaireAnswers = 42; temporalTraceCount = 0 }
     }
 
     $runtimeConfig = Get-Content -LiteralPath $runtimeConfigPath -Encoding UTF8 -Raw | ConvertFrom-Json
     $maiaBlock = @($runtimeConfig.blocks | Where-Object { $_.id -eq 'maia2' } | Select-Object -First 1)[0]
     $pictographicBlock = @($runtimeConfig.blocks | Where-Object { $_.type -eq 'pictographic' } | Select-Object -First 1)[0]
     $sliderBlock = @($runtimeConfig.blocks | Where-Object { $_.type -eq 'slider' } | Select-Object -First 1)[0]
+    $temporalBlock = @($runtimeConfig.blocks | Where-Object { $_.id -eq 'temporal_tracer' -or $_.type -eq 'temporalTracer' } | Select-Object -First 1)[0]
 
     return [ordered]@{
         maia2Answers = if ($maiaBlock) { [int]$maiaBlock.expectedItemCount } else { 0 }
         maia2Scores = if ($maiaBlock) { 8 } else { 0 }
         pictographicSelections = if ($pictographicBlock) { @($pictographicBlock.prompts).Count } else { 0 }
         questionnaireAnswers = if ($sliderBlock) { [int]$sliderBlock.expectedItemCount } else { 0 }
+        temporalTraceCount = if ($temporalBlock) { @($temporalBlock.dimensions).Count } else { 0 }
     }
 }
 
@@ -309,6 +313,7 @@ function Paint-RenderNode {
         'Button' { Paint-Button -Graphics $Graphics -Node $Node -Rect $rect; break }
         'EditText' { Paint-EditText -Graphics $Graphics -Node $Node -Rect $rect; break }
         'SeekBar' { Paint-SeekBar -Graphics $Graphics -Node $Node -Rect $rect; break }
+        'TraceCanvasView' { Paint-TraceCanvasView -Graphics $Graphics -Rect $rect; break }
         'ImageView' { Paint-ImageView -Graphics $Graphics -Node $Node -Rect $rect -ProjectPath $ProjectPath; break }
         'TextView' { Paint-TextView -Graphics $Graphics -Node $Node -Rect $rect; break }
     }
@@ -485,6 +490,50 @@ function Paint-SeekBar {
     }
 }
 
+function Paint-TraceCanvasView {
+    param([System.Drawing.Graphics]$Graphics, [System.Drawing.RectangleF]$Rect)
+
+    $fill = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(18, 24, 33))
+    $startBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(54, 102, 180, 232))
+    $border = [System.Drawing.Pen]::new([System.Drawing.Color]::FromArgb(150, 169, 182, 201), 2)
+    $grid = [System.Drawing.Pen]::new([System.Drawing.Color]::FromArgb(72, 169, 182, 201), 1)
+    $axis = [System.Drawing.Pen]::new([System.Drawing.Color]::FromArgb(225, 245, 248, 250), 2)
+    $trace = [System.Drawing.Pen]::new([System.Drawing.Color]::FromArgb(255, 0, 207, 174), 4)
+    try {
+        $Graphics.FillRectangle($fill, $Rect)
+        $plot = [System.Drawing.RectangleF]::new($Rect.Left + 56, $Rect.Top + 24, [Math]::Max(1.0, $Rect.Width - 88), [Math]::Max(1.0, $Rect.Height - 56))
+        $Graphics.FillRectangle($startBrush, [System.Drawing.RectangleF]::new($Rect.Left + 8, $plot.Top, 42, $plot.Height))
+        $Graphics.DrawRectangle($border, $Rect.X, $Rect.Y, $Rect.Width, $Rect.Height)
+        for ($i = 0; $i -le 5; $i++) {
+            $x = $plot.Left + $plot.Width * ($i / 5.0)
+            $Graphics.DrawLine($grid, [single]$x, [single]$plot.Top, [single]$x, [single]$plot.Bottom)
+        }
+        for ($i = 0; $i -le 4; $i++) {
+            $y = $plot.Top + $plot.Height * ($i / 4.0)
+            $Graphics.DrawLine($grid, [single]$plot.Left, [single]$y, [single]$plot.Right, [single]$y)
+        }
+        $Graphics.DrawLine($axis, [single]$plot.Left, [single]$plot.Top, [single]$plot.Left, [single]$plot.Bottom)
+        $Graphics.DrawLine($axis, [single]$plot.Left, [single]$plot.Bottom, [single]$plot.Right, [single]$plot.Bottom)
+
+        $points = @(
+            [System.Drawing.PointF]::new($plot.Left, $plot.Bottom - $plot.Height * 0.25),
+            [System.Drawing.PointF]::new($plot.Left + $plot.Width * 0.22, $plot.Bottom - $plot.Height * 0.42),
+            [System.Drawing.PointF]::new($plot.Left + $plot.Width * 0.48, $plot.Bottom - $plot.Height * 0.35),
+            [System.Drawing.PointF]::new($plot.Left + $plot.Width * 0.74, $plot.Bottom - $plot.Height * 0.66),
+            [System.Drawing.PointF]::new($plot.Right, $plot.Bottom - $plot.Height * 0.58)
+        )
+        $Graphics.DrawLines($trace, $points)
+    }
+    finally {
+        $fill.Dispose()
+        $startBrush.Dispose()
+        $border.Dispose()
+        $grid.Dispose()
+        $axis.Dispose()
+        $trace.Dispose()
+    }
+}
+
 function Paint-ImageView {
     param([System.Drawing.Graphics]$Graphics, $Node, [System.Drawing.RectangleF]$Rect, [string]$ProjectPath)
 
@@ -619,6 +668,7 @@ function Test-ForegroundEvidence {
     if ($expectedCounts.maia2Answers -gt 0) { $requiredVisualStages += 'maia2' }
     if ($expectedCounts.pictographicSelections -gt 0) { $requiredVisualStages += 'pictographic' }
     if ($expectedCounts.questionnaireAnswers -gt 0) { $requiredVisualStages += 'slider' }
+    if ($expectedCounts.temporalTraceCount -gt 0) { $requiredVisualStages += 'temporal-tracer' }
     $requiredVisualStages += @('saved-confirmation', 'finished-black')
     $visualStageReplayPassed = $true
     foreach ($requiredStage in $requiredVisualStages) {
@@ -637,7 +687,8 @@ function Test-ForegroundEvidence {
         $counts.maia2Answers -eq $expectedCounts.maia2Answers -and
         $counts.maia2Scores -eq $expectedCounts.maia2Scores -and
         $counts.pictographicSelections -eq $expectedCounts.pictographicSelections -and
-        $counts.questionnaireAnswers -eq $expectedCounts.questionnaireAnswers
+        $counts.questionnaireAnswers -eq $expectedCounts.questionnaireAnswers -and
+        $counts.temporalTraceCount -eq $expectedCounts.temporalTraceCount
 
     $foregroundPass =
         $foregroundHasPackage -and
@@ -792,7 +843,13 @@ elseif ($expected.PSObject.Properties.Name -contains 'questquestionnaire') {
 else {
     -1
 }
-if ($expected.maia2 -lt 0 -or $expected.pictographic -lt 0 -or $sliderCount -lt 0) {
+$temporalCount = if ($expected.PSObject.Properties.Name -contains 'temporalTracer') {
+    [int]$expected.temporalTracer
+}
+else {
+    0
+}
+if ($expected.maia2 -lt 0 -or $expected.pictographic -lt 0 -or $sliderCount -lt 0 -or $temporalCount -lt 0) {
     throw "Render metadata count mismatch. See $renderSummaryPath"
 }
 

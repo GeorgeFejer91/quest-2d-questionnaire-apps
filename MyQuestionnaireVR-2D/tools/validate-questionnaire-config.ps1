@@ -122,8 +122,8 @@ if ($blocks.Count -gt 0) {
 if ($config.PSObject.Properties.Name -contains 'chainDefaults' -and $null -ne $config.chainDefaults) {
     $allowedFinishBehaviors = @('resumeCaller', 'openNext', 'staySaved')
     $allowedStartModes = @('unityFirst', 'questionnaireFirst')
-    $allowedDefaultQuestionnaireModes = @('', 'none', 'demographics', 'baseline', 'maia2', 'pictographic', 'slider', 'full')
-    $allowedQuestionnaireModules = @('demographics', 'maia2', 'pictographic', 'slider')
+    $allowedDefaultQuestionnaireModes = @('', 'none', 'demographics', 'baseline', 'maia2', 'pictographic', 'slider', 'temporalTracer', 'full')
+    $allowedQuestionnaireModules = @('demographics', 'maia2', 'pictographic', 'slider', 'temporalTracer')
     $finishBehavior = if ($config.chainDefaults.finishBehavior) { [string]$config.chainDefaults.finishBehavior } else { 'staySaved' }
     $startMode = if ($config.chainDefaults.startMode) { [string]$config.chainDefaults.startMode } else { 'unityFirst' }
     $questionnaireMode = if ($config.chainDefaults.questionnaireMode) { [string]$config.chainDefaults.questionnaireMode } else { '' }
@@ -135,7 +135,7 @@ if ($config.PSObject.Properties.Name -contains 'chainDefaults' -and $null -ne $c
         Add-ConfigError "chainDefaults.startMode must be unityFirst or questionnaireFirst when present."
     }
     if ($allowedDefaultQuestionnaireModes -notcontains $questionnaireMode) {
-        Add-ConfigError "chainDefaults.questionnaireMode must be one of: none, demographics, baseline, maia2, pictographic, slider, full, or blank."
+        Add-ConfigError "chainDefaults.questionnaireMode must be one of: none, demographics, baseline, maia2, pictographic, slider, temporalTracer, full, or blank."
     }
     foreach ($module in $questionnaireSequence) {
         if ($allowedQuestionnaireModules -notcontains [string]$module) {
@@ -183,8 +183,8 @@ if ($config.PSObject.Properties.Name -contains 'triggerQuestionnaireMapping' -an
         }
     }
 
-    $allowedTriggerModes = @('none', 'demographics', 'baseline', 'maia2', 'pictographic', 'slider', 'full')
-    $allowedQuestionnaireModules = @('demographics', 'maia2', 'pictographic', 'slider')
+    $allowedTriggerModes = @('none', 'demographics', 'baseline', 'maia2', 'pictographic', 'slider', 'temporalTracer', 'full')
+    $allowedQuestionnaireModules = @('demographics', 'maia2', 'pictographic', 'slider', 'temporalTracer')
     $seenTriggers = @{}
     foreach ($trigger in @($mapping.triggers)) {
         $triggerId = [string]$trigger.triggerId
@@ -339,6 +339,43 @@ foreach ($block in $blocks) {
 
                 if ($block.expectedItemCount -and $count -ne [int]$block.expectedItemCount) {
                     Add-ConfigError "Slider block $($block.id) language $language expected $($block.expectedItemCount) items, found $count."
+                }
+            }
+        }
+        'temporalTracer' {
+            if ($block.id -ne 'temporal_tracer') {
+                Add-ConfigError "Temporal tracer block id should be temporal_tracer."
+            }
+
+            $dimensions = @($block.dimensions)
+            if ($dimensions.Count -lt 1) {
+                Add-ConfigError "Temporal tracer block should define at least one dimension."
+            }
+
+            foreach ($dimension in $dimensions) {
+                if ([string]::IsNullOrWhiteSpace([string]$dimension.id)) {
+                    Add-ConfigError "Temporal tracer dimension is missing id."
+                }
+                $dimensionLabel = if ($dimension.PSObject.Properties.Name -contains 'dimensionLabel') { [string]$dimension.dimensionLabel } else { [string]$dimension.label }
+                $dimensionDescription = if ($dimension.PSObject.Properties.Name -contains 'dimensionDescription') { [string]$dimension.dimensionDescription } else { [string]$dimension.description }
+                if ([string]::IsNullOrWhiteSpace($dimensionLabel)) {
+                    Add-ConfigError "Temporal tracer dimension $($dimension.id) is missing label."
+                }
+                if ([string]::IsNullOrWhiteSpace($dimensionDescription)) {
+                    Add-ConfigError "Temporal tracer dimension $($dimension.id) is missing description."
+                }
+
+                $axis = if ($dimension.PSObject.Properties.Name -contains 'axis' -and $null -ne $dimension.axis) { $dimension.axis } else { $block.axis }
+                if ($null -ne $axis) {
+                    if ($axis.PSObject.Properties.Name -contains 'xMin' -and $axis.PSObject.Properties.Name -contains 'xMax' -and [double]$axis.xMax -le [double]$axis.xMin) {
+                        Add-ConfigError "Temporal tracer dimension $($dimension.id) xMax must be greater than xMin."
+                    }
+                    if ($axis.PSObject.Properties.Name -contains 'yMin' -and $axis.PSObject.Properties.Name -contains 'yMax' -and [double]$axis.yMax -le [double]$axis.yMin) {
+                        Add-ConfigError "Temporal tracer dimension $($dimension.id) yMax must be greater than yMin."
+                    }
+                    if ($axis.PSObject.Properties.Name -contains 'targetSampleCount' -and [int]$axis.targetSampleCount -lt 2) {
+                        Add-ConfigError "Temporal tracer dimension $($dimension.id) targetSampleCount must be at least 2."
+                    }
                 }
             }
         }

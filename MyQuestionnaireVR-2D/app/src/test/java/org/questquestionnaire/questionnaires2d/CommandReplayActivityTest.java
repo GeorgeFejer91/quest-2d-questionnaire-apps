@@ -52,6 +52,9 @@ public final class CommandReplayActivityTest {
         if (config.findBlock("pictographic") != null) {
             assertTrue(logs.contains("MYQUESTIONNAIRE_VISUAL_STAGE stage=pictographic"));
         }
+        if (config.findBlock("temporal_tracer") != null) {
+            assertTrue(logs.contains("MYQUESTIONNAIRE_VISUAL_STAGE stage=temporal-tracer"));
+        }
         assertTrue(logs.contains("MYQUESTIONNAIRE_VISUAL_STAGE stage=slider"));
         assertTrue(logs.contains("MYQUESTIONNAIRE_VISUAL_STAGE stage=saved-confirmation"));
         assertTrue(logs.contains("MYQUESTIONNAIRE_COMMAND command=TextInput source=demographics-name"));

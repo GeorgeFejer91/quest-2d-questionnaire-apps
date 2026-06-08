@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
+const zlib = require("zlib");
 
 const root = path.resolve(__dirname, "..", "..");
 const repoRoot = path.resolve(root, "..");
@@ -168,6 +169,8 @@ function loadEditor() {
     },
     URL: { createObjectURL: () => "blob:fake", revokeObjectURL: () => undefined },
     FileReader: class FileReader {},
+    DecompressionStream,
+    Response,
     setTimeout,
     clearTimeout
   };
@@ -196,31 +199,35 @@ function uint32(value) {
   return [value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >> 24) & 0xff];
 }
 
-function storedZip(entries) {
+function storedZip(entries, options = {}) {
+  const method = options.method === 8 ? 8 : 0;
   const encoder = new TextEncoder();
   const chunks = [];
   const central = [];
   let offset = 0;
   Object.entries(entries).forEach(([name, text]) => {
     const nameBytes = encoder.encode(name);
-    const dataBytes = encoder.encode(text);
+    const rawBytes = encoder.encode(text);
+    const dataBytes = method === 8 ? zlib.deflateRawSync(rawBytes) : rawBytes;
     const localHeader = new Uint8Array([
       ...uint32(0x04034b50),
       ...uint16(20),
       ...uint16(0),
-      ...uint16(0),
+      ...uint16(method),
       ...uint16(0),
       ...uint16(0),
       ...uint32(0),
       ...uint32(dataBytes.length),
-      ...uint32(dataBytes.length),
+      ...uint32(rawBytes.length),
       ...uint16(nameBytes.length),
       ...uint16(0)
     ]);
     chunks.push(localHeader, nameBytes, dataBytes);
     central.push({
       nameBytes,
-      size: dataBytes.length,
+      method,
+      compressedSize: dataBytes.length,
+      uncompressedSize: rawBytes.length,
       offset
     });
     offset += localHeader.length + nameBytes.length + dataBytes.length;
@@ -232,12 +239,12 @@ function storedZip(entries) {
       ...uint16(20),
       ...uint16(20),
       ...uint16(0),
-      ...uint16(0),
+      ...uint16(entry.method),
       ...uint16(0),
       ...uint16(0),
       ...uint32(0),
-      ...uint32(entry.size),
-      ...uint32(entry.size),
+      ...uint32(entry.compressedSize),
+      ...uint32(entry.uncompressedSize),
       ...uint16(entry.nameBytes.length),
       ...uint16(0),
       ...uint16(0),
@@ -287,6 +294,12 @@ function multiTriggerCatalogPath(triggerCount) {
 function readMultiTriggerCatalog(triggerCount) {
   return readJsonFile(multiTriggerCatalogPath(triggerCount));
 }
+
+const unityApkTriggerCatalogPaths = [
+  "assets/mq/questionnaire-trigger-catalog.json",
+  "assets/bin/Data/StreamingAssets/mq/questionnaire-trigger-catalog.json",
+  "assets/bin/Data/StreamingAssets/questionnaire-trigger-catalog.json"
+];
 
 function assertPassiveMultiTriggerCatalog(catalog, triggerCount) {
   assert(catalog.schemaVersion === "mq.quest_questionnaire_trigger_catalog.v1", `${triggerCount}-trigger catalog schema mismatch.`);
@@ -431,6 +444,57 @@ async function runMultiTriggerApkUploadScenario(triggerCount) {
     blockSegmentCount: blockSegmentCount(test.document.getElementById("triggerMappingList").innerHTML),
     qualityStatus: quality.status,
     stagedScenarioApkPath: test.document.getElementById("stagedScenarioApkPath").value
+  };
+}
+
+async function runUnityApkPathScanScenario(catalogPath, triggerCount, options = {}) {
+  const test = loadEditor();
+  const catalog = readMultiTriggerCatalog(triggerCount);
+  assertPassiveMultiTriggerCatalog(catalog, triggerCount);
+  const method = options.method === 8 ? 8 : 0;
+  const fileName = options.fileName || `unity-apk-scan-${triggerCount}-triggers-${catalogPath.replace(/[^a-z0-9]+/gi, "-")}.apk`;
+  const bytes = storedZip({
+    "assets/bin/Data/Managed/not-a-trigger-catalog.txt": "This file proves the scanner does not use the demo preload.",
+    [catalogPath]: JSON.stringify(catalog)
+  }, { method });
+  const file = {
+    name: fileName,
+    async arrayBuffer() {
+      return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    }
+  };
+  await test.context.__api.loadTriggerCatalogFile(file);
+  assertRenderedBlocks(test, triggerCount, `${options.label || catalogPath} APK scan`);
+  const scanned = test.context.__api.buildConfig();
+  assert(scanned.chainDefaults.nextPackage === catalog.package, `${catalogPath}: scanned package should come from the embedded APK catalog.`);
+  assert(scanned.chainDefaults.nextActivity === catalog.activity, `${catalogPath}: scanned activity should come from the embedded APK catalog.`);
+  assert(scanned.appDisplayName === `Start Experiment | ${catalog.label}`, `${catalogPath}: app title should use the scanned APK catalog label.`);
+  assert(scanned.triggerQuestionnaireMapping.sourceApkName === fileName, `${catalogPath}: config should remember the uploaded APK file name.`);
+  assert(scanned.triggerQuestionnaireMapping.triggers.length === triggerCount, `${catalogPath}: trigger count should come from the embedded APK catalog.`);
+  scanned.triggerQuestionnaireMapping.triggers.forEach((trigger, index) => {
+    const expected = catalog.triggers[index];
+    assert(trigger.triggerId === expected.triggerId, `${catalogPath}: trigger ${index + 1} id should come from the embedded catalog.`);
+    assert(trigger.label === expected.label, `${catalogPath}: trigger ${index + 1} label should come from the embedded catalog.`);
+  });
+  assert(scanned.experimentBlockRegistry.sourceTriggerCatalog.triggerCount === triggerCount, `${catalogPath}: registry should remember scanned trigger count.`);
+  assert(test.document.getElementById("stagedScenarioApkPath").value === `C:\\staged\\${fileName}`, `${catalogPath}: uploaded Unity APK should be staged for headset install.`);
+
+  assignSingleModulePerTrigger(test, triggerCount);
+  const assigned = test.context.__api.buildConfig();
+  const quality = test.context.__api.qualityReport(assigned);
+  assert(quality.status === "pass", `${catalogPath}: assigned APK-scan config should pass quality report.`);
+  assert(assigned.experimentBlockRegistry.blocks.length === triggerCount, `${catalogPath}: assigned registry should create one questionnaire-owned block per scanned trigger.`);
+  assert(assigned.experimentBlockRegistry.blocks.every(block => block.package === "org.questquestionnaire.questionnaires2d"), `${catalogPath}: scanned triggers must route back into the generated questionnaire APK.`);
+  assert(assigned.experimentBlockRegistry.blocks.every(block => block.extras && block.extras["mq.triggerId"]), `${catalogPath}: scanned return blocks should use mq.triggerId extras.`);
+
+  return {
+    catalogPath,
+    triggerCount,
+    compressionMethod: method,
+    blockSegmentCount: blockSegmentCount(test.document.getElementById("triggerMappingList").innerHTML),
+    stagedScenarioApkPath: test.document.getElementById("stagedScenarioApkPath").value,
+    qualityStatus: quality.status,
+    nextPackage: assigned.chainDefaults.nextPackage
   };
 }
 
@@ -614,12 +678,12 @@ assert(visibleDemoOptionCount === 3, "Hosted demo picker should expose exactly t
 assert(!html.includes('four-trigger-demo'), "Hosted demo picker should not expose the 4-trigger regression fixture as a public demo option.");
 assert(html.includes('org.questquestionnaire.circletriggerdemo'), "Three-circle Unity demo preload should use a product-branded package id.");
 assert(!/before video|after video|Video complete/i.test(html), "Builder source must not expose video-specific trigger labels.");
-assert(html.includes('const startupElementTypes = ["demographics", "likert", "pictographic", "slider"]'), "Visible block types should use generic questionnaire categories.");
+assert(html.includes('const startupElementTypes = ["demographics", "likert", "pictographic", "slider", "temporalTracer"]'), "Visible block types should use generic questionnaire categories plus temporal tracer.");
 assert(!html.includes('const startupElementTypes = ["demographics", "maia2"'), "MAIA-2 should not be a visible top-level questionnaire type.");
 assert(!html.includes('<h3>MAIA-2</h3>'), "MAIA-2 should not appear as a standalone questionnaire panel heading.");
 assert(!html.includes('>MAIA-2</button>'), "MAIA-2 should not appear as a standalone questionnaire button.");
 assert(!html.includes('Likert MAIA-2 preload'), "MAIA-2 should not appear as a visible top-level Likert option.");
-assert(!html.includes('<option value="temporalTracer">'), "Temporal tracer should not appear as a visible trigger-block route in the product GUI.");
+assert(html.includes('<option value="temporalTracer">Temporal experience tracer</option>'), "Temporal tracer should appear as a visible questionnaire type in the product GUI.");
 assert(html.includes('Before experiment/running APK'), "Block 1 label should use experiment/running APK wording.");
 assert(html.includes('stage-scenario-apk'), "Builder should expose scenario APK staging before headset install.");
 assert(html.includes('id="csvTemplateKind"'), "Hosted product flow should expose questionnaire type CSV templates.");
@@ -889,6 +953,16 @@ assert(customSequenced.experimentBlockRegistry.blocks[0].expectedOutputs.pictogr
 assert(customSequenced.experimentBlockRegistry.blocks[0].expectedOutputs.sliderAnswers > 0, "Multi-module trigger block should expect slider outputs.");
 assert(context.__api.qualityReport(customSequenced).status === "pass", "Custom block sequence config should pass quality report.");
 
+document.getElementById("triggerModule1_temporalTracer").checked = true;
+context.__api.refresh();
+const temporalSequenced = context.__api.buildConfig();
+const temporalPlan = context.__api.buildChainPlan(temporalSequenced);
+assert(temporalSequenced.triggerQuestionnaireMapping.triggers[1].questionnaireSequence.join(",") === "slider,temporalTracer", "GUI should add temporal tracer to a Unity-return block sequence.");
+assert(temporalSequenced.blocks.some(block => block.id === "temporal_tracer" && block.type === "temporalTracer"), "Temporal tracer sequence should package the internal temporal tracer block.");
+assert(temporalSequenced.experimentBlockRegistry.blocks[1].expectedOutputs.temporalTraceSvg === true, "Temporal tracer return block should expect SVG exports.");
+assert(!JSON.stringify(temporalPlan).includes("org.questquestionnaire.temporaltracer2d"), "Temporal tracer product plan should never launch the standalone tracer APK.");
+assert(context.__api.qualityReport(temporalSequenced).status === "pass", "Temporal tracer block sequence config should pass quality report.");
+
 context.__api.applyTriggerCatalog({
   schemaVersion: "mq.quest_questionnaire_trigger_catalog.v1",
   catalogVersion: "1.0.0",
@@ -922,7 +996,7 @@ assert(handoffQuality.status === "fail", "Unassigned handoff demo config should 
 const handoffBlockHtml = document.getElementById("triggerMappingList").innerHTML;
 assert(!handoffBlockHtml.includes("Multiple choice CSV"), "Visible block dropdown should hide unsupported multiple-choice imports.");
 assert(!handoffBlockHtml.includes("Text entry CSV"), "Visible block dropdown should hide unsupported text-entry imports.");
-assert(!handoffBlockHtml.includes("Temporal tracer"), "Visible block dropdown should hide unsupported temporal-tracer imports.");
+assert(handoffBlockHtml.includes("Temporal Experience Tracer"), "Visible block dropdown should expose temporal tracer as a supported in-APK questionnaire type.");
 
 document.getElementById("triggerMode0").value = "slider";
 context.__api.refresh();
@@ -980,7 +1054,9 @@ assert(sliderTemplate.includes("branchingTag"), "CSV template should include fut
 assert(likertTemplate.includes("likert"), "Likert template should be type-oriented, not MAIA-specific.");
 assert(multipleChoiceTemplate.includes("multipleChoice"), "Multiple-choice template should be available as a future import type.");
 assert(textEntryTemplate.includes("textEntry"), "Text-entry template should be available as a future import type.");
-assert(temporalTracerTemplate.includes("temporalTracer"), "Temporal tracer dimension template should be available as a future import type.");
+assert(temporalTracerTemplate.includes("temporalTracer"), "Temporal tracer dimension template should be available as a supported import type.");
+assert(temporalTracerTemplate.includes("dimensionLabel"), "Temporal tracer template should expose dimensionLabel metadata.");
+assert(temporalTracerTemplate.includes("targetSampleCount"), "Temporal tracer template should expose sampling metadata.");
 context.__api.downloadCsvTemplate();
 const pictographicManifest = context.__api.pictographicZipManifestText();
 assert(pictographicManifest.includes("imageFileName"), "Pictographic ZIP manifest should tell users where to replace PNG filenames.");
@@ -1078,11 +1154,23 @@ assert(likertImportedConfig.questionnaireId === "custom-likert-demo", "Generic L
 assert(likertImportedBlock && likertImportedBlock.expectedItemCount === 2, "Generic Likert CSV should set the imported Likert item count.");
 assert(likertImportedBlock.items.length === 2, "Generic Likert CSV should populate inline Likert items.");
 assert(likertImport.context.__api.qualityReport(likertImportedConfig).status === "pass", "Generic Likert CSV import should pass quality guardrails.");
-const unsupportedTemporalTracerError = assertCsvImportThrows(
-  temporalTracerTemplate,
-  "questionnaire-temporal-tracer-template.csv",
-  "unsupported block"
-);
+const temporalImport = loadEditor();
+applyCsvStressTriggerCatalog(temporalImport);
+temporalImport.document.getElementById("triggerModule0_slider").checked = false;
+temporalImport.document.getElementById("triggerModule0_temporalTracer").checked = true;
+temporalImport.context.__api.applyCsvText(temporalTracerTemplate, "questionnaire-temporal-tracer-template.csv");
+temporalImport.context.__api.refresh();
+const temporalImportedConfig = JSON.parse(temporalImport.document.getElementById("preview").textContent);
+const temporalImportedBlock = temporalImportedConfig.blocks.find(block => block.id === "temporal_tracer");
+const temporalImportedPlan = temporalImport.context.__api.buildChainPlan(temporalImportedConfig);
+assert(temporalImportedConfig.questionnaireId === "custom-tracer-demo", "Temporal tracer CSV should import as a custom questionnaire.");
+assert(temporalImportedBlock && temporalImportedBlock.type === "temporalTracer", "Temporal tracer CSV should create a temporal_tracer config block.");
+assert(temporalImportedBlock.dimensions.length === 2, "Temporal tracer CSV should import two dimensions.");
+assert(temporalImportedBlock.dimensions[0].axis.targetSampleCount === 1000, "Temporal tracer CSV should preserve target sample count.");
+assert(temporalImportedConfig.triggerQuestionnaireMapping.triggers[0].questionnaireSequence.join(",") === "temporalTracer", "Temporal trigger mapping should use an internal temporal tracer sequence.");
+assert(temporalImportedConfig.experimentBlockRegistry.blocks[0].package === "org.questquestionnaire.questionnaires2d", "Temporal tracer should route to the generated questionnaire APK.");
+assert(!JSON.stringify(temporalImportedPlan).includes("org.questquestionnaire.temporaltracer2d"), "Temporal tracer chain plan must not launch the standalone tracer APK.");
+assert(temporalImport.context.__api.qualityReport(temporalImportedConfig).status === "pass", "Temporal tracer CSV import should pass quality guardrails.");
 
 const duplicate = JSON.parse(JSON.stringify(imported));
 const duplicateSlider = duplicate.blocks.find(block => block.id === "custom_slider");
@@ -1117,13 +1205,14 @@ const summary = {
   blockSequenceStatus: "pass",
   customBlock1Sequence: customSequenced.chainDefaults.questionnaireSequence,
   customUnityReturnSequence: customSequenced.triggerQuestionnaireMapping.triggers[0].questionnaireSequence,
+  temporalUnityReturnSequence: temporalSequenced.triggerQuestionnaireMapping.triggers[1].questionnaireSequence,
   pictographicZipTemplateStatus: "pass",
   pictographicDataUrlConfigStatus: "pass",
   csvStressResults,
   csvUnsupportedTypeErrors: {
-    unsupportedFormat: unsupportedFormatError,
-    temporalTracer: unsupportedTemporalTracerError
+    unsupportedFormat: unsupportedFormatError
   },
+  temporalTracerImportStatus: temporalImport.context.__api.qualityReport(temporalImportedConfig).status,
   duplicateGuardrailStatus: duplicateQuality.status,
   preloadedDemoTriggerCount: preloadedDemoResults[0].triggerCount,
   preloadedDemoBlockSegmentCount: preloadedDemoResults[0].blockSegmentCount,
@@ -1190,12 +1279,35 @@ async function runApkUploadScanScenario() {
 async function finish() {
   const apkUploadScan = await runApkUploadScanScenario();
   const multiTriggerApkUploadResults = await Promise.all([2, 3, 4].map(runMultiTriggerApkUploadScenario));
+  const unityApkPathScanResults = [];
+  for (const catalogPath of unityApkTriggerCatalogPaths) {
+    unityApkPathScanResults.push(await runUnityApkPathScanScenario(catalogPath, 3));
+  }
+  unityApkPathScanResults.push(await runUnityApkPathScanScenario(
+    "assets/bin/Data/StreamingAssets/mq/questionnaire-trigger-catalog.json",
+    4,
+    {
+      method: 8,
+      fileName: "unity-streamingassets-deflated-4-triggers.apk",
+      label: "deflated Unity StreamingAssets catalog"
+    }
+  ));
+  unityApkPathScanResults.push(await runUnityApkPathScanScenario(
+    "assets/bin/Data/StreamingAssets/MQ/QUESTIONNAIRE-TRIGGER-CATALOG.JSON",
+    2,
+    {
+      fileName: "unity-streamingassets-case-normalized-2-triggers.apk",
+      label: "case-normalized Unity StreamingAssets catalog"
+    }
+  ));
   summary.apkUploadScanAction = "pass";
   summary.apkUploadTriggerCount = apkUploadScan.triggerCount;
   summary.apkUploadBlockSegmentCount = apkUploadScan.blockSegmentCount;
   summary.apkUploadStagedScenarioApkPath = apkUploadScan.stagedScenarioApkPath;
   summary.multiTriggerApkUploadScanStatus = "pass";
   summary.multiTriggerApkUploadResults = multiTriggerApkUploadResults;
+  summary.unityApkTriggerScanStatus = "pass";
+  summary.unityApkTriggerScanResults = unityApkPathScanResults;
 
 if (outputDir) {
   fs.mkdirSync(outputDir, { recursive: true });

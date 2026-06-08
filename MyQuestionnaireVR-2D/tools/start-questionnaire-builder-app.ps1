@@ -2377,6 +2377,92 @@ function Save-StagedScenarioApk {
     }
 }
 
+function Save-StagedScenarioApkChunk {
+    param([object]$Payload)
+
+    $fileName = if ($Payload.PSObject.Properties.Name -contains 'fileName') { [string]$Payload.fileName } else { 'scenario.apk' }
+    $base64 = if ($Payload.PSObject.Properties.Name -contains 'base64') { [string]$Payload.base64 } else { '' }
+    $uploadId = if ($Payload.PSObject.Properties.Name -contains 'uploadId') { [string]$Payload.uploadId } else { '' }
+    $chunkIndex = if ($Payload.PSObject.Properties.Name -contains 'chunkIndex') { [int]$Payload.chunkIndex } else { -1 }
+    $chunkCount = if ($Payload.PSObject.Properties.Name -contains 'chunkCount') { [int]$Payload.chunkCount } else { 0 }
+    $totalBytes = if ($Payload.PSObject.Properties.Name -contains 'totalBytes') { [long]$Payload.totalBytes } else { 0 }
+    if ([string]::IsNullOrWhiteSpace($base64)) {
+        throw "Scenario APK chunk upload is missing base64 content."
+    }
+    if ($chunkIndex -lt 0 -or $chunkCount -lt 1 -or $chunkIndex -ge $chunkCount) {
+        throw "Scenario APK chunk index is invalid."
+    }
+    if ([string]::IsNullOrWhiteSpace($uploadId)) {
+        $uploadId = 'builder-scenario-apk-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    }
+
+    $safeName = Get-SafeName -Value ([System.IO.Path]::GetFileName($fileName))
+    if (-not $safeName.EndsWith('.apk', [System.StringComparison]::OrdinalIgnoreCase)) {
+        $safeName = "$safeName.apk"
+    }
+
+    $safeUploadId = Get-SafeName -Value $uploadId
+    if (-not $safeUploadId.StartsWith('builder-scenario-apk-', [System.StringComparison]::OrdinalIgnoreCase)) {
+        $safeUploadId = "builder-scenario-apk-$safeUploadId"
+    }
+    $targetDir = Join-Path $ProjectPath ("artifacts\builder-scenario-apks\$safeUploadId")
+    New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
+
+    $targetPath = Join-Path $targetDir $safeName
+    $bytes = [Convert]::FromBase64String($base64)
+    $mode = if ($chunkIndex -eq 0) { [System.IO.FileMode]::Create } else { [System.IO.FileMode]::Append }
+    $stream = [System.IO.File]::Open($targetPath, $mode, [System.IO.FileAccess]::Write, [System.IO.FileShare]::Read)
+    try {
+        $stream.Write($bytes, 0, $bytes.Length)
+    }
+    finally {
+        $stream.Dispose()
+    }
+
+    $writtenBytes = (Get-Item -LiteralPath $targetPath).Length
+    $complete = ($chunkIndex -eq ($chunkCount - 1))
+    $sha = ''
+    $summaryPath = Join-Path $targetDir 'staged-scenario-apk-summary.json'
+    if ($complete) {
+        if ($totalBytes -gt 0 -and $writtenBytes -ne $totalBytes) {
+            throw "Scenario APK chunk upload completed with byte mismatch. Expected $totalBytes bytes, wrote $writtenBytes bytes."
+        }
+        try {
+            $sha = (Get-FileHash -LiteralPath $targetPath -Algorithm SHA256).Hash
+        }
+        catch {
+            $sha = ''
+        }
+
+        $summary = [ordered]@{
+            status = 'ok'
+            schemaVersion = 'questquestionnaire.builder.staged-scenario-apk.v1'
+            runId = $safeUploadId
+            fileName = $safeName
+            apk = $targetPath
+            bytes = $writtenBytes
+            sha256 = $sha
+            chunkCount = $chunkCount
+            stagedAt = (Get-Date).ToString('o')
+        }
+        $summary | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
+    }
+
+    return [ordered]@{
+        status = 'ok'
+        complete = $complete
+        runId = $safeUploadId
+        fileName = $safeName
+        apk = $targetPath
+        bytes = $writtenBytes
+        sha256 = $sha
+        chunkIndex = $chunkIndex
+        chunkCount = $chunkCount
+        artifactDir = $targetDir
+        summaryPath = if ($complete) { $summaryPath } else { '' }
+    }
+}
+
 function Resolve-NodeCandidate {
     $candidates = New-Object 'System.Collections.Generic.List[string]'
     $command = Get-Command node -ErrorAction SilentlyContinue
@@ -2685,6 +2771,7 @@ function New-StatusPayload {
             'workflow-receipt',
             'quest-readiness',
             'stage-scenario-apk',
+            'stage-scenario-apk-chunk',
             'install-apk',
             'install-apk-job-status',
             'quest-replay',
@@ -2888,6 +2975,14 @@ function Handle-Request {
         Assert-OriginAndToken -Request $request
         $payload = Receive-JsonPayload -Request $request
         $result = Save-StagedScenarioApk -Payload $payload
+        Write-JsonResponse -Context $Context -StatusCode 200 -Value $result
+        return
+    }
+
+    if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/stage-scenario-apk-chunk') {
+        Assert-OriginAndToken -Request $request
+        $payload = Receive-JsonPayload -Request $request
+        $result = Save-StagedScenarioApkChunk -Payload $payload
         Write-JsonResponse -Context $Context -StatusCode 200 -Value $result
         return
     }

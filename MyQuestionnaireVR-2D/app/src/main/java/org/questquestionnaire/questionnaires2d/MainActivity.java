@@ -2,8 +2,10 @@ package org.questquestionnaire.questionnaires2d;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -52,19 +54,24 @@ public final class MainActivity extends Activity {
     private List<String> maiaQuestions = new ArrayList<>();
     private List<String> sliderQuestions = new ArrayList<>();
     private List<QuestionnaireData.RuntimePictographicPrompt> pictographicPrompts = new ArrayList<>();
+    private List<QuestionnaireData.RuntimeTemporalDimension> temporalDimensions = new ArrayList<>();
     private final List<QuestionnaireData.Maia2Answer> maia2Answers = new ArrayList<>();
     private final List<QuestionnaireData.PictographicSelection> pictographicSelections = new ArrayList<>();
     private final List<QuestionnaireData.QuestionnaireAnswer> questionnaireAnswers = new ArrayList<>();
+    private final List<QuestionnaireData.TemporalTraceExport> temporalTraceExports = new ArrayList<>();
     private QuestionnaireScreenBuilder screenBuilder;
     private int currentMaiaIndex;
     private int currentPictographicIndex;
     private int currentQuestionIndex;
+    private int currentTemporalIndex;
     private String currentScreen = "boot";
     private QuestionnaireScreenBuilder.LanguageScreen activeLanguageScreen;
     private QuestionnaireScreenBuilder.DemographicsScreen activeDemographicsScreen;
     private QuestionnaireScreenBuilder.MaiaScreen activeMaiaScreen;
     private QuestionnaireScreenBuilder.PictographicScreen activePictographicScreen;
     private QuestionnaireScreenBuilder.SliderScreen activeSliderScreen;
+    private QuestionnaireScreenBuilder.TemporalTraceScreen activeTemporalTraceScreen;
+    private MediaPlayer temporalAudioPlayer;
     private long lastJoystickLogMillis;
     private QuestionnaireLaunchContext launchContext;
 
@@ -82,6 +89,12 @@ public final class MainActivity extends Activity {
         startSessionFromIntent(intent);
     }
 
+    @Override
+    protected void onDestroy() {
+        stopTemporalAudio();
+        super.onDestroy();
+    }
+
     private void startSessionFromIntent(Intent intent) {
         handler.removeCallbacksAndMessages(null);
         try {
@@ -94,6 +107,7 @@ public final class MainActivity extends Activity {
                 ? QuestionnaireLoader.loadMaia2Questions(this)
                 : new ArrayList<>();
             pictographicPrompts = loadPictographicPrompts();
+            temporalDimensions = loadTemporalDimensions();
             updateDraftQuietly("launched");
 
             AutoSessionRunner.Mode autoMode = AutoSessionRunner.detect(getExternalFilesDir(null));
@@ -180,6 +194,27 @@ public final class MainActivity extends Activity {
         return new ArrayList<>();
     }
 
+    private List<QuestionnaireData.RuntimeTemporalDimension> loadTemporalDimensions() {
+        QuestionnaireData.RuntimeBlock block = runtimeConfig != null ? runtimeConfig.findBlock("temporal_tracer") : null;
+        if (block != null && !block.temporalDimensions.isEmpty()) {
+            return block.temporalDimensions;
+        }
+        return new ArrayList<>();
+    }
+
+    private List<QuestionnaireData.RuntimeTemporalDimension> temporalDimensionsForLanguage() {
+        if (participant == null || isBlank(participant.language)) {
+            return temporalDimensions;
+        }
+        List<QuestionnaireData.RuntimeTemporalDimension> localized = new ArrayList<>();
+        for (QuestionnaireData.RuntimeTemporalDimension dimension : temporalDimensions) {
+            if (isBlank(dimension.language) || participant.language.equalsIgnoreCase(dimension.language)) {
+                localized.add(dimension);
+            }
+        }
+        return localized.isEmpty() ? temporalDimensions : localized;
+    }
+
     private void runCommandReplayThroughUi(AutoSessionRunner.Mode mode) throws Exception {
         if (mode.commandReplay) {
             Log.i(AutoSessionRunner.TAG, "MYQUESTIONNAIRE_COMMAND_REPLAY_START language=" + mode.language);
@@ -223,6 +258,13 @@ public final class MainActivity extends Activity {
             logReplayCommand("TriggerSelect", "slider-" + (currentQuestionIndex + 1) + "-score-" + score);
             activeSliderScreen.useCurrent.performClick();
             activeSliderScreen.next.performClick();
+        }
+
+        while ("temporalTracer".equals(currentScreen)) {
+            QuestionnaireData.RuntimeTemporalDimension dimension = temporalDimensionsForLanguage().get(currentTemporalIndex);
+            activeTemporalTraceScreen.canvas.seedFixtureTrace();
+            logReplayCommand("TraceDraw", "temporal-tracer-" + dimension.id);
+            activeTemporalTraceScreen.saveNext.performClick();
         }
 
         if (mode.commandReplay) {
@@ -371,6 +413,7 @@ public final class MainActivity extends Activity {
             maia2Answers.clear();
             pictographicSelections.clear();
             questionnaireAnswers.clear();
+            temporalTraceExports.clear();
             updateDraftQuietly("language-selected");
             if (launchContext != null && !launchContext.shouldRunDemographics()) {
                 if (isBlank(participant.name)) {
@@ -632,13 +675,77 @@ public final class MainActivity extends Activity {
             updateDraftQuietly("slider-" + (currentQuestionIndex + 1));
             currentQuestionIndex++;
             if (currentQuestionIndex >= sliderQuestions.size()) {
-                saveSession();
+                showAfterSlider();
             } else {
                 showSliderQuestion();
             }
         });
         setContentView(screen.root);
         logVisualStage("slider", currentQuestionIndex == 0 ? "slider-first" : "slider-" + (currentQuestionIndex + 1));
+        return screen;
+    }
+
+    private QuestionnaireScreenBuilder.TemporalTraceScreen showTemporalTraceDimension() {
+        List<QuestionnaireData.RuntimeTemporalDimension> dimensions = temporalDimensionsForLanguage();
+        if (dimensions.isEmpty()) {
+            showAfterTemporalTracer();
+            return null;
+        }
+
+        currentScreen = "temporalTracer";
+        QuestionnaireData.RuntimeTemporalDimension dimension = dimensions.get(currentTemporalIndex);
+        QuestionnaireScreenBuilder.TemporalTraceScreen screen = screenBuilder.temporalTraceScreen(
+            dimension,
+            currentTemporalIndex,
+            dimensions.size(),
+            false);
+        activeTemporalTraceScreen = screen;
+        if (screen.backButton != null) {
+            screen.backButton.setOnClickListener(v -> {
+                logUiInput("Back", "temporal-tracer-visible-back");
+                handleBack();
+            });
+        }
+        screen.canvas.setCompletionListener((complete, status) -> {
+            screen.status.setText(status);
+            screen.saveNext.setEnabled(complete);
+        });
+        screen.clear.setOnClickListener(v -> {
+            logUiInput("Activate", "temporal-tracer-clear-" + dimension.id);
+            screen.canvas.clearTrace();
+        });
+        screen.saveNext.setOnClickListener(v -> {
+            logUiInput("Activate", "temporal-tracer-save-" + dimension.id);
+            if (!screen.canvas.isTraceComplete()) {
+                return;
+            }
+            try {
+                trimTemporalTraceExportsTo(currentTemporalIndex);
+                QuestionnaireData.TemporalTraceExport export = TemporalTraceExporter.exportTrace(
+                    this,
+                    launchContext,
+                    runtimeConfig,
+                    participant,
+                    currentTemporalIndex,
+                    dimension,
+                    screen.canvas.rawPoints(),
+                    screen.canvas.resampledPoints());
+                temporalTraceExports.add(export);
+                updateDraftQuietly("temporal-tracer-" + (currentTemporalIndex + 1));
+                currentTemporalIndex++;
+                if (currentTemporalIndex >= dimensions.size()) {
+                    showAfterTemporalTracer();
+                } else {
+                    showTemporalTraceDimension();
+                }
+            } catch (Exception exception) {
+                Log.e(AutoSessionRunner.TAG, "MYQUESTIONNAIRE_TEMPORAL_TRACE_EXPORT_ERROR " + exception.getMessage(), exception);
+                showError("Could not save temporal trace", exception.getMessage());
+            }
+        });
+        setContentView(screen.root);
+        playTemporalAudioIfAvailable(dimension);
+        logVisualStage("temporal-tracer", currentTemporalIndex == 0 ? "temporal-tracer-first" : "temporal-tracer-" + (currentTemporalIndex + 1));
         return screen;
     }
 
@@ -652,6 +759,15 @@ public final class MainActivity extends Activity {
 
     private void showAfterPictographic() {
         showNextConfiguredModule(QuestionnaireLaunchContext.MODULE_PICTOGRAPHIC);
+    }
+
+    private void showAfterSlider() {
+        showNextConfiguredModule(QuestionnaireLaunchContext.MODULE_SLIDER);
+    }
+
+    private void showAfterTemporalTracer() {
+        stopTemporalAudio();
+        showNextConfiguredModule(QuestionnaireLaunchContext.MODULE_TEMPORAL_TRACER);
     }
 
     private void showNextConfiguredModule(String completedModule) {
@@ -688,6 +804,12 @@ public final class MainActivity extends Activity {
             if (QuestionnaireLaunchContext.MODULE_SLIDER.equals(module) && !sliderQuestions.isEmpty()) {
                 currentQuestionIndex = 0;
                 showSliderQuestion();
+                return;
+            }
+
+            if (QuestionnaireLaunchContext.MODULE_TEMPORAL_TRACER.equals(module) && !temporalDimensionsForLanguage().isEmpty()) {
+                currentTemporalIndex = 0;
+                showTemporalTraceDimension();
                 return;
             }
         }
@@ -744,6 +866,7 @@ public final class MainActivity extends Activity {
         record.maia2Scores.addAll(Maia2Scoring.calculate(record.maia2Answers));
         record.pictographicSelections.addAll(pictographicSelections);
         record.questionnaireAnswers.addAll(questionnaireAnswers);
+        record.temporalTraces.addAll(temporalTraceExports);
         return record;
     }
 
@@ -831,18 +954,23 @@ public final class MainActivity extends Activity {
         maiaQuestions = new ArrayList<>();
         sliderQuestions = new ArrayList<>();
         pictographicPrompts = new ArrayList<>();
+        temporalDimensions = new ArrayList<>();
         maia2Answers.clear();
         pictographicSelections.clear();
         questionnaireAnswers.clear();
+        temporalTraceExports.clear();
         currentMaiaIndex = 0;
         currentPictographicIndex = 0;
         currentQuestionIndex = 0;
+        currentTemporalIndex = 0;
         currentScreen = "boot";
         activeLanguageScreen = null;
         activeDemographicsScreen = null;
         activeMaiaScreen = null;
         activePictographicScreen = null;
         activeSliderScreen = null;
+        activeTemporalTraceScreen = null;
+        stopTemporalAudio();
         lastJoystickLogMillis = 0L;
     }
 
@@ -959,6 +1087,56 @@ public final class MainActivity extends Activity {
         return button;
     }
 
+    private void playTemporalAudioIfAvailable(QuestionnaireData.RuntimeTemporalDimension dimension) {
+        stopTemporalAudio();
+        if (dimension == null || isBlank(dimension.audioFile)) {
+            return;
+        }
+        String language = participant != null && !isBlank(participant.language) ? participant.language : "English";
+        String cleanAudio = dimension.audioFile.trim();
+        String[] candidates = cleanAudio.contains("/")
+            ? new String[] { cleanAudio }
+            : new String[] {
+                "questionnaire/tracer/audio/" + language + "/" + cleanAudio,
+                "questionnaire/tracer/audio/English/" + cleanAudio,
+                "tracer/audio/" + language + "/" + cleanAudio,
+                "tracer/audio/English/" + cleanAudio,
+                cleanAudio
+            };
+        for (String candidate : candidates) {
+            try (AssetFileDescriptor descriptor = getAssets().openFd(candidate)) {
+                MediaPlayer player = new MediaPlayer();
+                player.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(), descriptor.getLength());
+                player.setOnCompletionListener(completed -> {
+                    completed.release();
+                    if (temporalAudioPlayer == completed) {
+                        temporalAudioPlayer = null;
+                    }
+                });
+                player.prepare();
+                temporalAudioPlayer = player;
+                temporalAudioPlayer.start();
+                Log.i(AutoSessionRunner.TAG, "MYQUESTIONNAIRE_TEMPORAL_AUDIO_PLAY asset=" + candidate);
+                return;
+            } catch (Exception ignored) {
+                // Optional narration must not block the tracer screen.
+            }
+        }
+        Log.w(AutoSessionRunner.TAG, "MYQUESTIONNAIRE_TEMPORAL_AUDIO_MISSING audioFile=" + cleanAudio);
+    }
+
+    private void stopTemporalAudio() {
+        if (temporalAudioPlayer == null) {
+            return;
+        }
+        try {
+            temporalAudioPlayer.stop();
+        } catch (IllegalStateException ignored) {
+        }
+        temporalAudioPlayer.release();
+        temporalAudioPlayer = null;
+    }
+
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }
@@ -1016,6 +1194,18 @@ public final class MainActivity extends Activity {
             return;
         }
 
+        if ("temporalTracer".equals(currentScreen)) {
+            stopTemporalAudio();
+            if (currentTemporalIndex > 0) {
+                currentTemporalIndex--;
+                trimTemporalTraceExportsTo(currentTemporalIndex);
+                showTemporalTraceDimension();
+            } else {
+                showPreviousConfiguredModule(QuestionnaireLaunchContext.MODULE_TEMPORAL_TRACER);
+            }
+            return;
+        }
+
         showLanguageSelection();
     }
 
@@ -1044,6 +1234,13 @@ public final class MainActivity extends Activity {
             currentQuestionIndex = Math.max(0, sliderQuestions.size() - 1);
             trimQuestionnaireAnswersTo(currentQuestionIndex);
             showSliderQuestion();
+            return;
+        }
+
+        if (QuestionnaireLaunchContext.MODULE_TEMPORAL_TRACER.equals(previousModule) && !temporalDimensionsForLanguage().isEmpty()) {
+            currentTemporalIndex = Math.max(0, temporalDimensionsForLanguage().size() - 1);
+            trimTemporalTraceExportsTo(currentTemporalIndex);
+            showTemporalTraceDimension();
             return;
         }
 
@@ -1080,6 +1277,9 @@ public final class MainActivity extends Activity {
         if (QuestionnaireLaunchContext.MODULE_SLIDER.equals(module)) {
             return !sliderQuestions.isEmpty();
         }
+        if (QuestionnaireLaunchContext.MODULE_TEMPORAL_TRACER.equals(module)) {
+            return !temporalDimensionsForLanguage().isEmpty();
+        }
         return false;
     }
 
@@ -1098,6 +1298,12 @@ public final class MainActivity extends Activity {
     private void trimQuestionnaireAnswersTo(int count) {
         while (questionnaireAnswers.size() > count) {
             questionnaireAnswers.remove(questionnaireAnswers.size() - 1);
+        }
+    }
+
+    private void trimTemporalTraceExportsTo(int count) {
+        while (temporalTraceExports.size() > count) {
+            temporalTraceExports.remove(temporalTraceExports.size() - 1);
         }
     }
 

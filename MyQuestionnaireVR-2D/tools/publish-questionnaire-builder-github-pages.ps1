@@ -76,6 +76,26 @@ New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
 
 Copy-Item -LiteralPath $sourceHtml -Destination (Join-Path $targetDir 'index.html') -Force
 
+$packageDir = Join-Path $projectFull 'Builds\QuestionnaireBuilder'
+$packageZip = Join-Path $projectFull 'Builds\QuestionnaireBuilder.zip'
+$packageAssets = @(
+    'Start-QuestionnaireBuilderApp.cmd',
+    'Start-QuestionnaireBuilderOnlineConnector.cmd',
+    'QuestionnaireBuilder.zip'
+)
+foreach ($asset in $packageAssets) {
+    $source = if ($asset -eq 'QuestionnaireBuilder.zip') { $packageZip } else { Join-Path $projectFull $asset }
+    if (Test-Path -LiteralPath $source) {
+        Copy-Item -LiteralPath $source -Destination (Join-Path $targetDir $asset) -Force
+    }
+}
+foreach ($folder in @('examples', 'schemas', 'unity', 'tools', 'docs')) {
+    $sourceFolder = Join-Path $packageDir $folder
+    if (Test-Path -LiteralPath $sourceFolder) {
+        Copy-Item -LiteralPath $sourceFolder -Destination (Join-Path $targetDir $folder) -Recurse -Force
+    }
+}
+
 $readme = @"
 # Quest Questionnaire Builder
 

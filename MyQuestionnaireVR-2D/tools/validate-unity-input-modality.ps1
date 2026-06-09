@@ -137,11 +137,13 @@ $sourceEvidence = [ordered]@{
 if ($sourceExists) {
     $manifestPath = Join-Path $UnityProjectPath 'Assets\Plugins\Android\AndroidManifest.xml'
     $openXrSettingsPath = Join-Path $UnityProjectPath 'Assets\XR\Settings\OpenXRPackageSettings.asset'
+    $projectSettingsPath = Join-Path $UnityProjectPath 'ProjectSettings\ProjectSettings.asset'
     $editorScripts = @(Get-ChildItem -LiteralPath (Join-Path $UnityProjectPath 'Assets\Editor') -Filter '*.cs' -ErrorAction SilentlyContinue)
     $editorScriptText = (@($editorScripts | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }) -join "`n")
 
     $sourceEvidence.manifest = $manifestPath
     $sourceEvidence.openXrSettings = $openXrSettingsPath
+    $sourceEvidence.projectSettings = $projectSettingsPath
     $sourceEvidence.editorScripts = @($editorScripts | ForEach-Object { $_.FullName })
 
     Add-Check -Name 'source Android manifest exists' -Pass (Test-Path -LiteralPath $manifestPath) -Detail $manifestPath
@@ -166,6 +168,24 @@ if ($sourceExists) {
             handTrackingRequiredFalse = ($null -ne $handFeatureNode -and $handRequired -eq 'false')
             handTrackingPermission = $hasHandPermission
             handTrackingVersionMetadata = $hasHandVersionMetadata
+        }
+    }
+
+    Add-Check -Name 'source Unity project settings exist' -Pass (Test-Path -LiteralPath $projectSettingsPath) -Detail $projectSettingsPath
+    if (Test-Path -LiteralPath $projectSettingsPath) {
+        $projectSettingsText = Get-Content -LiteralPath $projectSettingsPath -Raw
+        $usesGameActivity = $projectSettingsText -match 'androidApplicationEntry:\s*2'
+        $isAndroidGame = $projectSettingsText -match 'AndroidIsGame:\s*1'
+        $targetsArm64 = $projectSettingsText -match 'AndroidTargetArchitectures:\s*2'
+
+        Add-Check -Name 'source uses Unity GameActivity entry' -Pass $usesGameActivity -Detail 'androidApplicationEntry: 2 keeps the stimulus on the Unity/GameActivity path.'
+        Add-Check -Name 'source is marked Android game' -Pass $isAndroidGame -Detail 'AndroidIsGame: 1 distinguishes the stimulus APK from the 2D questionnaire panel product.'
+        Add-Check -Name 'source targets Quest ARM64 architecture' -Pass $targetsArm64 -Detail 'AndroidTargetArchitectures: 2'
+
+        $sourceEvidence.projectSettingsFacts = [ordered]@{
+            unityGameActivityEntry = $usesGameActivity
+            androidGame = $isAndroidGame
+            arm64Target = $targetsArm64
         }
     }
 
@@ -234,10 +254,18 @@ if ($apkExists) {
         $handTrackingRequiredFalse = $manifestText -match 'oculus\.software\.handtracking[\s\S]{0,600}android:required[^\r\n]*(false|\(type 0x12\)0x0)'
         $handTrackingPermission = $manifestText -match 'com\.oculus\.permission\.HAND_TRACKING|oculus\.permission\.handtracking'
         $handTrackingVersion = $manifestText -match 'com\.oculus\.handtracking\.version'
+        $openXrPermission = $manifestText -match 'org\.khronos\.openxr\.permission\.OPENXR'
+        $openXrSystemPermission = $manifestText -match 'org\.khronos\.openxr\.permission\.OPENXR_SYSTEM'
+        $vrHeadtrackingFeature = $manifestText -match 'android\.hardware\.vr\.headtracking'
+        $unityActivity = $manifestText -match 'QuestQuestionnaireUnityActivity|UnityPlayerGameActivity|UnityPlayerActivity'
 
         Add-Check -Name 'apk optional hand tracking feature' -Pass ($AllowControllerOnly -or ($handTrackingFeature -and $handTrackingRequiredFalse)) -Detail 'Merged APK manifest must advertise optional hand tracking for generic demo/stimulus APKs.'
         Add-Check -Name 'apk hand tracking permission' -Pass ($AllowControllerOnly -or $handTrackingPermission) -Detail 'Merged APK manifest should include HAND_TRACKING permission when hand support is enabled.'
         Add-Check -Name 'apk hand tracking metadata' -Pass ($AllowControllerOnly -or $handTrackingVersion) -Detail 'Merged APK manifest should include com.oculus.handtracking.version metadata.'
+        Add-Check -Name 'apk OpenXR permission' -Pass $openXrPermission -Detail 'Merged stimulus APK must declare org.khronos.openxr.permission.OPENXR.'
+        Add-Check -Name 'apk OpenXR system permission' -Pass $openXrSystemPermission -Detail 'Merged stimulus APK must declare org.khronos.openxr.permission.OPENXR_SYSTEM.'
+        Add-Check -Name 'apk VR headtracking feature' -Pass $vrHeadtrackingFeature -Detail 'Merged stimulus APK must advertise android.hardware.vr.headtracking.'
+        Add-Check -Name 'apk Unity activity target' -Pass $unityActivity -Detail 'Launch activity remains on the Unity activity path, not a native questionnaire panel activity.'
 
         $apkEvidence.aapt = $resolvedAapt
         $apkEvidence.manifest = $apkManifestPath
@@ -246,6 +274,10 @@ if ($apkExists) {
             handTrackingRequiredFalse = $handTrackingRequiredFalse
             handTrackingPermission = $handTrackingPermission
             handTrackingVersionMetadata = $handTrackingVersion
+            openXrPermission = $openXrPermission
+            openXrSystemPermission = $openXrSystemPermission
+            vrHeadtrackingFeature = $vrHeadtrackingFeature
+            unityActivity = $unityActivity
         }
     }
 }

@@ -20,9 +20,10 @@ Current files:
   emits `trigger_1_complete`, `trigger_2_complete`, and `trigger_3_complete`
   as passive events and is available as "Three Circle 3 Trigger Demo" in the
   hosted builder.
-- `apk/`: generated local example scenario APKs. Recreate them with
-  `MyQuestionnaireVR-2D/tools/build-example-scenario-apks.ps1`; the builder
-  scans these APKs from disk and reads their embedded trigger manifests.
+- `apk/`: small native Android scanner fixtures used by automated tests and
+  local fallback checks. Recreate them with
+  `MyQuestionnaireVR-2D/tools/build-example-scenario-apks.ps1`; product-facing
+  demos should use real immersive Unity APK builds when available.
 - `unity-project/`: place the matching Unity project or exported Unity build
   folder here when available.
 
@@ -37,10 +38,12 @@ From a source checkout, run:
 powershell -NoProfile -ExecutionPolicy Bypass -File ..\MyQuestionnaireVR-2D\tools\build-example-scenario-apks.ps1
 ```
 
-The local companion also attempts this build once when a preloaded demo is
-selected and the expected APK files are absent. Trigger counts still come from
-the APK's embedded `assets/mq/questionnaire-trigger-catalog.json`; the catalog
-object in the GUI is only a display fallback.
+The local companion also attempts the scanner-fixture build once when a
+preloaded demo is selected and the expected APK files are absent. Trigger
+counts still come from the selected APK's embedded trigger catalog; the catalog
+object in the GUI is only a display fallback. For headset demonstrations, use
+the real immersive Unity APK outputs, such as the Three Circle build under
+`unity-project/three-circle-trigger-demo/Builds/`.
 
 For a rebuildable Unity project, copy the bridge scripts from
 `MyQuestionnaireVR-2D/tools/unity/`. `QuestQuestionnairePassiveTriggerDemo.cs`

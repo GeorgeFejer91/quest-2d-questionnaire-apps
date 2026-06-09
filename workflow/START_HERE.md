@@ -199,3 +199,5 @@ Then use the project-specific READMEs:
 - [../TemporalExperienceTracerVR-2D/README.md](../TemporalExperienceTracerVR-2D/README.md)
 - [../TemporalExperienceTracerVR-2D/docs/temporal-tracer-2d-workflow.md](../TemporalExperienceTracerVR-2D/docs/temporal-tracer-2d-workflow.md)
 - [../MyQuestionnaireVR-2D/docs/experiment-chain-workflow.md](../MyQuestionnaireVR-2D/docs/experiment-chain-workflow.md)
+- [../docs/minimal-apk-trigger-protocol.md](../docs/minimal-apk-trigger-protocol.md)
+- [../docs/trigger-transport-decision-record.md](../docs/trigger-transport-decision-record.md)

@@ -4,7 +4,7 @@ param(
     [string]$ReferenceProjectPath = "",
     [ValidateSet('Offline', 'OnlineConnector')]
     [string]$Mode = 'Offline',
-    [string]$OnlinePageUrl = "https://georgefejer91.github.io/quest-2d-questionnaire-apps/questionnaire-builder/",
+    [string]$OnlinePageUrl = "http://127.0.0.1:8776/",
     [string[]]$AllowedOrigins = @(),
     [string]$PairingToken = "",
     [switch]$NoOpen
@@ -85,6 +85,8 @@ $script:DirectHandoffJobs = @{}
 $script:DirectHandoffJobOrder = New-Object 'System.Collections.Generic.List[string]'
 $script:TwoDFirstLauncherJobs = @{}
 $script:TwoDFirstLauncherJobOrder = New-Object 'System.Collections.Generic.List[string]'
+$script:MinimalProtocolJobs = @{}
+$script:MinimalProtocolJobOrder = New-Object 'System.Collections.Generic.List[string]'
 
 function New-Utf8NoBomEncoding {
     return [System.Text.UTF8Encoding]::new($false)
@@ -1222,6 +1224,60 @@ function New-TwoDFirstLauncherJobReceipt {
     }
 }
 
+function New-MinimalProtocolJobReceipt {
+    param(
+        [object]$Summary,
+        [string]$SummaryPath,
+        [string]$JobStatus = '',
+        [string]$ProtocolStatus = '',
+        [bool]$RunLive = $false
+    )
+
+    $summaryRunLive = if ($null -ne $Summary) { [bool](Get-JsonProperty -Object $Summary -Name 'runLive' -Default $RunLive) } else { $RunLive }
+    $statuses = Get-JsonProperty -Object $Summary -Name 'statuses'
+    $remainingLiveGates = @(Get-JsonProperty -Object $Summary -Name 'remainingLiveGates' -Default @())
+    $failedStepCount = [int](Get-JsonProperty -Object $Summary -Name 'failedStepCount' -Default 0)
+    $statusValue = if ([string]::IsNullOrWhiteSpace($ProtocolStatus)) { $JobStatus } else { $ProtocolStatus }
+    $physicalPending = (-not $summaryRunLive) -or $remainingLiveGates.Count -gt 0
+    $receiptStatus = if ($statusValue -eq 'pass' -and $physicalPending) { 'pass-with-physical-pending' } else { $statusValue }
+
+    return [ordered]@{
+        schemaVersion = 'mq.builder_runner.job_receipt.v1'
+        kind = 'minimal-apk-trigger-protocol'
+        status = $receiptStatus
+        jobStatus = $JobStatus
+        actionStatus = $ProtocolStatus
+        runLive = $summaryRunLive
+        dryRun = (-not $summaryRunLive)
+        physicalQuestProductPathPending = $physicalPending
+        checks = [ordered]@{
+            summaryWritten = ($null -ne $Summary -and -not [string]::IsNullOrWhiteSpace($SummaryPath) -and (Test-Path -LiteralPath $SummaryPath))
+            passiveTriggerProtocolPass = ([string](Get-JsonProperty -Object $statuses -Name 'passiveTriggerProtocol' -Default '') -eq 'pass')
+            unityInputModalityPass = ([string](Get-JsonProperty -Object $statuses -Name 'unityInputModality' -Default '') -eq 'pass')
+            twoDFirstFrontDoorPass = ([string](Get-JsonProperty -Object $statuses -Name 'twoDFirstFrontDoor' -Default '') -eq 'pass')
+            questionnaireApkPresent = ([string](Get-JsonProperty -Object $statuses -Name 'questionnaireApkGenerated' -Default '') -eq 'present')
+            unityApkPresent = ([string](Get-JsonProperty -Object $statuses -Name 'unityApk' -Default '') -eq 'present')
+            noFailedSteps = ($failedStepCount -eq 0)
+        }
+        artifacts = [ordered]@{
+            summaryPath = $SummaryPath
+            outputRoot = Get-JsonProperty -Object $Summary -Name 'outputRoot' -Default ''
+            passiveTriggerProtocolSummary = Get-JsonProperty -Object (Get-JsonProperty -Object $Summary -Name 'evidence') -Name 'passiveTriggerProtocolSummary' -Default ''
+            unityInputModalitySummary = Get-JsonProperty -Object (Get-JsonProperty -Object $Summary -Name 'evidence') -Name 'unityInputModalitySummary' -Default ''
+            twoDFirstFrontDoorSummary = Get-JsonProperty -Object (Get-JsonProperty -Object $Summary -Name 'evidence') -Name 'twoDFirstFrontDoorSummary' -Default ''
+            questionnaireApk = Get-JsonProperty -Object (Get-JsonProperty -Object $Summary -Name 'inputs') -Name 'questionnaireApk' -Default ''
+            unityApk = Get-JsonProperty -Object (Get-JsonProperty -Object $Summary -Name 'inputs') -Name 'unityApk' -Default ''
+        }
+        statuses = $statuses
+        remainingLiveGates = $remainingLiveGates
+        proofBoundary = if ($summaryRunLive) {
+            'Live minimal protocol gate was attempted. Manual Unity trigger observation and export audit remain pending unless the linked evidence explicitly proves them.'
+        } else {
+            'Dry-run software preflight only. It does not install, launch, wake, foreground-switch, observe Unity trigger input, or pull Quest exports.'
+        }
+    }
+}
+
 function New-DirectHandoffManualSignoffReceipt {
     param(
         [object]$Summary,
@@ -1358,6 +1414,98 @@ function New-PhysicalGatePacketReceipt {
             operatorSignoffTemplatePath = $templatePath
         }
         proofBoundary = 'This packet prepares the remaining physical headset gates for an operator. It is not a product-path pass and does not replace live Quest trials or filled manual signoff.'
+    }
+}
+
+function New-TwoApkLiveValidationPacketReceipt {
+    param(
+        [object]$Summary,
+        [string]$SummaryPath,
+        [int]$ExitCode
+    )
+
+    $status = if ($Summary) { [string](Get-JsonProperty -Object $Summary -Name 'status' -Default 'unknown') } else { 'missing-summary' }
+    $productContract = Get-JsonProperty -Object $Summary -Name 'productContract' -Default ([pscustomobject]@{})
+    $inputs = Get-JsonProperty -Object $Summary -Name 'inputs' -Default ([pscustomobject]@{})
+    $evidence = Get-JsonProperty -Object $Summary -Name 'evidence' -Default ([pscustomobject]@{})
+    $statuses = Get-JsonProperty -Object $Summary -Name 'statuses' -Default ([pscustomobject]@{})
+    $operatorSignoffValidation = Get-JsonProperty -Object $Summary -Name 'operatorSignoffValidation' -Default ([pscustomobject]@{})
+    $remainingLiveGates = @(Get-JsonProperty -Object $Summary -Name 'remainingLiveGates' -Default @())
+    $proofBoundary = [string](Get-JsonProperty -Object $Summary -Name 'proofBoundary' -Default '')
+    $questionnaireApk = Get-JsonProperty -Object $inputs -Name 'questionnaireApk' -Default ([pscustomobject]@{})
+    $unityApk = Get-JsonProperty -Object $inputs -Name 'unityApk' -Default ([pscustomobject]@{})
+    $pairSummaryPath = [string](Get-JsonProperty -Object $evidence -Name 'twoApkPairSummary' -Default '')
+    $dryRunSummaryPath = [string](Get-JsonProperty -Object $evidence -Name 'dryRunPreflightSummary' -Default '')
+    $runbookPath = [string](Get-JsonProperty -Object $evidence -Name 'operatorRunbook' -Default '')
+    $templatePath = [string](Get-JsonProperty -Object $evidence -Name 'operatorSignoffTemplate' -Default '')
+    $operatorSignoffPath = [string](Get-JsonProperty -Object $evidence -Name 'operatorSignoffPath' -Default '')
+    $runbookText = Read-TextFileIfExists -Path $runbookPath
+    $template = Read-JsonFileIfExists -Path $templatePath
+    $observedTemplate = Get-JsonProperty -Object $template -Name 'observed' -Default ([pscustomobject]@{})
+    $observedFields = if ($observedTemplate -and $observedTemplate.PSObject.Properties) { @($observedTemplate.PSObject.Properties.Name) } else { @() }
+    $twoApkGuardrailChecks = [ordered]@{
+        questionnaireFrontDoorContract = ([string](Get-JsonProperty -Object $productContract -Name 'participantFrontDoor' -Default '') -eq 'generated 2D questionnaire APK')
+        unityPassiveRoleContract = ([string](Get-JsonProperty -Object $productContract -Name 'unityRole' -Default '') -match 'passive trigger')
+        questionnaireLogicOwnerContract = ([string](Get-JsonProperty -Object $productContract -Name 'questionnaireRole' -Default '') -match 'study logic owner')
+        noHeadsetSideEffectsBoundary = $proofBoundary.Contains('does not install, launch, wake, or change the Quest')
+        runbookQuestionnaireFirst = $runbookText.Contains('participant starts the generated 2D questionnaire APK')
+        runbookDoNotLaunchUnityFirst = $runbookText.Contains('Do not launch Unity from Meta Home')
+        runbookNoAdbOrMenuRepair = $runbookText.Contains('Do not use ADB')
+        runbookUnityPassiveTriggersOnly = $runbookText.Contains('Unity emits passive trigger IDs only')
+        runbookQuestionnaireResumesMappedBlock = $runbookText.Contains('questionnaire APK resumes the mapped block')
+        signoffHasQuestionnaireFirstObservation = ($observedFields -contains 'startedGeneratedQuestionnaireFromMetaHome')
+        signoffHasUnityNotStartedObservation = ($observedFields -contains 'didNotStartUnityFromMetaHome')
+        signoffHasImmersiveUnityObservation = ($observedFields -contains 'unityDisplayedAsImmersiveForegroundApp')
+        signoffHasPassiveUnityObservation = ($observedFields -contains 'noUnitySideQuestionnaireDecisionObserved')
+    }
+    $twoApkGuardrailsPresent = -not @($twoApkGuardrailChecks.GetEnumerator() | Where-Object { -not [bool]$_.Value })
+
+    return [ordered]@{
+        schemaVersion = 'mq.builder_two_apk_live_validation_packet.receipt.v1'
+        kind = 'two-apk-live-validation-packet'
+        status = $status
+        exitCode = $ExitCode
+        physicalQuestProductPathPending = ($status -ne 'operator-signoff-pass')
+        checks = [ordered]@{
+            summaryWritten = ($null -ne $Summary -and (Test-FileExists -Path $SummaryPath))
+            twoApkPairAuditPass = ([string](Get-JsonProperty -Object $statuses -Name 'twoApkPairAudit' -Default '') -eq 'pass')
+            dryRunPreflightPassOrSkipped = ([string](Get-JsonProperty -Object $statuses -Name 'dryRunPreflight' -Default '') -in @('pass', 'skipped'))
+            operatorRunbookWritten = (Test-FileExists -Path $runbookPath)
+            operatorSignoffTemplateWritten = (Test-FileExists -Path $templatePath)
+            operatorSignoffProvided = (Test-FileExists -Path $operatorSignoffPath)
+            questionnaireApkExists = [bool](Get-JsonProperty -Object $questionnaireApk -Name 'exists' -Default $false)
+            unityApkExists = [bool](Get-JsonProperty -Object $unityApk -Name 'exists' -Default $false)
+            operatorGuardrailsPresent = $twoApkGuardrailsPresent
+            operatorSignoffPass = [bool](Get-JsonProperty -Object $operatorSignoffValidation -Name 'pass' -Default $false)
+        }
+        statuses = [ordered]@{
+            twoApkPairAudit = [string](Get-JsonProperty -Object $statuses -Name 'twoApkPairAudit' -Default '')
+            dryRunPreflight = [string](Get-JsonProperty -Object $statuses -Name 'dryRunPreflight' -Default '')
+            operatorSignoff = [string](Get-JsonProperty -Object $statuses -Name 'operatorSignoff' -Default '')
+        }
+        remainingLiveGateCount = $remainingLiveGates.Count
+        guardrails = [ordered]@{
+            present = $twoApkGuardrailsPresent
+            checks = $twoApkGuardrailChecks
+        }
+        artifacts = [ordered]@{
+            summaryPath = $SummaryPath
+            pairSummaryPath = $pairSummaryPath
+            dryRunPreflightSummaryPath = $dryRunSummaryPath
+            runbookPath = $runbookPath
+            operatorSignoffTemplatePath = $templatePath
+            operatorSignoffPath = $operatorSignoffPath
+            questionnaireApkPath = [string](Get-JsonProperty -Object $questionnaireApk -Name 'path' -Default '')
+            unityApkPath = [string](Get-JsonProperty -Object $unityApk -Name 'path' -Default '')
+        }
+        contract = [ordered]@{
+            participantFrontDoor = [string](Get-JsonProperty -Object $productContract -Name 'participantFrontDoor' -Default '')
+            unityRole = [string](Get-JsonProperty -Object $productContract -Name 'unityRole' -Default '')
+            questionnaireRole = [string](Get-JsonProperty -Object $productContract -Name 'questionnaireRole' -Default '')
+            lslRole = [string](Get-JsonProperty -Object $productContract -Name 'lslRole' -Default '')
+        }
+        remainingLiveGates = $remainingLiveGates
+        proofBoundary = $proofBoundary
     }
 }
 
@@ -2336,6 +2484,192 @@ function Start-TwoDFirstLauncherJob {
     return Get-TwoDFirstLauncherJobStatus -RunId $runId
 }
 
+function Get-MinimalProtocolJobStatus {
+    param([string]$RunId)
+
+    if ([string]::IsNullOrWhiteSpace($RunId) -or -not $script:MinimalProtocolJobs.ContainsKey($RunId)) {
+        return $null
+    }
+    $job = $script:MinimalProtocolJobs[$RunId]
+    $process = $job['process']
+    $summary = Read-JsonFileIfExists -Path ([string]$job['summaryPath'])
+    $summaryStatus = if ($summary) { [string](Get-JsonProperty -Object $summary -Name 'status' -Default '') } else { '' }
+    $jobStatus = 'running'
+    $exitCode = $null
+    $processError = ''
+    if ($process -and $process.HasExited) {
+        $exitCode = $process.ExitCode
+        $jobStatus = if ($summaryStatus -eq 'pass' -or $exitCode -eq 0) { 'completed' } else { 'failed' }
+        $job['completedAt'] = if ([string]::IsNullOrWhiteSpace([string]$job['completedAt'])) { (Get-Date).ToString('o') } else { $job['completedAt'] }
+    }
+    elseif (-not $process) {
+        $jobStatus = 'failed'
+        $processError = 'Process did not start.'
+    }
+
+    $protocolStatus = if ($summary) { $summaryStatus } elseif ($jobStatus -eq 'running') { 'running' } else { 'missing-summary' }
+    $jobReceipt = New-MinimalProtocolJobReceipt -Summary $summary -SummaryPath ([string]$job['summaryPath']) -JobStatus $jobStatus -ProtocolStatus $protocolStatus -RunLive ([bool]$job['runLive'])
+
+    return [ordered]@{
+        status = 'ok'
+        jobId = $RunId
+        runId = $RunId
+        jobStatus = $jobStatus
+        protocolStatus = $protocolStatus
+        exitCode = $exitCode
+        processError = $processError
+        runLive = [bool]$job['runLive']
+        dryRun = (-not [bool]$job['runLive'])
+        skipQuestionnaireBuild = [bool]$job['skipQuestionnaireBuild']
+        runGradleTests = [bool]$job['runGradleTests']
+        runFullLocalProtocol = [bool]$job['runFullLocalProtocol']
+        questSerial = $job['questSerial']
+        questionnaireApk = $job['questionnaireApk']
+        unityApk = $job['unityApk']
+        artifactDir = $job['artifactDir']
+        summaryPath = $job['summaryPath']
+        stdoutPath = $job['stdoutPath']
+        stderrPath = $job['stderrPath']
+        stdout = Get-TailText -Path ([string]$job['stdoutPath'])
+        stderr = Get-TailText -Path ([string]$job['stderrPath'])
+        jobReceipt = $jobReceipt
+        summary = $summary
+        startedAt = $job['startedAt']
+        completedAt = $job['completedAt']
+    }
+}
+
+function Start-MinimalProtocolJob {
+    param([object]$Payload)
+
+    $runId = 'builder-minimal-protocol-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    $jobDir = Join-Path $ProjectPath ("artifacts\builder-minimal-apk-trigger-protocol\$runId")
+    New-Item -ItemType Directory -Force -Path $jobDir | Out-Null
+
+    $questionnaireApk = if ($Payload.PSObject.Properties.Name -contains 'questionnaireApk') { [string]$Payload.questionnaireApk } elseif ($Payload.PSObject.Properties.Name -contains 'apk') { [string]$Payload.apk } else { '' }
+    $unityApk = if ($Payload.PSObject.Properties.Name -contains 'unityApk') { [string]$Payload.unityApk } else { '' }
+    $unityPackage = if ($Payload.PSObject.Properties.Name -contains 'unityPackage') { [string]$Payload.unityPackage } else { '' }
+    $unityActivity = if ($Payload.PSObject.Properties.Name -contains 'unityActivity') { [string]$Payload.unityActivity } else { '' }
+    $serial = if ($Payload.PSObject.Properties.Name -contains 'questSerial') { [string]$Payload.questSerial } else { '' }
+    $runLive = ($Payload.PSObject.Properties.Name -contains 'runLive' -and [bool]$Payload.runLive)
+    $skipQuestionnaireBuild = (-not ($Payload.PSObject.Properties.Name -contains 'skipQuestionnaireBuild')) -or [bool]$Payload.skipQuestionnaireBuild
+    $skipInstall = ($Payload.PSObject.Properties.Name -contains 'skipInstall' -and [bool]$Payload.skipInstall)
+    $noAutoReplay = ($Payload.PSObject.Properties.Name -contains 'noAutoReplay' -and [bool]$Payload.noAutoReplay)
+    $runGradleTests = ($Payload.PSObject.Properties.Name -contains 'runGradleTests' -and [bool]$Payload.runGradleTests)
+    $runFullLocalProtocol = ($Payload.PSObject.Properties.Name -contains 'runFullLocalProtocol' -and [bool]$Payload.runFullLocalProtocol)
+    $trialCount = if ($Payload.PSObject.Properties.Name -contains 'trialCount') { [Math]::Min(10, [Math]::Max(1, [int]$Payload.trialCount)) } else { 1 }
+    $waitForReadySeconds = if ($Payload.PSObject.Properties.Name -contains 'waitForReadySeconds') { [Math]::Min(28800, [Math]::Max(0, [int]$Payload.waitForReadySeconds)) } else { 30 }
+    $readinessPollSeconds = if ($Payload.PSObject.Properties.Name -contains 'readinessPollSeconds') { [Math]::Min(60, [Math]::Max(1, [int]$Payload.readinessPollSeconds)) } else { 2 }
+    $waitSeconds = if ($Payload.PSObject.Properties.Name -contains 'waitSeconds') { [Math]::Max(1, [int]$Payload.waitSeconds) } else { 45 }
+    $wakeBeforeReadiness = ($runLive -and $Payload.PSObject.Properties.Name -contains 'wakeBeforeReadiness' -and [bool]$Payload.wakeBeforeReadiness)
+    $allowLaunchWhenNotReady = ($runLive -and $Payload.PSObject.Properties.Name -contains 'allowLaunchWhenNotReady' -and [bool]$Payload.allowLaunchWhenNotReady)
+
+    if ($runLive -and [string]::IsNullOrWhiteSpace($serial)) {
+        throw "Live minimal protocol validation requires a Quest serial. Run dry-run preflight without runLive for software-only validation."
+    }
+
+    $stdoutPath = Join-Path $jobDir 'minimal-protocol-stdout.txt'
+    $stderrPath = Join-Path $jobDir 'minimal-protocol-stderr.txt'
+    $summaryPath = Join-Path $jobDir 'quest-minimal-apk-trigger-protocol-summary.json'
+    $script = Join-Path $ProjectPath 'tools\quest-minimal-apk-trigger-protocol-validate.ps1'
+    $arguments = @(
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        $script,
+        '-ProjectPath',
+        $ProjectPath,
+        '-OutputRoot',
+        $jobDir,
+        '-RunId',
+        $runId,
+        '-TrialCount',
+        [string]$trialCount,
+        '-WaitForReadySeconds',
+        [string]$waitForReadySeconds,
+        '-ReadinessPollSeconds',
+        [string]$readinessPollSeconds,
+        '-WaitSeconds',
+        [string]$waitSeconds
+    )
+    if (-not [string]::IsNullOrWhiteSpace($questionnaireApk)) {
+        $arguments += @('-QuestionnaireApk', $questionnaireApk)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($unityApk)) {
+        $arguments += @('-UnityApk', $unityApk)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($unityPackage)) {
+        $arguments += @('-UnityPackage', $unityPackage)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($unityActivity)) {
+        $arguments += @('-UnityActivity', $unityActivity)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($serial)) {
+        $arguments += @('-Serial', $serial)
+    }
+    if ($runLive) { $arguments += '-RunLive' }
+    if ($skipQuestionnaireBuild) { $arguments += '-SkipQuestionnaireBuild' }
+    if ($skipInstall) { $arguments += '-SkipInstall' }
+    if ($noAutoReplay) { $arguments += '-NoAutoReplay' }
+    if ($wakeBeforeReadiness) { $arguments += '-WakeBeforeReadiness' }
+    if ($allowLaunchWhenNotReady) { $arguments += '-AllowLaunchWhenNotReady' }
+    if ($runGradleTests) { $arguments += '-RunGradleTests' }
+    if ($runFullLocalProtocol) { $arguments += '-RunFullLocalProtocol' }
+
+    $process = Start-Process `
+        -FilePath 'powershell' `
+        -ArgumentList $arguments `
+        -WorkingDirectory $ProjectPath `
+        -PassThru `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput $stdoutPath `
+        -RedirectStandardError $stderrPath
+
+    $script:MinimalProtocolJobs[$runId] = [ordered]@{
+        process = $process
+        runId = $runId
+        questionnaireApk = $questionnaireApk
+        unityApk = $unityApk
+        unityPackage = $unityPackage
+        unityActivity = $unityActivity
+        questSerial = $serial
+        runLive = [bool]$runLive
+        skipQuestionnaireBuild = [bool]$skipQuestionnaireBuild
+        skipInstall = [bool]$skipInstall
+        noAutoReplay = [bool]$noAutoReplay
+        runGradleTests = [bool]$runGradleTests
+        runFullLocalProtocol = [bool]$runFullLocalProtocol
+        trialCount = [int]$trialCount
+        waitForReadySeconds = [int]$waitForReadySeconds
+        readinessPollSeconds = [int]$readinessPollSeconds
+        waitSeconds = [int]$waitSeconds
+        wakeBeforeReadiness = [bool]$wakeBeforeReadiness
+        allowLaunchWhenNotReady = [bool]$allowLaunchWhenNotReady
+        artifactDir = $jobDir
+        stdoutPath = $stdoutPath
+        stderrPath = $stderrPath
+        summaryPath = $summaryPath
+        startedAt = (Get-Date).ToString('o')
+        completedAt = ''
+    }
+    $script:MinimalProtocolJobOrder.Add($runId) | Out-Null
+
+    while ($script:MinimalProtocolJobOrder.Count -gt 20) {
+        $oldest = $script:MinimalProtocolJobOrder[0]
+        $script:MinimalProtocolJobOrder.RemoveAt(0)
+        if ($script:MinimalProtocolJobs.ContainsKey($oldest)) {
+            $oldJob = $script:MinimalProtocolJobs[$oldest]
+            $oldProcess = $oldJob['process']
+            if ($oldProcess -and $oldProcess.HasExited) {
+                $script:MinimalProtocolJobs.Remove($oldest)
+            }
+        }
+    }
+
+    return Get-MinimalProtocolJobStatus -RunId $runId
+}
+
 function Receive-JsonPayload {
     param([System.Net.HttpListenerRequest]$Request)
 
@@ -2991,6 +3325,79 @@ function Invoke-UniversalHandoffPhysicalGatePacket {
     }
 }
 
+function Invoke-TwoApkLiveValidationPacket {
+    param([object]$Payload)
+
+    $runId = 'builder-two-apk-live-validation-packet-' + (Get-Date).ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'")
+    $script = Join-Path $ProjectPath 'tools\new-two-apk-live-validation-packet.ps1'
+    $summaryPath = Join-Path $ProjectPath ("artifacts\two-apk-live-validation-packet\$runId\two-apk-live-validation-packet-summary.json")
+    $arguments = @(
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        $script,
+        '-ProjectPath',
+        $ProjectPath,
+        '-RunId',
+        $runId
+    )
+
+    $configPath = ''
+    if ($Payload.PSObject.Properties.Name -contains 'config') {
+        $configPath = Save-ConfigPayload -Payload $Payload
+    }
+    elseif ($Payload.PSObject.Properties.Name -contains 'questionnaireConfig' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.questionnaireConfig)) {
+        $configPath = [string]$Payload.questionnaireConfig
+    }
+    elseif ($Payload.PSObject.Properties.Name -contains 'configPath' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.configPath)) {
+        $configPath = [string]$Payload.configPath
+    }
+    if (-not [string]::IsNullOrWhiteSpace($configPath)) {
+        $arguments += @('-QuestionnaireConfig', $configPath)
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'questionnaireApk' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.questionnaireApk)) {
+        $arguments += @('-QuestionnaireApk', [string]$Payload.questionnaireApk)
+    }
+    elseif ($Payload.PSObject.Properties.Name -contains 'apk' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.apk)) {
+        $arguments += @('-QuestionnaireApk', [string]$Payload.apk)
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'unityProjectPath' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.unityProjectPath)) {
+        $arguments += @('-UnityProjectPath', [string]$Payload.unityProjectPath)
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'unityApk' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.unityApk)) {
+        $arguments += @('-UnityApk', [string]$Payload.unityApk)
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'questSerial' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.questSerial)) {
+        $arguments += @('-QuestSerial', [string]$Payload.questSerial)
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'operatorSignoffPath' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.operatorSignoffPath)) {
+        $arguments += @('-OperatorSignoffPath', [string]$Payload.operatorSignoffPath)
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'skipDryRunPreflight' -and [bool]$Payload.skipDryRunPreflight) {
+        $arguments += '-SkipDryRunPreflight'
+    }
+    if ($Payload.PSObject.Properties.Name -contains 'requirePass' -and [bool]$Payload.requirePass) {
+        $arguments += '-RequirePass'
+    }
+
+    $result = Invoke-ProjectPowerShell -Arguments $arguments
+    $summary = Read-JsonFileIfExists -Path $summaryPath
+    $packetStatus = if ($summary) { [string](Get-JsonProperty -Object $summary -Name 'status' -Default 'unknown') } elseif ($result.exitCode -eq 0) { 'missing-summary' } else { 'error' }
+    $receipt = New-TwoApkLiveValidationPacketReceipt -Summary $summary -SummaryPath $summaryPath -ExitCode $result.exitCode
+
+    return [ordered]@{
+        status = if ($summary) { 'ok' } else { 'error' }
+        packetStatus = $packetStatus
+        runId = $runId
+        exitCode = $result.exitCode
+        summaryPath = $summaryPath
+        twoApkLivePacketReceipt = $receipt
+        summary = $summary
+        output = $result.output
+    }
+}
+
 function New-StatusPayload {
     param([bool]$Authorized)
 
@@ -3032,6 +3439,9 @@ function New-StatusPayload {
             '2d-first-launcher',
             '2d-first-launcher-preflight',
             '2d-first-launcher-job-status',
+            'minimal-apk-trigger-protocol',
+            'minimal-apk-trigger-protocol-job-status',
+            'two-apk-live-validation-packet',
             'handoff-readiness-audit',
             'direct-handoff-manual-signoff',
             'physical-gate-packet',
@@ -3053,6 +3463,8 @@ function New-StatusPayload {
             validateWorkflow = Join-Path $ProjectPath 'tools\validate-builder-to-quest-workflow.ps1'
             directHandoff = Join-Path $ProjectPath 'tools\quest-direct-handoff-validate.ps1'
             twoDFirstLauncher = Join-Path $ProjectPath 'tools\quest-2d-first-launcher-validate.ps1'
+            minimalApkTriggerProtocol = Join-Path $ProjectPath 'tools\quest-minimal-apk-trigger-protocol-validate.ps1'
+            twoApkLiveValidationPacket = Join-Path $ProjectPath 'tools\new-two-apk-live-validation-packet.ps1'
             handoffReadinessAudit = Join-Path $ProjectPath 'tools\audit-universal-handoff-readiness.ps1'
             directHandoffManualSignoff = Join-Path $ProjectPath 'tools\new-direct-handoff-manual-signoff.ps1'
             physicalGatePacket = Join-Path $ProjectPath 'tools\new-universal-handoff-physical-gate-packet.ps1'
@@ -3206,6 +3618,24 @@ function Handle-Request {
         return
     }
 
+    if ($request.HttpMethod -eq 'GET' -and $path -eq '/api/minimal-protocol-job') {
+        Assert-OriginAndToken -Request $request
+        $runId = [string]$request.QueryString['runId']
+        if ([string]::IsNullOrWhiteSpace($runId)) {
+            $runId = [string]$request.QueryString['jobId']
+        }
+        $status = Get-MinimalProtocolJobStatus -RunId $runId
+        if ($null -eq $status) {
+            Write-JsonResponse -Context $Context -StatusCode 404 -Value ([ordered]@{
+                status = 'error'
+                message = "Unknown minimal protocol job: $runId"
+            })
+            return
+        }
+        Write-JsonResponse -Context $Context -StatusCode 200 -Value $status
+        return
+    }
+
     if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/install-dependencies') {
         Assert-OriginAndToken -Request $request
         $result = Handle-DependencyInstall
@@ -3274,6 +3704,22 @@ function Handle-Request {
         $payload = Receive-JsonPayload -Request $request
         $job = Start-TwoDFirstLauncherJob -Payload $payload
         Write-JsonResponse -Context $Context -StatusCode 202 -Value $job
+        return
+    }
+
+    if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/minimal-protocol') {
+        Assert-OriginAndToken -Request $request
+        $payload = Receive-JsonPayload -Request $request
+        $job = Start-MinimalProtocolJob -Payload $payload
+        Write-JsonResponse -Context $Context -StatusCode 202 -Value $job
+        return
+    }
+
+    if ($request.HttpMethod -eq 'POST' -and $path -eq '/api/two-apk-live-packet') {
+        Assert-OriginAndToken -Request $request
+        $payload = Receive-JsonPayload -Request $request
+        $result = Invoke-TwoApkLiveValidationPacket -Payload $payload
+        Write-JsonResponse -Context $Context -StatusCode ($(if ($result.status -eq 'ok') { 200 } else { 500 })) -Value $result
         return
     }
 

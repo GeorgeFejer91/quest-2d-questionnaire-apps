@@ -17,11 +17,14 @@ For questionnaire builder work, also read:
 
 1. [published-questionnaire-builder.md](published-questionnaire-builder.md)
 2. [../MyQuestionnaireVR-2D/For-AI/questionnaire-builder-gui-constraints.md](../MyQuestionnaireVR-2D/For-AI/questionnaire-builder-gui-constraints.md)
+3. [HANDOFF_2026-06-09_TWO_APK_V2.md](HANDOFF_2026-06-09_TWO_APK_V2.md)
 
 For XR app -> 2D panel handoff work, also read:
 
 1. [handoff-implementation-lessons.md](handoff-implementation-lessons.md)
 2. [../docs/xr-questionnaire-panel-handoff.md](../docs/xr-questionnaire-panel-handoff.md)
+3. [../docs/minimal-apk-trigger-protocol.md](../docs/minimal-apk-trigger-protocol.md)
+4. [../docs/trigger-transport-decision-record.md](../docs/trigger-transport-decision-record.md)
 
 For Unity Quest video stimulus work, also read:
 

@@ -599,11 +599,15 @@ activity: org.questquestionnaire.questionnaires2d.QuestChainBrokerActivity
 action: org.questquestionnaire.questionnaires2d.BROKER
 ```
 
-Both brokers accept `mq.brokerCommand` values:
+The questionnaire-owned broker accepts `mq.brokerCommand` values:
 
 ```text
-startPlan, continuePlan, clearPlan, startQuestionnaire, openApp, goHome, ping
+startPlan, continuePlan, trigger, clearPlan, startQuestionnaire, openApp, goHome, ping
 ```
+
+The `trigger` command takes `mq.triggerId` and routes it against the
+questionnaire APK's stored protocol state. It does not accept questionnaire
+mode, scoring, next-block, or export decisions from Unity or external tools.
 
 The standalone orchestrator stores chain state under:
 
@@ -877,8 +881,19 @@ tools\unity\README.md
 
 ## Optional LSL Control
 
-The headset-owned broker remains the orchestrator. LSL is an optional command
-source for starting or continuing that broker plan from the lab network.
+The questionnaire-owned broker remains the study-logic owner. LSL is an
+optional host-side command source for lab-network markers; in the product
+contract it should emit passive `triggerId` events into the same broker rather
+than deciding questionnaire routing.
+For the minimal public protocol recipe, see
+[`../docs/minimal-trigger-integration-guide.md`](../docs/minimal-trigger-integration-guide.md).
+For the transport decision, including why native in-APK LSL is future/advanced
+rather than the default product path, see
+[`../docs/trigger-transport-decision-record.md`](../docs/trigger-transport-decision-record.md).
+For Unity-side starter files, use
+[`tools/unity/passive-trigger-kit/README.md`](tools/unity/passive-trigger-kit/README.md).
+To audit a concrete generated questionnaire config and Unity APK pair before
+headset install, run `tools/validate-two-apk-pair.ps1`.
 
 Install the Python LSL dependency and run the host adapter:
 
@@ -895,7 +910,19 @@ python .\tools\lsl-send-command.py `
   --command-file .\QuestionnaireConfigs\examples\lsl-start-questionnaire.example.json
 ```
 
+Send a passive trigger marker:
+
+```powershell
+python .\tools\lsl-send-command.py `
+  --command-file .\QuestionnaireConfigs\examples\lsl-trigger.example.json
+```
+
 This v1 LSL path is a thin adapter: LSL JSON sample in, Android broker intent
 on the Quest out. A future fully native LSL listener inside the headset would
 need Android-native `liblsl` packaging and a foreground/background service
-design, but the broker contract would stay the same.
+design, but the broker contract would stay the same: trigger source in,
+questionnaire-owned state machine out.
+For `command=trigger`, the bridge rejects routing fields such as
+`finishBehavior`, `nextPackage`, `questionnaireMode`, `blockId`, `blockNumber`,
+and chain-plan payloads. Use those only in legacy/advanced commands, not in
+the passive trigger product path.

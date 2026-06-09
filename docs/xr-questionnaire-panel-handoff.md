@@ -1,15 +1,19 @@
 # XR Questionnaire Panel Handoff
 
-This contract defines the product-path handoff between a foreground XR/Unity
-APK and reusable Meta Quest 2D panel apps. The goal is:
+This contract defines the product-path handoff between a generated Meta Quest
+2D questionnaire APK and a foreground immersive Unity/stimulus APK. The primary
+participant path is questionnaire-first:
 
 ```text
-XR focused -> 2D questionnaire/tracer focused -> same XR app focused again
+2D questionnaire focused -> immersive Unity/stimulus focused -> 2D questionnaire focused after passive trigger
 ```
 
 The product path must not depend on ADB foreground switching, force-stop,
 package killing, or Meta menu navigation. ADB remains valid for installation,
 log capture, evidence pulls, and developer stress tests.
+
+For the compact implementation contract and LSL decision, see
+[`minimal-apk-trigger-protocol.md`](minimal-apk-trigger-protocol.md).
 
 The generated 2D questionnaire APK is the study logic owner. Unity/stimulus
 APKs are passive trigger emitters: they present stimulus content and emit simple
@@ -20,18 +24,41 @@ and resumes the next configured block.
 
 ## Contract
 
-The foreground XR app owns only stimulus timing and the physical moment a
-trigger fires. When the app reaches that event, it launches the 2D questionnaire
-APK with an explicit component intent and the `mq.handoff.v1` extras below.
+The participant starts the generated 2D questionnaire APK. That APK runs its
+configured Block 1, saves state, and launches the configured immersive
+Unity/stimulus APK. The foreground Unity app owns only stimulus timing and the
+physical moment a passive trigger fires. When Unity reaches that event, it
+brings the same questionnaire APK back to the foreground with an explicit
+component intent or a questionnaire-created return token.
 
-Required extras:
+Required trigger extra:
+
+```text
+mq.triggerId=<manifest trigger id>
+```
+
+When the questionnaire APK launches Unity, it should also provide the trigger
+receiver target:
+
+```text
+mq.triggerReceiverPackage=<generated questionnaire package>
+mq.triggerReceiverActivity=<generated questionnaire activity>
+mq.triggerReceiverAction=org.questquestionnaire.questionnaires2d.RUN
+```
+
+Unity trigger code should read those extras from its launch intent and use
+them as the return component for passive trigger intents. A hard-coded
+questionnaire component is only a developer fallback for direct Unity demo
+launches.
+
+Recommended inert metadata:
 
 ```text
 mq.handoffSchema=mq.handoff.v1
 mq.sessionId=<stable session id>
-mq.triggerId=<manifest trigger id>
 mq.scenarioId=<scenario/study id>
-mq.finishBehavior=resumeCaller
+mq.triggerSource=<stimulus app/source label>
+mq.triggerTimestampUtc=<UTC trigger timestamp>
 ```
 
 Optional developer fallback extras:
@@ -44,6 +71,10 @@ mq.blockNumber=<three digit block number>
 Use `mq.triggerId` as the normal Unity-to-questionnaire contract. `mq.blockId`
 and `mq.blockNumber` are for diagnostics, explicit tests, or legacy plans; they
 should not become Unity's questionnaire-routing decision surface.
+Unity should not send `mq.questionnaireMode`, scoring fields, or a requested
+next questionnaire. `mq.finishBehavior` is owned by the generated
+questionnaire config; if a legacy Unity build sends it, treat it as a fallback
+or diagnostic value rather than study logic.
 
 Preferred return extra:
 
@@ -91,6 +122,11 @@ The XR app activity should be the real enabled Unity activity and should use
 `launchMode="singleTop"`. It must handle `onNewIntent()` and make the latest
 intent available to Unity code.
 
+For Unity 6 `UnityPlayerGameActivity` builds, the safest pattern is a tiny
+subclass whose `onNewIntent(Intent intent)` calls `setIntent(intent)`. That
+prevents stale questionnaire receiver extras from surviving into a later direct
+Meta Home launch.
+
 The 2D panel activities should be exported, resizeable, `singleTop`, and
 launched by explicit action/component pairs:
 
@@ -101,9 +137,10 @@ org.questquestionnaire.temporaltracer2d.RUN
 
 ## Focus Expectations
 
-The XR app should pause video or experiment progression when it loses focus or
-is paused. It may resume only after it receives `mq.resultStatus=complete` for
-the expected trigger.
+The Unity app should pause video or experiment progression when it loses focus
+or is paused. It may resume only after the questionnaire APK returns according
+to the questionnaire-owned protocol and, when using direct return tokens,
+delivers `mq.resultStatus=complete` for the expected trigger.
 
 For stimulus scenes that should not begin until the participant/operator is
 ready, put a source-app start gate before the first questionnaire trigger. The
@@ -114,18 +151,17 @@ validation may bypass that human gate only through an explicit launch extra,
 for example `mq.validationAutoStart=true`, and should record the bypass in
 log/evidence markers.
 
-A demographics-before-stimulus participant chain should normally start from the
-2D questionnaire APK. In that mode the packaged questionnaire config sets
+A questionnaire-before-stimulus participant chain should normally start from
+the 2D questionnaire APK. In that mode the packaged questionnaire config sets
 `chainDefaults.startMode=questionnaireFirst`,
-`chainDefaults.questionnaireMode=demographics`,
 `chainDefaults.finishBehavior=openNext`, and
-`chainDefaults.nextPackage=<Unity package>`. A normal Meta Home launch then
-runs demographics, saves exports, and opens Unity with the same completion
-extras that Unity would receive after trigger 1. Treat the generated APK as
-study-pinned to that Unity package/activity, but keep the behavior
-config-driven through the builder. Do not hard-code a single Unity APK into the
-reusable Android source, and do not use this as a substitute for Unity
-hand/controller support or later Unity-owned trigger handling.
+`chainDefaults.nextPackage=<Unity package>`. Block 1 content is chosen by the
+builder/user; demographics is only a common preload, not a fixed rule. A normal
+Meta Home launch then runs Block 1, saves exports, and opens Unity. Treat the
+generated APK as study-pinned to that Unity package/activity, but keep the
+behavior config-driven through the builder. Do not hard-code a single Unity APK
+into the reusable Android source, and do not use Unity trigger metadata as a
+questionnaire decision surface.
 
 For demographics-before-video studies, combine the 2D-first front door with the
 Unity start gate:
@@ -135,8 +171,8 @@ Meta Home -> 2D demographics -> Unity Start experiment gate -> video/stimulus
 ```
 
 That removes the first "questionnaire over a running Unity video" transition.
-Unity should consume the demographics completion extras, show the foreground
-start target, and start media only after real input inside Unity. Later
+Unity should consume the Block 1 completion extras, show the foreground start
+target, and start media only after real input inside Unity. Later
 Unity-triggered questionnaire/tracer panels still use passive trigger emission:
 Unity sends `mq.triggerId`; the questionnaire APK decides the next questionnaire
 block and still needs the explicit panel-focus pause/resume and result-clearing

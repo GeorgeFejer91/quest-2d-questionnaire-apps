@@ -1,0 +1,313 @@
+{
+  "schemaVersion": "my-questionnaire-vr.config.v1",
+  "questionnaireId": "quest-questionnaire-three-circle-protocol-demo",
+  "questionnaireVersion": "1.0.0",
+  "appVersion": "1.0.0",
+  "appDisplayName": "Start Experiment | Three Circle Trigger Demo",
+  "uiTextSource": "Assets/StreamingAssets/UIText.txt",
+  "languages": [
+    "English",
+    "Deutsch"
+  ],
+  "participantFields": [
+    {
+      "id": "name",
+      "type": "text",
+      "required": true
+    },
+    {
+      "id": "age",
+      "type": "integer",
+      "required": true
+    },
+    {
+      "id": "gender",
+      "type": "singleChoice",
+      "required": true
+    },
+    {
+      "id": "consent",
+      "type": "checkbox",
+      "required": true
+    }
+  ],
+  "blocks": [
+    {
+      "id": "demographics",
+      "type": "demographics"
+    },
+    {
+      "id": "custom_slider",
+      "type": "slider",
+      "expectedItemCount": 2,
+      "min": 0,
+      "max": 100,
+      "wholeNumbers": true,
+      "anchors": {
+        "left": "NO, not more than usual",
+        "right": "YES, much more than usual"
+      },
+      "languages": {
+        "English": {
+          "items": [
+            "I felt aware of my breathing.",
+            "I felt aware of my body boundaries."
+          ],
+          "target": "Assets/StreamingAssets/Questions_English.txt"
+        },
+        "Deutsch": {
+          "items": [
+            "Ich war mir meiner Atmung bewusst.",
+            "Ich war mir meiner Koerpergrenzen bewusst."
+          ],
+          "target": "Assets/StreamingAssets/Questions_Deutsch.txt"
+        }
+      }
+    },
+    {
+      "id": "end",
+      "type": "blackScreen"
+    }
+  ],
+  "exports": {
+    "destination": "Application.persistentDataPath/QuestionnaireExports",
+    "formats": [
+      "json",
+      "csv"
+    ]
+  },
+  "chainDefaults": {
+    "finishBehavior": "openNext",
+    "startMode": "questionnaireFirst",
+    "callerPackage": "org.questquestionnaire.circletriggerdemo",
+    "callerActivity": "org.questquestionnaire.circletriggerdemo.QuestQuestionnaireUnityActivity",
+    "nextPackage": "org.questquestionnaire.circletriggerdemo",
+    "nextActivity": "org.questquestionnaire.circletriggerdemo.QuestQuestionnaireUnityActivity",
+    "questionnaireMode": "demographics",
+    "triggerId": "study_start_block_1",
+    "blockNumber": "001",
+    "blockId": "001_study_start_block_1",
+    "saveNamespace": "study_start_block_1",
+    "autoCloseDelayMs": 2000
+  },
+  "experimentBlockRegistry": {
+    "schemaVersion": "questquestionnaire.chainlink.block-registry.v1",
+    "experimentId": "quest-questionnaire-three-circle-protocol-demo",
+    "planId": "quest-questionnaire-three-circle-protocol-demo-plan",
+    "questionnaireId": "quest-questionnaire-three-circle-protocol-demo",
+    "questionnaireVersion": "1.0.0",
+    "controllerTriggerButton": "passive-unity-trigger",
+    "sourceTriggerCatalog": {
+      "schemaVersion": "mq.quest_questionnaire_trigger_catalog.v1",
+      "catalogVersion": "1.0.0",
+      "sourceApkName": "three-circle-3-trigger-demo.apk",
+      "triggerCount": 3
+    },
+    "scenario": {
+      "label": "Three Circle Trigger Demo",
+      "package": "org.questquestionnaire.circletriggerdemo",
+      "activity": "org.questquestionnaire.circletriggerdemo.QuestQuestionnaireUnityActivity"
+    },
+    "targetApp": {
+      "label": "Three Circle Trigger Demo",
+      "package": "org.questquestionnaire.circletriggerdemo",
+      "activity": "org.questquestionnaire.circletriggerdemo.QuestQuestionnaireUnityActivity"
+    },
+    "dataPolicy": {
+      "uniqueRunPerBlock": true,
+      "perResponseTimestampUtc": true,
+      "appendOnlyExports": true,
+      "noOverwrite": true
+    },
+    "blocks": [
+      {
+        "number": "001",
+        "id": "001_study_start_block_1",
+        "type": "questionnaire",
+        "label": "Before experiment/running APK",
+        "trigger": {
+          "type": "questionnaireFrontDoor",
+          "triggerId": "study_start_block_1",
+          "foregroundPackage": "org.questquestionnaire.circletriggerdemo"
+        },
+        "package": "org.questquestionnaire.questionnaires2d",
+        "activity": "org.questquestionnaire.questionnaires2d.MainActivity",
+        "action": "org.questquestionnaire.questionnaires2d.RUN",
+        "questionnaireMode": "demographics",
+        "scenarioMode": "",
+        "targetMode": "",
+        "saveNamespace": "study_start_block_1",
+        "expectedOutputs": {
+          "demographics": true
+        },
+        "extras": {
+          "mq.questionnaireMode": "demographics",
+          "mq.flowMode": "demographics",
+          "mq.handoffSchema": "mq.handoff.v1",
+          "mq.triggerId": "study_start_block_1",
+          "mq.finishBehavior": "openNext",
+          "mq.nextPackage": "org.questquestionnaire.circletriggerdemo",
+          "mq.nextActivity": "org.questquestionnaire.circletriggerdemo.QuestQuestionnaireUnityActivity",
+          "mq.autoCloseDelayMs": 2000
+        }
+      },
+      {
+        "number": "002",
+        "id": "002_trigger_trigger_1_complete",
+        "type": "questionnaire",
+        "label": "After trigger 1",
+        "trigger": {
+          "type": "apkManifestTrigger",
+          "triggerId": "trigger_1_complete",
+          "foregroundPackage": "org.questquestionnaire.circletriggerdemo"
+        },
+        "package": "org.questquestionnaire.questionnaires2d",
+        "activity": "org.questquestionnaire.questionnaires2d.MainActivity",
+        "action": "org.questquestionnaire.questionnaires2d.RUN",
+        "questionnaireMode": "slider",
+        "scenarioMode": "",
+        "targetMode": "",
+        "saveNamespace": "trigger_trigger_1_complete",
+        "expectedOutputs": {
+          "sliderAnswers": 2
+        },
+        "extras": {
+          "mq.handoffSchema": "mq.handoff.v1",
+          "mq.triggerId": "trigger_1_complete",
+          "mq.questionnaireMode": "slider",
+          "mq.questionnaireSequence": "slider",
+          "mq.finishBehavior": "resumeCaller",
+          "mq.callerPackage": "org.questquestionnaire.circletriggerdemo",
+          "mq.callerActivity": "org.questquestionnaire.circletriggerdemo.QuestQuestionnaireUnityActivity",
+          "mq.autoCloseDelayMs": 2000
+        }
+      },
+      {
+        "number": "003",
+        "id": "003_trigger_trigger_2_complete",
+        "type": "questionnaire",
+        "label": "After trigger 2",
+        "trigger": {
+          "type": "apkManifestTrigger",
+          "triggerId": "trigger_2_complete",
+          "foregroundPackage": "org.questquestionnaire.circletriggerdemo"
+        },
+        "package": "org.questquestionnaire.questionnaires2d",
+        "activity": "org.questquestionnaire.questionnaires2d.MainActivity",
+        "action": "org.questquestionnaire.questionnaires2d.RUN",
+        "questionnaireMode": "slider",
+        "scenarioMode": "",
+        "targetMode": "",
+        "saveNamespace": "trigger_trigger_2_complete",
+        "expectedOutputs": {
+          "sliderAnswers": 2
+        },
+        "extras": {
+          "mq.handoffSchema": "mq.handoff.v1",
+          "mq.triggerId": "trigger_2_complete",
+          "mq.questionnaireMode": "slider",
+          "mq.questionnaireSequence": "slider",
+          "mq.finishBehavior": "resumeCaller",
+          "mq.callerPackage": "org.questquestionnaire.circletriggerdemo",
+          "mq.callerActivity": "org.questquestionnaire.circletriggerdemo.QuestQuestionnaireUnityActivity",
+          "mq.autoCloseDelayMs": 2000
+        }
+      },
+      {
+        "number": "004",
+        "id": "004_trigger_trigger_3_complete",
+        "type": "questionnaire",
+        "label": "After trigger 3",
+        "trigger": {
+          "type": "apkManifestTrigger",
+          "triggerId": "trigger_3_complete",
+          "foregroundPackage": "org.questquestionnaire.circletriggerdemo"
+        },
+        "package": "org.questquestionnaire.questionnaires2d",
+        "activity": "org.questquestionnaire.questionnaires2d.MainActivity",
+        "action": "org.questquestionnaire.questionnaires2d.RUN",
+        "questionnaireMode": "slider",
+        "scenarioMode": "",
+        "targetMode": "",
+        "saveNamespace": "trigger_trigger_3_complete",
+        "expectedOutputs": {
+          "sliderAnswers": 2
+        },
+        "extras": {
+          "mq.handoffSchema": "mq.handoff.v1",
+          "mq.triggerId": "trigger_3_complete",
+          "mq.questionnaireMode": "slider",
+          "mq.questionnaireSequence": "slider",
+          "mq.finishBehavior": "resumeCaller",
+          "mq.callerPackage": "org.questquestionnaire.circletriggerdemo",
+          "mq.callerActivity": "org.questquestionnaire.circletriggerdemo.QuestQuestionnaireUnityActivity",
+          "mq.autoCloseDelayMs": 2000
+        }
+      }
+    ]
+  },
+  "triggerQuestionnaireMapping": {
+    "schemaVersion": "mq.quest_questionnaire_trigger_mapping.v1",
+    "sourceCatalogSchemaVersion": "mq.quest_questionnaire_trigger_catalog.v1",
+    "catalogVersion": "1.0.0",
+    "sourceApkName": "three-circle-3-trigger-demo.apk",
+    "scenarioId": "quest-questionnaire-three-circle-protocol-demo",
+    "scenarioPackage": "org.questquestionnaire.circletriggerdemo",
+    "scenarioActivity": "org.questquestionnaire.circletriggerdemo.QuestQuestionnaireUnityActivity",
+    "triggers": [
+      {
+        "triggerId": "study_start_block_1",
+        "label": "Before experiment/running APK",
+        "enabled": true,
+        "questionnaireMode": "demographics",
+        "blockNumber": "001",
+        "blockId": "001_study_start_block_1",
+        "saveNamespace": "study_start_block_1",
+        "language": "",
+        "autoCloseDelayMs": 2000
+      },
+      {
+        "triggerId": "trigger_1_complete",
+        "label": "After trigger 1",
+        "enabled": true,
+        "questionnaireMode": "slider",
+        "questionnaireSequence": [
+          "slider"
+        ],
+        "blockNumber": "002",
+        "blockId": "002_trigger_trigger_1_complete",
+        "saveNamespace": "trigger_trigger_1_complete",
+        "language": "",
+        "autoCloseDelayMs": 2000
+      },
+      {
+        "triggerId": "trigger_2_complete",
+        "label": "After trigger 2",
+        "enabled": true,
+        "questionnaireMode": "slider",
+        "questionnaireSequence": [
+          "slider"
+        ],
+        "blockNumber": "003",
+        "blockId": "003_trigger_trigger_2_complete",
+        "saveNamespace": "trigger_trigger_2_complete",
+        "language": "",
+        "autoCloseDelayMs": 2000
+      },
+      {
+        "triggerId": "trigger_3_complete",
+        "label": "After trigger 3",
+        "enabled": true,
+        "questionnaireMode": "slider",
+        "questionnaireSequence": [
+          "slider"
+        ],
+        "blockNumber": "004",
+        "blockId": "004_trigger_trigger_3_complete",
+        "saveNamespace": "trigger_trigger_3_complete",
+        "language": "",
+        "autoCloseDelayMs": 2000
+      }
+    ]
+  }
+}

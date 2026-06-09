@@ -13,6 +13,9 @@ Required modes:
   package and uses the connected local builder page it opens. The hosted static
   GUI remains the public entry point, but browsers may block hosted pages from
   calling loopback APIs directly.
+- Treat `window.MQ_LOCAL_BACKEND_MODE === "OnlineConnector"` as final-product
+  GUI mode even though the page is served from `127.0.0.1`. The explicit local
+  escape hatch for engineering controls is `?developerMode=1`.
 
 Do not fork the GUI into separate offline and online implementations. Prefer one
 HTML/JavaScript UI with mode-specific visibility:
@@ -98,10 +101,52 @@ Workflow constraint:
   foreground recovery continues the next configured questionnaire block from
   the 2D APK protocol. Do not let Unity decide "block 2" or questionnaire
   module order.
+- When the generated questionnaire APK launches Unity, it should pass
+  `mq.triggerReceiverPackage`, `mq.triggerReceiverActivity`, and
+  `mq.triggerReceiverAction`. Unity trigger code should read those launch
+  extras and send only passive `mq.triggerId` metadata back to that receiver.
+  Public/preloaded Unity demos in this repo should not include a hard-coded
+  questionnaire fallback; direct Unity launches without receiver extras should
+  not perform questionnaire handoff. Reusable developer templates may document
+  an explicit opt-in local fallback, but that is not the product-path contract.
+- Public Unity demos that use a `singleTop` activity must update the current
+  Android intent in `onNewIntent()` with `setIntent(intent)` so a later direct
+  Meta Home launch clears any old questionnaire receiver extras.
 - Treat Unity trigger catalogs as event manifests, not questionnaire plans. In
   V2 the GUI/questionnaire config maps trigger IDs to blocks; Unity should send
   `mq.triggerId` and optional session metadata only. `mq.blockId` and
   `mq.blockNumber` are developer fallbacks, not the normal study contract.
+- The recommended copy-first Unity integration for public V2 docs/packages is
+  `tools/unity/QuestQuestionnairePassiveTriggerBridge.cs`. It only uses the
+  generated questionnaire APK's `mq.triggerReceiver*` launch extras and emits a
+  passive trigger. Older ChainLink, broker, and direct-panel helper scripts are
+  legacy/advanced tooling and should not be presented as the default product
+  path.
+- Host-side adapters such as LSL can be supported only as passive trigger
+  sources into the generated questionnaire APK/broker. They may carry
+  `triggerId` and inert timing/source metadata, but not questionnaire mode,
+  block order, scoring, participant state, or export decisions. Repeated
+  trigger handling belongs to generated protocol state and must be explicit.
+- Public/preloaded stimulus demos used for headset demonstrations should be
+  immersive Unity/stimulus APKs with passive triggers only. Native Android
+  scanner fixtures can remain for automated local trigger-detection tests, but
+  the visible preload workflow should scan a real local APK from the user's
+  checkout/program and must not treat a catalog-only fixture as an installable
+  Unity participant experience.
+- The public Three Circle preload has a matching generated questionnaire
+  config at
+  `QuestionnaireConfigs/examples/quest-questionnaire-three-circle-protocol-demo.config.json`
+  and a dry-run/live validation wrapper at
+  `tools/quest-minimal-apk-trigger-protocol-validate.ps1`. Default wrapper
+  runs are preflight-only; physical Quest install/launch requires explicit
+  `-RunLive -Serial <serial>`.
+- Public GUI links and companion status defaults should stay product-neutral.
+  Use package-relative downloads and `questquestionnaire` naming; do not
+  reintroduce personal GitHub owner names, legacy study labels, or inherited
+  project branding into the user-facing builder.
+- The Three Circle public preload must come from the real Unity build. Use the
+  demo project's short-path build helper on Windows when a deep checkout causes
+  Unity/Gradle generated path failures.
 - Block 1 is configurable and must not be prefilled with demographics, MAIA-2,
   or any other fixed questionnaire. Demographics is a generic
   participant-field type with a CSV-backed preload/template, not a hard-coded
@@ -116,6 +161,10 @@ Workflow constraint:
   the first questionnaire panel heading. The target label should come from the
   scanned trigger catalog/target app label, falling back to the package name
   only when needed.
+- The Bake step must also let the user manually override that generated
+  questionnaire APK app name. A blank field falls back to the scanned target
+  label; a custom field value becomes `config.appDisplayName` and the Android
+  `@string/app_name` for the generated APK.
 - CSV templates should be questionnaire-type templates, not named-instrument
   templates. Keep MAIA-2 as a preloaded questionnaire/library option under the
   generic Likert type; model the upload protocol around reusable types such as
@@ -159,6 +208,11 @@ Workflow constraint:
   handoff jobs, the local companion must send only one bounded wake request
   before the shared readiness probe and record the wake attempt in the job
   summary/receipt.
+- The local/developer GUI can expose a hidden `Validate minimal two-APK
+  protocol` runner backed by `POST /api/minimal-protocol`, but the hosted final
+  product should not surface it as a normal user step. The job defaults to
+  dry-run/software preflight and should report physical Quest gates pending
+  until a real `runLive=true` session and export evidence prove them.
 
 Security and portability constraints:
 

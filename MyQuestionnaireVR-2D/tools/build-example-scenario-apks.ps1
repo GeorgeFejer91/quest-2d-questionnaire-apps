@@ -55,9 +55,7 @@ $variantMap = @(
         variant = 'threeCircle'
         source = 'scenarioexamples-threeCircle-debug.apk'
         copies = @(
-            'example-scenario-apk\apk\three-circle-3-trigger-demo.apk',
-            'example-scenario-apk\unity-project\three-circle-trigger-demo\Builds\QuestQuestionnaireThreeCircleTriggerDemo.apk',
-            'example-scenario-apk\unity-project\three-circle-trigger-demo\Builds\three-circle-trigger-demo.apk'
+            'example-scenario-apk\apk\three-circle-3-trigger-demo.apk'
         )
     }
 )

@@ -3,6 +3,52 @@
 Record changes that affect future AI-agent behavior or project constraints.
 Use absolute dates.
 
+## 2026-06-09
+
+- Added `For-AI/HANDOFF_2026-06-09_TWO_APK_V2.md` as the current continuation
+  inventory before pushing to GitHub. It records the questionnaire-first
+  two-APK product contract, implemented scripts/docs/GUI controls, latest local
+  software validation evidence, oversized generated artifacts to avoid
+  committing, and the physical Quest gates still required before project
+  completion can be claimed.
+- Removed the legacy `org.questquestionnaire.CHAIN_COMMAND` intent filter from
+  the public three-circle Unity demo and the passive Unity kit manifest
+  snippet. The v2 product path is now explicit: participant starts the
+  generated questionnaire APK, it launches immersive Unity by package/activity,
+  and Unity returns only passive `mq.triggerId` events to the
+  questionnaire-supplied receiver.
+- Added `MyQuestionnaireVR-2D/tools/new-two-apk-live-validation-packet.ps1` to
+  the packaged builder workflow. It prepares a no-headset pair audit, dry-run
+  preflight, operator runbook, and typed manual signoff for the two-APK live
+  gate without installing, launching, waking, or foreground-switching a Quest.
+- Hardened the public three-circle Unity demo against stale questionnaire
+  receiver extras by using a tiny `UnityPlayerGameActivity` subclass that calls
+  `setIntent(intent)` in `onNewIntent()`. Public demos must remain immersive
+  Unity/stimulus APKs that only emit passive triggers; direct Meta Home launches
+  without fresh questionnaire receiver extras must not perform questionnaire
+  handoff.
+- Removed `mq.questionnaireSequence` from the default questionnaire-to-Unity
+  completion intent. The generated 2D APK still owns, stores, and exports
+  questionnaire sequence state, but Unity receives only passive receiver,
+  result, and inert session/export metadata needed for the handoff.
+- Added a short minimal trigger integration guide and hardened the LSL host
+  bridge so `command=trigger` accepts only passive trigger/session/source/timing
+  metadata. LSL remains an optional adapter into the questionnaire-owned broker,
+  not a route for questionnaire mode, block order, next app, scoring, or export
+  decisions.
+- Added `docs/trigger-transport-decision-record.md` as the durable Android
+  intent vs LSL decision record. The passive-trigger validator now checks that
+  this decision stays present and linked from the product protocol docs.
+- Added `MyQuestionnaireVR-2D/tools/unity/passive-trigger-kit/` as the minimal
+  copyable Unity-side starter kit. It includes a passive trigger catalog
+  template and optional `singleTop` activity/manifest snippets, and it is
+  included in the packaged builder download.
+- Added `MyQuestionnaireVR-2D/tools/validate-two-apk-pair.ps1`, a no-headset
+  audit for a concrete generated questionnaire config plus Unity/stimulus APK.
+  It verifies package/activity agreement, trigger catalog coverage,
+  questionnaire-owned return blocks, and APK badging when Android build-tools
+  are available.
+
 ## 2026-06-08
 
 - Updated the V2 builder rule: Block 1 is configurable and demographics is only
@@ -449,3 +495,12 @@ Use absolute dates.
   self-contained page card, and the add affordance appears as a separate empty
   next-page card underneath instead of an inline row attached to the current
   questionnaire.
+- Simplified the public questionnaire-builder Unity package path: the packaged
+  `unity/` folder now ships only `QuestQuestionnairePassiveTriggerBridge.cs`,
+  the passive-trigger kit, and a short v2 README. Legacy ChainLink/wrapper
+  Unity helpers remain in the source repo for maintainer diagnostics, but they
+  are not exposed as the public two-APK integration path.
+- Added a publisher invariant so `publish-questionnaire-builder.ps1` now fails
+  if the public `unity/` package is missing passive-kit files, exposes legacy
+  Unity routing helpers, points the public README at those helpers, or ships a
+  passive bridge that contains questionnaire-routing extras.

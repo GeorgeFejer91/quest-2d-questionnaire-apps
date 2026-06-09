@@ -109,7 +109,7 @@ public sealed class CircleSceneController : MonoBehaviour
     private void FireTrigger()
     {
         hasFired = true;
-        CircleDemoQuestionnaireBridge.LaunchQuestionnaireTrigger(profile.triggerId, TriggerExtras());
+        CircleDemoQuestionnaireBridge.EmitTrigger(profile.triggerId, TriggerExtras());
         if (!string.IsNullOrEmpty(profile.nextSceneName))
         {
             SceneManager.LoadScene(profile.nextSceneName);
@@ -124,9 +124,7 @@ public sealed class CircleSceneController : MonoBehaviour
             ["mq.triggerSource"] = "three-circle-unity-demo",
             ["mq.triggerTimestampUtc"] = utcNow.ToString("o"),
             ["mq.triggerTimestampUnixMs"] = ToUnixMilliseconds(utcNow).ToString(CultureInfo.InvariantCulture),
-            ["mq.scenarioId"] = "quest-questionnaire-three-circle-trigger-demo",
-            ["mq.finishBehavior"] = "resumeCaller",
-            ["mq.autoCloseDelayMs"] = "1000"
+            ["mq.scenarioId"] = "quest-questionnaire-three-circle-trigger-demo"
         };
     }
 

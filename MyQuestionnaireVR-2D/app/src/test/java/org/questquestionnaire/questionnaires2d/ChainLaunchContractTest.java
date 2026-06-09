@@ -174,6 +174,10 @@ public final class ChainLaunchContractTest {
         assertEquals(new ComponentName("org.example.next", "org.example.next.MainActivity"), next.getComponent());
         assertEquals("complete", next.getStringExtra(QuestionnaireLaunchContext.EXTRA_RESULT_STATUS));
         assertEquals("session-chain-test", next.getStringExtra(QuestionnaireLaunchContext.EXTRA_SESSION_ID));
+        assertEquals("org.questquestionnaire.questionnaires2d", next.getStringExtra(QuestionnaireLaunchContext.EXTRA_TRIGGER_RECEIVER_PACKAGE));
+        assertEquals("org.questquestionnaire.questionnaires2d.MainActivity", next.getStringExtra(QuestionnaireLaunchContext.EXTRA_TRIGGER_RECEIVER_ACTIVITY));
+        assertEquals(QuestionnaireLaunchContext.ACTION_RUN, next.getStringExtra(QuestionnaireLaunchContext.EXTRA_TRIGGER_RECEIVER_ACTION));
+        assertFalse(next.hasExtra(QuestionnaireLaunchContext.EXTRA_QUESTIONNAIRE_SEQUENCE));
         QuestionnaireData.RuntimeConfig activeConfig = QuestionnaireLoader.loadRuntimeConfig(RuntimeEnvironment.getApplication());
         assertEquals(activeConfig.questionnaireId, next.getStringExtra(QuestionnaireLaunchContext.EXTRA_QUESTIONNAIRE_CONFIG_ID));
         assertTrue(next.getStringExtra(QuestionnaireLaunchContext.EXTRA_EXPORT_JSON_PATH).endsWith(".json"));

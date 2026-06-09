@@ -29,6 +29,10 @@ EXTRA_MAP = {
     "experimentId": "mq.experimentId",
     "scenarioId": "mq.scenarioId",
     "trialId": "mq.trialId",
+    "triggerId": "mq.triggerId",
+    "triggerSource": "mq.triggerSource",
+    "triggerTimestampUtc": "mq.triggerTimestampUtc",
+    "triggerTimestampUnixMs": "mq.triggerTimestampUnixMs",
     "chainId": "mq.chainId",
     "chainStepId": "mq.chainStepId",
     "chainStepIndex": "mq.chainStepIndex",
@@ -40,6 +44,27 @@ EXTRA_MAP = {
     "callerActivity": "mq.callerActivity",
     "nextPackage": "mq.nextPackage",
     "nextActivity": "mq.nextActivity",
+}
+
+PASSIVE_TRIGGER_ALLOWED_KEYS = {
+    "schemaVersion",
+    "command",
+    "sessionId",
+    "invocationId",
+    "experimentId",
+    "scenarioId",
+    "trialId",
+    "chainId",
+    "triggerId",
+    "triggerSource",
+    "triggerTimestampUtc",
+    "triggerTimestampUnixMs",
+}
+
+PASSIVE_TRIGGER_MQ_TO_COMMAND_KEY = {
+    extra: key
+    for key, extra in EXTRA_MAP.items()
+    if key in PASSIVE_TRIGGER_ALLOWED_KEYS
 }
 
 
@@ -157,6 +182,31 @@ def chain_plan_json(command: Dict[str, Any]) -> Optional[str]:
     return str(plan_json)
 
 
+def sanitize_passive_trigger_command(command: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a passive trigger command or reject questionnaire-routing payloads."""
+
+    sanitized: Dict[str, Any] = {"command": "trigger"}
+    rejected: List[str] = []
+    for key, value in command.items():
+        clean_key = str(key).strip()
+        if clean_key in PASSIVE_TRIGGER_ALLOWED_KEYS:
+            sanitized[clean_key] = value
+        elif clean_key in PASSIVE_TRIGGER_MQ_TO_COMMAND_KEY:
+            sanitized[PASSIVE_TRIGGER_MQ_TO_COMMAND_KEY[clean_key]] = value
+        else:
+            rejected.append(clean_key)
+
+    if rejected:
+        rejected_list = ", ".join(sorted(rejected))
+        raise RuntimeError(
+            "Passive LSL trigger commands may only carry trigger id and inert "
+            f"session/source/timing metadata. Rejected field(s): {rejected_list}"
+        )
+    if not str(sanitized.get("triggerId") or "").strip():
+        raise RuntimeError("Passive LSL trigger command requires triggerId.")
+    return sanitized
+
+
 def start_broker(args: argparse.Namespace, command: Dict[str, Any], broker_command: str) -> None:
     am_args = [
         "shell",
@@ -213,6 +263,8 @@ def handle_command(args: argparse.Namespace, command: Dict[str, Any]) -> None:
         start_plan(args, command)
     elif name == "continuePlan":
         start_broker(args, command, "continuePlan")
+    elif name == "trigger":
+        start_broker(args, sanitize_passive_trigger_command(command), "trigger")
     elif name == "clearPlan":
         start_broker(args, command, "clearPlan")
     elif name == "discoverHooks":

@@ -13,6 +13,7 @@ import java.util.List;
 
 final class QuestionnaireLaunchContext {
     static final String ACTION_RUN = "org.questquestionnaire.questionnaires2d.RUN";
+    static final String QUESTIONNAIRE_ACTIVITY = "org.questquestionnaire.questionnaires2d.MainActivity";
     static final String EXTRA_SESSION_ID = "mq.sessionId";
     static final String EXTRA_INVOCATION_ID = "mq.invocationId";
     static final String EXTRA_EXPERIMENT_ID = "mq.experimentId";
@@ -40,6 +41,9 @@ final class QuestionnaireLaunchContext {
     static final String EXTRA_HANDOFF_SCHEMA = "mq.handoffSchema";
     static final String EXTRA_RETURN_PENDING_INTENT = "mq.returnPendingIntent";
     static final String EXTRA_TRIGGER_ID = "mq.triggerId";
+    static final String EXTRA_TRIGGER_RECEIVER_PACKAGE = "mq.triggerReceiverPackage";
+    static final String EXTRA_TRIGGER_RECEIVER_ACTIVITY = "mq.triggerReceiverActivity";
+    static final String EXTRA_TRIGGER_RECEIVER_ACTION = "mq.triggerReceiverAction";
     static final String EXTRA_QUESTIONNAIRE_MODE = "mq.questionnaireMode";
     static final String EXTRA_QUESTIONNAIRE_SEQUENCE = "mq.questionnaireSequence";
     static final String EXTRA_FLOW_MODE = "mq.flowMode";
@@ -292,21 +296,23 @@ final class QuestionnaireLaunchContext {
             target.putExtra("mq.command", CHAINLINK_NEXT_BLOCK);
             target.putExtra("mq.triggerSource", "questionnaire-complete");
         }
-        addCompletionExtras(target, export, record);
+        addCompletionExtras(target, export, record, context);
         return target;
     }
 
     void sendReturnPendingIntent(Context context, QuestionnaireExporter.ExportResult export, QuestionnaireData.SessionRecord record) throws PendingIntent.CanceledException {
         Intent fillIn = new Intent();
-        addCompletionExtras(fillIn, export, record);
+        addCompletionExtras(fillIn, export, record, context);
         returnPendingIntent.send(context, 0, fillIn);
     }
 
-    private void addCompletionExtras(Intent target, QuestionnaireExporter.ExportResult export, QuestionnaireData.SessionRecord record) {
+    private void addCompletionExtras(Intent target, QuestionnaireExporter.ExportResult export, QuestionnaireData.SessionRecord record, Context context) {
         target.putExtra(EXTRA_HANDOFF_SCHEMA, HANDOFF_SCHEMA_V1);
         target.putExtra(EXTRA_RESULT_STATUS, "complete");
         target.putExtra(EXTRA_TRIGGER_ID, triggerId);
-        target.putExtra(EXTRA_QUESTIONNAIRE_SEQUENCE, record.questionnaireSequence);
+        target.putExtra(EXTRA_TRIGGER_RECEIVER_PACKAGE, context.getPackageName());
+        target.putExtra(EXTRA_TRIGGER_RECEIVER_ACTIVITY, QUESTIONNAIRE_ACTIVITY);
+        target.putExtra(EXTRA_TRIGGER_RECEIVER_ACTION, ACTION_RUN);
         target.putExtra(EXTRA_RUN_ID, record.runId);
         target.putExtra(EXTRA_SESSION_ID, record.sessionId);
         target.putExtra(EXTRA_CHAIN_ID, record.chainId);

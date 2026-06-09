@@ -4,6 +4,17 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
-  m_configObjects: {}
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/01_GreenCircle.unity
+    guid: 00a0cc6df7f14fc4a8e7d088fa7fa101
+  - enabled: 1
+    path: Assets/Scenes/02_BlueCircle.unity
+    guid: 00a0cc6df7f14fc4a8e7d088fa7fa102
+  - enabled: 1
+    path: Assets/Scenes/03_RedCircle.unity
+    guid: 00a0cc6df7f14fc4a8e7d088fa7fa103
+  m_configObjects:
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 955003e1fa021664786169866b5868b0, type: 2}
+    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 9af1a120c7aa4e55b7efb7d219d3b215, type: 2}
   m_UseUCBPForAssetBundles: 0

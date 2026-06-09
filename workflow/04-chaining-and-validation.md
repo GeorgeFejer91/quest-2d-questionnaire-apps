@@ -2,6 +2,24 @@
 
 ## Chain Ownership
 
+For the V2 public builder/product path, start from the generated questionnaire
+APK:
+
+```text
+2D questionnaire APK -> immersive Unity/stimulus APK -> same 2D questionnaire APK via mq.triggerId
+```
+
+The questionnaire APK launches Unity with `mq.triggerReceiverPackage`,
+`mq.triggerReceiverActivity`, and `mq.triggerReceiverAction`. Unity source
+hooks read those launch extras and return only passive trigger metadata,
+primarily `mq.triggerId`, to that receiver. Public/preloaded Unity demos should
+not include a hard-coded questionnaire fallback; direct Unity launches without
+receiver extras should not perform questionnaire handoff.
+Public/preloaded v2 demos also should not expose
+`org.questquestionnaire.CHAIN_COMMAND`; the questionnaire APK starts Unity by
+explicit package/activity after Block 1, and Unity returns through the supplied
+receiver extras.
+
 For XR app to questionnaire/tracer handoff, prefer the direct app-owned
 contract first:
 
@@ -22,6 +40,18 @@ interprets `mq.triggerId` against its own protocol state and decides which block
 to resume. `mq.blockId` and `mq.blockNumber` are developer fallbacks, not the
 normal Unity decision surface.
 
+The recommended copy-first Unity integration for the public v2 path is
+`MyQuestionnaireVR-2D/tools/unity/QuestQuestionnairePassiveTriggerBridge.cs`.
+Call `QuestQuestionnairePassiveTriggerBridge.EmitTrigger("<trigger-id>")` at
+the real stimulus event. Keep older ChainLink/broker helpers for legacy or
+advanced workflows only.
+
+When the Unity activity is `singleTop`, require an activity wrapper or subclass
+that calls `setIntent(intent)` from `onNewIntent()`. This keeps direct Unity
+launches from reusing stale questionnaire receiver extras, while preserving the
+questionnaire-first path where the 2D APK supplies fresh receiver extras before
+opening the immersive Unity app.
+
 For multi-APK experiments, use the standalone orchestrator APK as the plan
 owner when possible:
 
@@ -39,7 +69,7 @@ activity: org.questquestionnaire.questionnaires2d.QuestChainBrokerActivity
 action: org.questquestionnaire.questionnaires2d.BROKER
 ```
 
-Both broker styles accept commands such as:
+The questionnaire broker accepts commands such as:
 
 ```text
 startPlan
@@ -50,6 +80,11 @@ openApp
 goHome
 ping
 trigger
+```
+
+ChainLink additionally supports foreground fallback commands such as:
+
+```text
 triggerComplete
 ```
 
@@ -66,14 +101,66 @@ Use the right link mode for the target APK:
 | --- | --- | --- | --- |
 | Existing compiled Unity APK | Wrapper hook | Orchestrator route, target launch request, questionnaire export safety | Scenario may not have reached real internal completion |
 | Rebuildable Unity source APK | Passive source trigger | Real stimulus event emitted from Unity source | Requires correct Unity source/build profile |
-| Lab network command source | LSL bridge | External command can start/continue headset-owned plan | LSL should not own headset state |
+| Lab network command source | LSL bridge | External command can emit a passive `triggerId` into the questionnaire-owned broker | LSL should not own headset state or questionnaire routing |
 
 Wrapper links are good for smoke tests, timed segments, and legacy APKs. Source
 triggers are the stronger study route because the active Unity app can emit the
 real stimulus event when the scenario truly finishes, while the 2D
 questionnaire APK still owns the questionnaire protocol.
+Use the LSL bridge as an optional lab adapter only: it may carry `command:
+trigger` and `triggerId`, but it must not encode questionnaire type, score
+logic, next block, or export behavior.
+The bridge enforces this for `command=trigger`; legacy commands such as
+`startPlan` remain advanced/debugging tooling outside the public two-APK path.
+The durable Android-intent-vs-LSL decision is recorded in
+[`../docs/trigger-transport-decision-record.md`](../docs/trigger-transport-decision-record.md).
 
 ## Validation Ladder
+
+For the local software proof of the minimal two-APK protocol, run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\validate-minimal-apk-trigger-protocol.ps1
+```
+
+This is a no-headset gate. It checks passive catalogs, LSL passive marker
+examples, questionnaire-owned trigger routing tests, builder multi-trigger
+generalization, APK build, Unity bridge receiver support, and Unity input
+metadata. It deliberately leaves Quest install, launch focus, trigger return,
+and export pull as a separate physical gate.
+
+For a concrete generated questionnaire config plus Unity APK pair, run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\validate-two-apk-pair.ps1 `
+  -QuestionnaireConfig <generated-questionnaire.config.json> `
+  -UnityApk <unity-stimulus.apk>
+```
+
+This catches package/activity mismatches and missing trigger return blocks
+before headset install.
+
+For the concrete public two-APK demo pair, use the dry-run Quest gate wrapper:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\quest-minimal-apk-trigger-protocol-validate.ps1 -SkipQuestionnaireBuild
+```
+
+This wrapper checks the passive trigger contract, the generated three-circle
+questionnaire config, Unity hand/controller metadata, and the 2D-first
+front-door preflight. It does not touch a headset unless run with
+`-RunLive -Serial <quest-serial>`.
+
+Before a human headset session, prepare the typed two-APK operator packet:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MyQuestionnaireVR-2D\tools\new-two-apk-live-validation-packet.ps1
+```
+
+The packet writes a no-headset summary, manual runbook, and
+`operator-signoff-template.json`. It records that Unity must be launched by the
+generated questionnaire APK, must be immersive foreground stimulus, and must
+emit passive triggers only.
 
 Use this progression before treating an APK as ready:
 

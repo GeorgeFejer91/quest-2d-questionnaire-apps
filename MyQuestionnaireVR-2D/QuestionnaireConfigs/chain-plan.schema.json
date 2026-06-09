@@ -45,6 +45,38 @@
           "command": {
             "type": "string"
           },
+          "triggerId": {
+            "type": "string"
+          },
+          "trigger": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "enum": ["apkManifestTrigger", "passiveTrigger", "externalTrigger"]
+              },
+              "id": {
+                "type": "string"
+              },
+              "triggerId": {
+                "type": "string"
+              },
+              "allowRepeat": {
+                "type": "boolean"
+              },
+              "repeatable": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": {
+              "type": ["string", "number", "boolean", "null"]
+            }
+          },
+          "allowRepeat": {
+            "type": "boolean"
+          },
+          "repeatable": {
+            "type": "boolean"
+          },
           "extras": {
             "type": "object",
             "additionalProperties": {

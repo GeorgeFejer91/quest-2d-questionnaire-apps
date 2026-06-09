@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(RobolectricTestRunner.class)
@@ -106,6 +107,55 @@ public final class QuestChainBrokerTest {
     }
 
     @Test
+    public void triggerCommandRoutesByTriggerIdInsideQuestionnaireBroker() throws Exception {
+        deleteBrokerState();
+        Intent start = new Intent(QuestChainBroker.ACTION_BROKER);
+        start.putExtra(QuestChainBroker.EXTRA_BROKER_COMMAND, QuestChainBroker.COMMAND_START_PLAN);
+        start.putExtra(QuestChainBroker.EXTRA_CHAIN_PLAN_JSON, triggerRoutedPlan(false));
+        start.putExtra(QuestionnaireLaunchContext.EXTRA_CHAIN_ID, "chain-trigger-001");
+        QuestChainBroker.handle(RuntimeEnvironment.getApplication(), start);
+
+        Intent trigger = new Intent(QuestChainBroker.ACTION_BROKER);
+        trigger.putExtra(QuestChainBroker.EXTRA_BROKER_COMMAND, QuestChainBroker.COMMAND_TRIGGER);
+        trigger.putExtra(QuestionnaireLaunchContext.EXTRA_TRIGGER_ID, "trigger_1_complete");
+        QuestChainBroker.Result result = QuestChainBroker.handle(RuntimeEnvironment.getApplication(), trigger);
+
+        assertEquals("questionnaire:questionnaire-after-trigger", result.status);
+        assertNotNull(result.outgoingIntent);
+        assertEquals(new ComponentName(
+            "org.questquestionnaire.questionnaires2d",
+            "org.questquestionnaire.questionnaires2d.MainActivity"), result.outgoingIntent.getComponent());
+        assertEquals("trigger_1_complete", result.outgoingIntent.getStringExtra(QuestionnaireLaunchContext.EXTRA_TRIGGER_ID));
+        assertEquals("questionnaire-after-trigger", result.outgoingIntent.getStringExtra(QuestionnaireLaunchContext.EXTRA_CHAIN_STEP_ID));
+        assertEquals("English", result.outgoingIntent.getStringExtra(QuestionnaireLaunchContext.EXTRA_LANGUAGE));
+
+        JSONObject state = readStateJson();
+        assertEquals(1, state.getInt("currentStepIndex"));
+        assertEquals("trigger_1_complete", state.getJSONObject("lastResult").getString(QuestionnaireLaunchContext.EXTRA_TRIGGER_ID));
+    }
+
+    @Test
+    public void repeatedTriggerDoesNotReplayCompletedBlockUnlessRepeatable() throws Exception {
+        deleteBrokerState();
+        Intent start = new Intent(QuestChainBroker.ACTION_BROKER);
+        start.putExtra(QuestChainBroker.EXTRA_BROKER_COMMAND, QuestChainBroker.COMMAND_START_PLAN);
+        start.putExtra(QuestChainBroker.EXTRA_CHAIN_PLAN_JSON, triggerRoutedPlan(false));
+        start.putExtra(QuestionnaireLaunchContext.EXTRA_CHAIN_ID, "chain-trigger-002");
+        QuestChainBroker.handle(RuntimeEnvironment.getApplication(), start);
+
+        Intent trigger = new Intent(QuestChainBroker.ACTION_BROKER);
+        trigger.putExtra(QuestChainBroker.EXTRA_BROKER_COMMAND, QuestChainBroker.COMMAND_TRIGGER);
+        trigger.putExtra(QuestionnaireLaunchContext.EXTRA_TRIGGER_ID, "trigger_1_complete");
+        QuestChainBroker.handle(RuntimeEnvironment.getApplication(), trigger);
+
+        QuestChainBroker.Result repeated = QuestChainBroker.handle(RuntimeEnvironment.getApplication(), trigger);
+
+        assertEquals("trigger-unmapped:trigger_1_complete", repeated.status);
+        assertNull(repeated.outgoingIntent);
+        assertEquals(1, readStateJson().getInt("currentStepIndex"));
+    }
+
+    @Test
     public void goHomeBuildsHomeIntentAndClearPlanRemovesState() throws Exception {
         deleteBrokerState();
         Intent start = new Intent(QuestChainBroker.ACTION_BROKER);
@@ -144,6 +194,17 @@ public final class QuestChainBrokerTest {
             + "{\"id\":\"questionnaire-a\",\"type\":\"questionnaire\",\"package\":\"org.questquestionnaire.questionnaires2d\",\"activity\":\".MainActivity\","
             + "\"extras\":{\"mq.language\":\"English\",\"mq.autoCloseDelayMs\":0}},"
             + "{\"id\":\"scenario-b\",\"type\":\"scenario\",\"package\":\"org.example.next\",\"activity\":\"org.example.next.MainActivity\"}"
+            + "]}";
+    }
+
+    private static String triggerRoutedPlan(boolean allowRepeat) {
+        return "{"
+            + "\"schemaVersion\":\"my-questionnaire-2d.chain-plan.v1\","
+            + "\"steps\":["
+            + "{\"id\":\"scenario-a\",\"type\":\"scenario\",\"package\":\"org.example.scenario\",\"activity\":\"org.example.scenario.MainActivity\"},"
+            + "{\"id\":\"questionnaire-after-trigger\",\"type\":\"questionnaire\",\"package\":\"org.questquestionnaire.questionnaires2d\",\"activity\":\".MainActivity\","
+            + "\"trigger\":{\"type\":\"apkManifestTrigger\",\"triggerId\":\"trigger_1_complete\",\"allowRepeat\":" + allowRepeat + "},"
+            + "\"extras\":{\"mq.language\":\"English\",\"mq.autoCloseDelayMs\":0}}"
             + "]}";
     }
 

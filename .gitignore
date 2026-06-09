@@ -8,9 +8,24 @@
 **/artifacts/
 **/Builds/
 **/QuestionnaireConfigs/generated/
+output/
+.codex-remote-attachments/
 example-scenario-apk/*.apk
 example-scenario-apk/apk/*.apk
 example-scenario-apk/multi-trigger-demos/*/*.apk
+
+# Generated staged website package assets.
+# Keep questionnaire-builder/index.html, README.md, and the Pages manifest in
+# git; regenerate the large package/download tree locally or publish it through
+# release assets/Git LFS.
+questionnaire-builder/QuestionnaireBuilder.zip
+questionnaire-builder/Start-QuestionnaireBuilderApp.cmd
+questionnaire-builder/Start-QuestionnaireBuilderOnlineConnector.cmd
+questionnaire-builder/docs/
+questionnaire-builder/examples/
+questionnaire-builder/schemas/
+questionnaire-builder/tools/
+questionnaire-builder/unity/
 
 # Unity generated state for the demo scenario project
 QuestionnaireStimulusUnity/Library/

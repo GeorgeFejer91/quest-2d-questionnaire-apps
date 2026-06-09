@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "mq.quest_questionnaire_trigger_catalog.v1",
+  "catalogVersion": "1.0.0",
+  "scenarioId": "my-unity-stimulus",
+  "package": "org.example.mystimulus",
+  "activity": "org.example.mystimulus.QuestQuestionnaireUnityActivity",
+  "label": "My Unity Stimulus",
+  "triggers": [
+    {
+      "triggerId": "trigger_1_complete",
+      "label": "After trigger 1",
+      "description": "Passive event emitted by the foreground Unity stimulus APK."
+    }
+  ]
+}

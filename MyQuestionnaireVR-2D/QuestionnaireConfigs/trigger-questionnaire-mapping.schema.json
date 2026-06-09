@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mq.quest_questionnaire_trigger_mapping.v1",
+  "title": "Quest Questionnaire Trigger To Block Mapping",
+  "type": "object",
+  "required": ["schemaVersion", "triggers"],
+  "properties": {
+    "schemaVersion": {
+      "const": "mq.quest_questionnaire_trigger_mapping.v1"
+    },
+    "passiveTriggerWarnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "triggers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["triggerId"],
+        "properties": {
+          "triggerId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "questionnaireMode": {
+            "enum": ["none", "demographics", "baseline", "maia2", "pictographic", "slider", "temporalTracer", "full"]
+          },
+          "questionnaireSequence": {
+            "type": "array",
+            "items": {
+              "enum": ["demographics", "maia2", "pictographic", "slider", "temporalTracer"]
+            }
+          },
+          "blockNumber": {
+            "type": "string",
+            "pattern": "^\\d{3}$"
+          },
+          "blockId": {
+            "type": "string"
+          },
+          "saveNamespace": {
+            "type": "string"
+          },
+          "language": {
+            "enum": ["English", "Deutsch"]
+          },
+          "autoCloseDelayMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sourceRecommendedMode": {
+            "type": "string"
+          },
+          "sourceStudyLogicFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": {
+          "type": ["string", "number", "boolean", "null", "array", "object"]
+        }
+      }
+    }
+  },
+  "additionalProperties": {
+    "type": ["string", "number", "boolean", "null", "array", "object"]
+  }
+}

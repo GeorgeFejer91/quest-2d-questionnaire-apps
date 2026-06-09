@@ -1,0 +1,14 @@
+<!--
+  Merge this activity into Assets/Plugins/Android/AndroidManifest.xml and
+  replace org.example.mystimulus with your Unity Android package.
+-->
+<activity
+    android:name="org.example.mystimulus.QuestQuestionnaireUnityActivity"
+    android:exported="true"
+    android:launchMode="singleTop"
+    android:theme="@style/BaseUnityGameActivityTheme">
+    <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+    </intent-filter>
+</activity>

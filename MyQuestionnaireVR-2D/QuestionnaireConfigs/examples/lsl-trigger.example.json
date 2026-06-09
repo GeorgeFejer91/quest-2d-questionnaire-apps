@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "my-questionnaire-2d.lsl-chain-command.v1",
+  "command": "trigger",
+  "sessionId": "demo-session-001",
+  "experimentId": "example-experiment",
+  "scenarioId": "three-circle-demo",
+  "trialId": "trial-001",
+  "triggerId": "trigger_1_complete",
+  "triggerSource": "external-lsl-marker",
+  "triggerTimestampUtc": "2026-06-09T12:00:00.000Z"
+}

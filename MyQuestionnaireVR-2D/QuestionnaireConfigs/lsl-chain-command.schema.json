@@ -4,18 +4,56 @@
   "title": "MyQuestionnaireVR-2D LSL Chain Command",
   "type": "object",
   "required": ["command"],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "command": { "const": "trigger" }
+        },
+        "required": ["command"]
+      },
+      "then": {
+        "required": ["triggerId"],
+        "propertyNames": {
+          "enum": [
+            "schemaVersion",
+            "command",
+            "sessionId",
+            "invocationId",
+            "experimentId",
+            "scenarioId",
+            "trialId",
+            "chainId",
+            "triggerId",
+            "triggerSource",
+            "triggerTimestampUtc",
+            "triggerTimestampUnixMs"
+          ]
+        }
+      }
+    }
+  ],
   "properties": {
     "schemaVersion": {
       "const": "my-questionnaire-2d.lsl-chain-command.v1"
     },
     "command": {
-      "enum": ["startPlan", "continuePlan", "clearPlan", "discoverHooks", "startQuestionnaire", "openApp", "goHome", "forceStopQuestionnaire", "ping"]
+      "enum": ["startPlan", "continuePlan", "trigger", "clearPlan", "discoverHooks", "startQuestionnaire", "openApp", "goHome", "forceStopQuestionnaire", "ping"]
     },
     "sessionId": { "type": "string" },
     "invocationId": { "type": "string" },
     "experimentId": { "type": "string" },
     "scenarioId": { "type": "string" },
     "trialId": { "type": "string" },
+    "triggerId": { "type": "string" },
+    "triggerSource": { "type": "string" },
+    "triggerTimestampUtc": { "type": "string" },
+    "triggerTimestampUnixMs": {
+      "oneOf": [
+        { "type": "integer", "minimum": 0 },
+        { "type": "string" }
+      ]
+    },
     "chainId": { "type": "string" },
     "chainStepId": { "type": "string" },
     "chainStepIndex": { "type": "integer", "minimum": 0 },

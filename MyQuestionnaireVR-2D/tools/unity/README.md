@@ -1,18 +1,28 @@
-# Unity Quest Questionnaire Chain Bridge
+# Unity Quest Questionnaire Passive Trigger Bridge
 
 Copy these files into a Unity Android project that needs to participate in an
 on-headset APK chain with the 2D questionnaire panel app:
 
-- `QuestQuestionnaireChainBridge.cs`: static Android intent bridge.
-- `ChainLinkControllerHook.cs`: optional scene component that watches the left
-  Quest controller and emits a passive `mq.triggerId` event.
-- `ChainLinkTimedTrigger.cs`: optional scene component that fires the same
-  chain action from a Unity timer, without requiring controller input.
+- `QuestQuestionnairePassiveTriggerBridge.cs`: copy-first v2 bridge. It emits
+  a passive `mq.triggerId` to the `mq.triggerReceiver*` target supplied by the
+  generated questionnaire APK. It has no hard-coded questionnaire package
+  fallback and no questionnaire routing extras.
+- `passive-trigger-kit/`: copyable v2 starter kit with a trigger catalog
+  template, optional `singleTop` Unity activity snippet, and a short checklist
+  for keeping questionnaire logic out of Unity.
 - `QuestQuestionnairePassiveTriggerDemo.cs`: optional scene component for
-  simple 2/3/4-trigger stimulus demos. Configure a list of passive trigger ids
-  such as `trigger_1_complete`, `trigger_2_complete`, and
-  `trigger_3_complete`; the questionnaire APK decides which block each event
-  resumes.
+  simple 2/3/4-trigger stimulus demos. Set `Action = QuestionnaireReceiver`
+  and configure passive trigger ids such as `trigger_1_complete`,
+  `trigger_2_complete`, and `trigger_3_complete`; the questionnaire APK
+  decides which block each event resumes.
+- `QuestQuestionnaireChainBridge.cs`: legacy/advanced Android intent bridge for
+  older ChainLink, broker, and direct-panel workflows. Do not use it as the
+  default public v2 integration unless you deliberately need those fallback
+  routes.
+- `ChainLinkControllerHook.cs`: legacy/advanced scene component that watches
+  the left Quest controller and emits ChainLink commands.
+- `ChainLinkTimedTrigger.cs`: legacy/advanced scene component that fires older
+  ChainLink or direct-panel actions from a Unity timer.
 
 Unity/stimulus APKs should stay passive in the product architecture. They may
 present stimulus content and emit simple trigger events, but they should not
@@ -22,12 +32,63 @@ that study logic and interprets `mq.triggerId` against its own protocol state.
 Use `mq.blockId`, `mq.blockNumber`, or `mq.questionnaireMode` only as
 diagnostic or legacy fallbacks.
 
-## Drop-In Timed Trigger
+In the questionnaire-first product path, the participant starts the generated
+2D questionnaire APK from Meta Home. The questionnaire APK then launches the
+immersive Unity/stimulus APK and passes:
+
+```text
+mq.triggerReceiverPackage
+mq.triggerReceiverActivity
+mq.triggerReceiverAction
+```
+
+`QuestQuestionnairePassiveTriggerBridge.EmitTrigger(...)` reads those receiver
+extras from the Unity launch intent and sends only `mq.triggerId` plus optional
+session/scenario metadata back to that target. Public/preloaded demos should
+require those receiver extras and avoid hard-coded questionnaire fallbacks.
+The bridge filters outgoing extras through a passive metadata allow-list before
+sending the trigger intent, so Unity scene code cannot add study-routing fields
+to the payload by accident.
+The older `QuestQuestionnaireChainBridge` file remains for explicit developer
+diagnostics and legacy ChainLink workflows, not for shipped v2 study-flow
+ownership.
+
+For Unity activities that use `launchMode="singleTop"`, make sure
+`onNewIntent(Intent intent)` calls `setIntent(intent)` before Unity bridge code
+reads `currentActivity.getIntent()`. The public three-circle demo does this
+with `QuestQuestionnaireUnityActivity`, a minimal subclass of
+`UnityPlayerGameActivity`. Without this, a direct Meta Home launch can reuse
+stale `mq.triggerReceiver*` extras from a previous questionnaire-started
+session.
+
+Minimal Unity call:
+
+```csharp
+QuestQuestionnairePassiveTriggerBridge.EmitTrigger("trigger_1_complete");
+```
+
+## Drop-In Passive Trigger
+
+For a Unity video, task, or scene sequence, call the bridge at the moment the
+questionnaire should resume:
+
+```csharp
+public void OnVideoFinished()
+{
+    QuestQuestionnairePassiveTriggerBridge.EmitTrigger("video_complete");
+}
+```
+
+For a multi-trigger demo, configure `QuestQuestionnairePassiveTriggerDemo` with
+`trigger_1_complete`, `trigger_2_complete`, and so on. Those IDs are event
+names only. The generated questionnaire APK maps them to blocks.
+
+## Legacy Timed Trigger
 
 For controller-free experiment switching, add `ChainLinkTimedTrigger` to a
-GameObject in the foreground Unity scene. This lets the Unity APK emit a
-passive trigger and bring the 2D questionnaire panel forward after a fixed
-delay.
+GameObject in the foreground Unity scene only when you are maintaining an older
+ChainLink/broker plan. New v2 public demos should use
+`QuestQuestionnairePassiveTriggerBridge` or `QuestQuestionnairePassiveTriggerDemo`.
 
 Common settings:
 
@@ -37,7 +98,8 @@ Common settings:
   standalone legacy ChainLink `nextBlock` command.
 - `Action = LaunchQuestionnaire`: use when the Unity APK is started directly
   and should open the questionnaire APK with `mq.triggerId` and no broker
-  state.
+  state. When Unity was launched by the questionnaire APK, this action returns
+  to the `mq.triggerReceiver*` target supplied by that launch.
 - `Initial Delay Seconds`: time after scene start before firing.
 - `Repeat`, `Repeat Interval Seconds`, and `Max Sends`: use for repeated
   timed pictographic probes. `Max Sends = 0` means unlimited sends.
@@ -73,9 +135,6 @@ directly, set:
 Action = LaunchQuestionnaire
 Initial Delay Seconds = 0.5
 Trigger Id = video_complete
-Finish Behavior = resumeCaller
-Caller Package = <this Unity package>
-Caller Activity = <this Unity activity>
 ```
 
 The timer is the quickest way to prove the switching mechanism in-device before
@@ -85,12 +144,14 @@ hook only has to emit the same passive trigger intent.
 ## Drop-In Multi-Trigger Demo
 
 For testing builder scans against more than one trigger, add
-`QuestQuestionnairePassiveTriggerDemo` to a GameObject and configure its
-`Triggers` list. The public fixtures under
+`QuestQuestionnairePassiveTriggerDemo` to a GameObject, keep
+`Action = QuestionnaireReceiver`, and configure its `Triggers` list. The
+public fixtures under
 `example-scenario-apk/multi-trigger-demos/` provide matching catalogs for 2,
-3, and 4 passive trigger ids. The component can launch the questionnaire APK
-directly with `mq.triggerId` or send a ChainLink trigger command, but it does
-not choose questionnaire modules, block order, scoring, or export behavior.
+3, and 4 passive trigger ids. The component emits each `mq.triggerId` to the
+questionnaire receiver that was supplied when the generated questionnaire APK
+launched Unity. It does not choose questionnaire modules, block order, scoring,
+export behavior, finish behavior, or auto-close timing.
 
 ## Drop-In ChainLink Controller Hook
 
@@ -254,11 +315,7 @@ QuestQuestionnaireChainBridge.LaunchQuestionnaireTrigger("video_complete", new D
     ["mq.trialId"] = "trial-03",
     ["mq.participantId"] = "P001",
     ["mq.participantName"] = "P001",
-    ["mq.language"] = "English",
-    ["mq.finishBehavior"] = "resumeCaller",
-    ["mq.callerPackage"] = "org.example.scenario01",
-    ["mq.callerActivity"] = "org.example.scenario01.MainActivity",
-    ["mq.autoCloseDelayMs"] = "2000"
+    ["mq.language"] = "English"
 });
 ```
 
@@ -277,7 +334,14 @@ controller-only builds for experiments where the controller itself is part of
 the measured task; otherwise Horizon may block the launch behind a
 controller-required dialog before the questionnaire handoff can start.
 
-Use direct `mq.finishBehavior=openNext` with `mq.nextPackage` and `mq.nextActivity` only for simple two-app chains. Use the broker for multi-step experiment chains.
+Keep direct passive launches minimal in V2: `mq.triggerId` plus optional
+session/scenario metadata. Legacy helpers may still mention
+`mq.finishBehavior`, `mq.nextPackage`, or `mq.nextActivity`, but those fields
+belong to questionnaire-owned config and should not be used by product stimulus
+demos to decide the study flow. If the Unity APK was launched by the generated
+questionnaire APK, the bridge returns to the `mq.triggerReceiverPackage`,
+`mq.triggerReceiverActivity`, and `mq.triggerReceiverAction` values already on
+the Unity activity intent.
 
 When Unity is resumed directly by the questionnaire or launched by the broker
 after a questionnaire step, call `ReadQuestionnaireResult()` and look for

@@ -43,10 +43,11 @@ Then choose a scenario link mode per APK:
 | --- | --- | --- | --- |
 | Existing compiled APK, no source rebuild | Wrapper hook | Legacy scenarios, smoke tests, timed segments | Timer or manual gate |
 | Rebuildable Unity source APK | Source hook | Real experiment chain with semantic scenario completion | Unity scenario end event |
-| Lab network trigger | Optional LSL bridge | Starting or continuing a headset-owned plan from another PC | LSL JSON sample translated to broker intent |
+| Lab network trigger | Optional LSL bridge | Emitting a passive `triggerId` into the questionnaire-owned broker from another PC | LSL JSON sample translated to broker trigger intent |
 
-The orchestrator should remain the owner of the plan. LSL can be an input route,
-but it should not replace the on-headset broker.
+The questionnaire APK or orchestrator should remain the owner of the plan. LSL
+can be an input route, but it should not replace the on-headset broker or carry
+questionnaire routing decisions.
 
 ## Chain Patterns
 
@@ -338,7 +339,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quest-wrapper-manual
   -AutoContinueAfterSeconds 8
 ```
 
-Use the optional LSL bridge only as a command source into the same broker:
+Use the optional LSL bridge only as a command source into the same broker. In
+participant workflows, prefer `command=trigger` plus `triggerId`; do not encode
+questionnaire modes, scores, next blocks, or export decisions in LSL samples:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\lsl-chain-bridge.ps1 `

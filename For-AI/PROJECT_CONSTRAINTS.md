@@ -78,9 +78,74 @@ Use it for:
   while listening for a passive Unity trigger, and the next foreground
   questionnaire block is chosen by the 2D APK protocol state. Unity never
   chooses "block 2" or any questionnaire module on return.
+- When the generated questionnaire APK launches Unity, it should pass
+  `mq.triggerReceiverPackage`, `mq.triggerReceiverActivity`, and
+  `mq.triggerReceiverAction`. Unity trigger code should read those launch
+  extras and send only passive trigger metadata back to that receiver.
+  Public/preloaded Unity demos in this repo must not include a hard-coded
+  questionnaire package fallback; if they are launched directly without
+  receiver extras, they should not perform questionnaire handoff. Reusable
+  developer templates may document an explicit opt-in local fallback, but that
+  is not the product-path study contract.
+- Public Unity demos that use `launchMode="singleTop"` must make the newest
+  Android launch intent visible to Unity bridge code by calling
+  `setIntent(intent)` in `onNewIntent()`. Without that, a direct Meta Home
+  launch can reuse stale `mq.triggerReceiver*` extras from a previous
+  questionnaire-started session and appear interdependent.
 - Prefer `mq.triggerId` as the Unity-to-questionnaire contract. `mq.blockId` and
   `mq.blockNumber` are optional developer fallbacks for diagnostics or explicit
   tests, not the normal Unity decision surface.
+- The recommended copy-first Unity integration for V2 is
+  `MyQuestionnaireVR-2D/tools/unity/QuestQuestionnairePassiveTriggerBridge.cs`.
+  It emits `mq.triggerId` to the questionnaire-supplied `mq.triggerReceiver*`
+  target and intentionally has no hard-coded questionnaire package fallback.
+  Treat older `QuestQuestionnaireChainBridge`, ChainLink hooks, broker commands,
+  and direct-panel launch helpers as legacy/advanced tooling, not the default
+  public protocol.
+- The questionnaire broker must understand passive `trigger` commands itself.
+  External adapters such as LSL may forward `triggerId` into that broker, but
+  they must not encode questionnaire type, next block, scoring, or export
+  decisions. Repeated triggers should not replay completed blocks unless the
+  generated protocol explicitly marks a step as repeatable.
+- LSL `command=trigger` is a passive marker adapter only. The host bridge must
+  reject questionnaire-routing fields such as `finishBehavior`, `nextPackage`,
+  `questionnaireMode`, `blockId`, `blockNumber`, and chain-plan payloads on
+  passive triggers. Legacy LSL commands may remain for advanced tooling, but
+  they are not the public two-APK product path.
+- The accepted transport decision lives in
+  `docs/trigger-transport-decision-record.md`: Android intents are the default
+  in-headset app switch; native in-APK LSL is possible but future/advanced, and
+  any LSL path must feed the questionnaire-owned trigger broker without routing
+  logic.
+- Public/preloaded stimulus demos must represent the product contract with
+  immersive Unity/stimulus APKs when used for headset demonstrations. Tiny
+  native Android scenario APKs may exist as local scanner fixtures, but they
+  must not be presented as the intended Unity participant experience. Repo demo
+  preloads should scan a real local APK from the user's checkout/program and
+  read its embedded trigger catalog before unlocking headset install.
+- The public three-circle protocol demo has a matching generated questionnaire
+  config at
+  `MyQuestionnaireVR-2D/QuestionnaireConfigs/examples/quest-questionnaire-three-circle-protocol-demo.config.json`.
+  Validate that pair with
+  `MyQuestionnaireVR-2D/tools/quest-minimal-apk-trigger-protocol-validate.ps1`.
+  Its default mode is dry-run/preflight only; use `-RunLive -Serial <serial>`
+  only with explicit physical Quest operator intent.
+- The local companion may expose that same gate as
+  `POST /api/minimal-protocol` plus
+  `GET /api/minimal-protocol-job?runId=...` for developer/offline validation.
+  This endpoint must default to dry-run and its dry-run receipt should say
+  `pass-with-physical-pending`; do not treat it as a live Quest product-path
+  pass.
+- Public builder surfaces should use repo/product-neutral names and links.
+  Avoid personal owner names, legacy project brands, or old study labels in the
+  GUI, packaged Pages output, downloadable launcher links, and companion
+  status defaults. Prefer package-relative assets and `questquestionnaire`
+  package/schema names.
+- Unity example builds may need a short temporary build path on Windows because
+  Unity/Gradle/CMake generated paths can exceed practical path limits under a
+  deep Documents/GitHub checkout. The three-circle demo provides a short-path
+  build helper and should publish the real Unity APK, not the scanner fixture,
+  as the public three-trigger preload.
 
 ## Browser Dashboard vs Local/Native Engine
 
@@ -116,6 +181,10 @@ The questionnaire builder must keep both launch paths available:
   companion origin. The hosted static GitHub Pages page remains the published
   product entry point, but browser private-network rules may block hosted pages
   from calling loopback APIs directly.
+- The loopback page served by the local companion in `OnlineConnector` mode is
+  still a final-product GUI surface. It should hide `data-dev-only` sections
+  just like the hosted Pages entry point. Use `?developerMode=1` only when an
+  engineer intentionally wants the local validation cockpit.
 
 Keep both paths backed by the same HTML/JavaScript source and local companion
 API. The hosted online GUI is the final user-facing product and should stay
@@ -209,6 +278,9 @@ sequence in Meta Home and in the first panel heading:
 `Start Experiment | <target APK label>`. Derive `<target APK label>` from the
 scanned trigger catalog/experiment target label, falling back to the target
 package only when no human-readable label exists.
+The Bake step must expose a user-editable generated questionnaire APK app name.
+The automatic default remains `Start Experiment | <target APK label>`, but a
+manual value must become `config.appDisplayName` and the Android app label.
 Questionnaire CSV templates should be type-oriented, inspired by tools such as
 Qualtrics: demographics/participant fields, slider/VAS, Likert, multiple
 choice, text entry, pictographic scales, and temporal tracer dimensions are

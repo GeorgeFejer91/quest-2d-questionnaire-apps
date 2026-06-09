@@ -880,15 +880,15 @@
 
       <div class="side-group" data-dev-only>
         <div class="side-group-title">Reference</div>
-        <a class="side-link" href="https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/blob/main/MyQuestionnaireVR-2D/README.md" target="_blank" rel="noreferrer">Instructions</a>
-        <a class="side-link" href="https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/blob/main/workflow/START_HERE.md" target="_blank" rel="noreferrer" data-dev-only>Workflow docs</a>
+        <a class="side-link" href="README.md" target="_blank" rel="noreferrer">Instructions</a>
+        <a class="side-link" href="README.md" target="_blank" rel="noreferrer" data-dev-only>Workflow docs</a>
       </div>
 
       <div class="side-group">
         <div class="side-group-title">Downloads</div>
-        <a class="side-link download-link" href="https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/archive/refs/heads/main.zip">Companion software ZIP</a>
-        <a class="side-link download-link" href="https://raw.githubusercontent.com/GeorgeFejer91/quest-2d-questionnaire-apps/main/MyQuestionnaireVR-2D/Start-QuestionnaireBuilderOnlineConnector.cmd">Online connector launcher</a>
-        <a class="side-link download-link" href="https://raw.githubusercontent.com/GeorgeFejer91/quest-2d-questionnaire-apps/main/MyQuestionnaireVR-2D/Start-QuestionnaireBuilderApp.cmd">Offline desktop launcher</a>
+        <a class="side-link download-link" href="QuestionnaireBuilder.zip">Companion software ZIP</a>
+        <a class="side-link download-link" href="Start-QuestionnaireBuilderOnlineConnector.cmd">Online connector launcher</a>
+        <a class="side-link download-link" href="Start-QuestionnaireBuilderApp.cmd">Offline desktop launcher</a>
       </div>
 
       <div class="side-group">
@@ -942,7 +942,7 @@
           <div id="exampleApkStatus" class="issue">Example not loaded.</div>
           <p class="subtle">
             Example folder:
-            <a id="exampleApkFolderLink" class="plain-link" href="https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/tree/main/example-scenario-apk" target="_blank" rel="noreferrer">https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/tree/main/example-scenario-apk</a>
+            <a id="exampleApkFolderLink" class="plain-link" href="examples/scenario-apks" target="_blank" rel="noreferrer">examples/scenario-apks</a>
           </p>
         </div>
       </section>
@@ -1237,6 +1237,14 @@
         <div class="stage-body">
           <div class="panel">
             <div class="section-title">
+              <h3>Questionnaire APK</h3>
+            </div>
+            <label>
+              App name shown on headset
+              <input id="questionnaireApkAppName" maxlength="80" placeholder="Start Experiment | Scenario APK" spellcheck="false">
+            </label>
+            <div id="questionnaireApkAppNameStatus" class="issue">Uses the scanned APK label unless you type a custom name.</div>
+            <div class="section-title" style="margin-top: 18px;">
               <h3>Local companion</h3>
             </div>
             <div class="grid two">
@@ -1308,6 +1316,8 @@
               <button id="questReplayAppButton" type="button" data-dev-only>Run replay/export</button>
               <button id="twoDFirstLauncherAppButton" type="button" data-dev-only>Run 2D-first launch</button>
               <button id="directHandoffAppButton" type="button" data-dev-only>Run direct handoff</button>
+              <button id="minimalProtocolAppButton" type="button" data-dev-only>Validate minimal two-APK protocol</button>
+              <button id="twoApkLivePacketAppButton" type="button" data-dev-only>Prepare two-APK packet</button>
               <button id="headsetSequenceAppButton" type="button" data-dev-only>Run headset sequence</button>
               <button id="validateWorkflowAppButton" type="button" data-dev-only>Validate workflow</button>
               <button id="auditHandoffReadinessButton" type="button" data-dev-only>Audit readiness</button>
@@ -1459,9 +1469,11 @@
     let lastScenarioApkName = "";
     let lastEvidenceData = null;
     let artifactPreviewObjectUrls = [];
-    const exampleApkFolderUrl = "https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/tree/main/example-scenario-apk";
-    const twoTriggerDemoFolderUrl = "https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/tree/main/example-scenario-apk/multi-trigger-demos/2-triggers";
-    const threeCircleDemoFolderUrl = "https://github.com/GeorgeFejer91/quest-2d-questionnaire-apps/tree/main/example-scenario-apk/unity-project/three-circle-trigger-demo";
+    let questionnaireApkAppNameTouched = false;
+    let lastQuestionnaireApkDefaultName = "";
+    const exampleApkFolderUrl = "examples/scenario-apks";
+    const twoTriggerDemoFolderUrl = "examples/scenario-apks";
+    const threeCircleDemoFolderUrl = "examples/scenario-apks";
     const exampleTriggerCatalog = {
       schemaVersion: "mq.quest_questionnaire_trigger_catalog.v1",
       catalogVersion: "1.0.0",
@@ -1502,7 +1514,7 @@
       catalogVersion: "1.0.0",
       scenarioId: "quest-questionnaire-three-circle-trigger-demo",
       package: "org.questquestionnaire.circletriggerdemo",
-      activity: "org.questquestionnaire.scenariodemo.ScenarioDemoActivity",
+      activity: "org.questquestionnaire.circletriggerdemo.QuestQuestionnaireUnityActivity",
       label: "Three Circle Trigger Demo",
       triggers: [
         {
@@ -1530,10 +1542,10 @@
         loadedText: "Aesthetic Chills 1 Trigger Demo APK scanned and staged for headset install.",
         localApkCandidates: [
           "examples/scenario-apks/aesthetic-chills-1-trigger-demo.apk",
+          "AweGreatDictatorUnity/Builds/QuestQuestionnaireStimulusDemo.apk",
           "example-scenario-apk/apk/aesthetic-chills-1-trigger-demo.apk",
           "example-scenario-apk/QuestQuestionnaireStimulusDemo.apk",
-          "example-scenario-apk/aesthetic-chills-1-trigger-demo.apk",
-          "AweGreatDictatorUnity/Builds/QuestQuestionnaireStimulusDemo.apk"
+          "example-scenario-apk/aesthetic-chills-1-trigger-demo.apk"
         ],
         catalog: exampleTriggerCatalog
       },
@@ -1557,9 +1569,9 @@
         loadedText: "Three Circle 3 Trigger Demo APK scanned and staged for headset install.",
         localApkCandidates: [
           "examples/scenario-apks/three-circle-3-trigger-demo.apk",
-          "example-scenario-apk/apk/three-circle-3-trigger-demo.apk",
           "example-scenario-apk/unity-project/three-circle-trigger-demo/Builds/QuestQuestionnaireThreeCircleTriggerDemo.apk",
-          "example-scenario-apk/unity-project/three-circle-trigger-demo/Builds/three-circle-trigger-demo.apk"
+          "example-scenario-apk/unity-project/three-circle-trigger-demo/Builds/three-circle-trigger-demo.apk",
+          "example-scenario-apk/apk/three-circle-3-trigger-demo.apk"
         ],
         catalog: threeCircleTriggerCatalog
       }
@@ -1567,8 +1579,7 @@
     const defaultExampleCatalogKey = "one-trigger-demo";
     const exampleTriggerCatalogUrlCandidates = [
       "../example-scenario-apk/questionnaire-trigger-catalog.json",
-      "../../../example-scenario-apk/questionnaire-trigger-catalog.json",
-      "https://raw.githubusercontent.com/GeorgeFejer91/quest-2d-questionnaire-apps/main/example-scenario-apk/questionnaire-trigger-catalog.json"
+      "../../../example-scenario-apk/questionnaire-trigger-catalog.json"
     ];
     const requiredAppBackendCapabilities = [
       { id: "generate-apk-receipt", label: "APK generation receipts" },
@@ -1579,6 +1590,9 @@
       { id: "stage-scenario-apk", label: "scenario APK staging" },
       { id: "direct-handoff-preflight", label: "direct handoff preflight" },
       { id: "2d-first-launcher-preflight", label: "2D-first launcher preflight" },
+      { id: "minimal-apk-trigger-protocol", label: "minimal two-APK protocol gate" },
+      { id: "minimal-apk-trigger-protocol-job-status", label: "minimal protocol job status" },
+      { id: "two-apk-live-validation-packet", label: "questionnaire-first two-APK live packet" },
       { id: "handoff-readiness-audit", label: "handoff readiness audit" },
       { id: "direct-handoff-manual-signoff", label: "manual headset signoff" },
       { id: "physical-gate-packet", label: "physical gate packet" },
@@ -2072,6 +2086,7 @@
       }
       renderTriggerMappingList();
       applyQuestionnaireFirstDefaults(false);
+      syncQuestionnaireApkAppNameDefault();
       const warningSuffix = triggerCatalogWarnings.length > 0
         ? ` ${triggerCatalogWarnings.length} passive-trigger warning${triggerCatalogWarnings.length === 1 ? "" : "s"}; keep questionnaire routing in the 2D APK.`
         : "";
@@ -3553,7 +3568,7 @@
         : defaultParticipantFields();
     }
 
-    function appDisplayNameForConfig(stub, registry) {
+    function defaultAppDisplayNameForConfig(stub, registry) {
       const defaults = stub.chainDefaults || {};
       if (defaults.startMode !== "questionnaireFirst") {
         return "MyQuestionnaireVR 2D";
@@ -3564,6 +3579,43 @@
         || defaults.nextPackage
         || "Scenario APK";
       return `Start Experiment | ${targetLabel}`;
+    }
+
+    function manualQuestionnaireApkAppName() {
+      const field = byId("questionnaireApkAppName");
+      return field ? field.value.trim() : "";
+    }
+
+    function appDisplayNameForConfig(stub, registry) {
+      return manualQuestionnaireApkAppName() || defaultAppDisplayNameForConfig(stub, registry);
+    }
+
+    function syncQuestionnaireApkAppNameDefault(force = false, fillEmpty = true) {
+      const field = byId("questionnaireApkAppName");
+      const status = byId("questionnaireApkAppNameStatus");
+      if (!field) {
+        return;
+      }
+      const stub = currentExperimentStub();
+      const registry = buildExperimentBlockRegistry(stub);
+      const defaultName = defaultAppDisplayNameForConfig(stub, registry);
+      const currentValue = field.value.trim();
+      if (!currentValue || currentValue === lastQuestionnaireApkDefaultName) {
+        questionnaireApkAppNameTouched = false;
+      }
+      field.placeholder = defaultName;
+      if (force || (!questionnaireApkAppNameTouched && (fillEmpty || field.value.trim()))) {
+        field.value = defaultName;
+        questionnaireApkAppNameTouched = false;
+      }
+      lastQuestionnaireApkDefaultName = defaultName;
+      if (status) {
+        const activeName = field.value.trim() || defaultName;
+        status.textContent = questionnaireApkAppNameTouched
+          ? `Custom questionnaire APK name: ${activeName}`
+          : `Auto questionnaire APK name: ${defaultName}`;
+        status.className = "issue ok";
+      }
     }
 
     function buildConfig() {
@@ -3612,6 +3664,9 @@
       }
       if (!config.questionnaireVersion) {
         issues.push({ level: "error", text: "Questionnaire version is required." });
+      }
+      if (!String(config.appDisplayName || "").trim()) {
+        issues.push({ level: "error", text: "Questionnaire APK app name is required." });
       }
       const allowedFinishBehaviors = ["staySaved", "resumeCaller", "openNext"];
       const finishBehavior = config.chainDefaults?.finishBehavior || "staySaved";
@@ -4102,6 +4157,12 @@
       byId("questionnaireId").value = config.questionnaireId || "";
       byId("questionnaireVersion").value = config.questionnaireVersion || "";
       byId("appVersion").value = config.appVersion || "";
+      if (config.appDisplayName) {
+        byId("questionnaireApkAppName").value = config.appDisplayName;
+        questionnaireApkAppNameTouched = true;
+      } else {
+        questionnaireApkAppNameTouched = false;
+      }
       customParticipantFields = Array.isArray(config.participantFields)
         ? config.participantFields.map(field => ({ ...field }))
         : null;
@@ -4247,6 +4308,7 @@
       }
 
       makeBlockList();
+      syncQuestionnaireApkAppNameDefault();
       refresh();
     }
 
@@ -5098,6 +5160,12 @@
       if (String(location.search || "").includes("hostedFinalProduct=1")) {
         return true;
       }
+      if (String(location.search || "").includes("developerMode=1")) {
+        return false;
+      }
+      if (String(window.MQ_LOCAL_BACKEND_MODE || "") === "OnlineConnector") {
+        return true;
+      }
       if (!/^https?:$/.test(location.protocol || "")) {
         return false;
       }
@@ -5351,10 +5419,10 @@
 
     function workflowReceiptLevel(receipt) {
       const status = receipt?.status || "";
-      if (status === "fail" || status === "blocked" || status === "missing-summary" || status === "incomplete-missing-evidence" || status === "error") {
+      if (status === "fail" || status === "blocked" || status === "missing-summary" || status === "incomplete-missing-evidence" || status === "error" || status === "needs-offline-attention") {
         return "error";
       }
-      if (status === "pass" || status === "complete") {
+      if (status === "pass" || status === "complete" || status === "operator-signoff-pass") {
         return "ok";
       }
       return "warn";
@@ -5462,7 +5530,8 @@
         "quest-apk-install": "Quest APK install",
         "quest-replay-export": "Quest replay/export",
         "direct-pendingintent-handoff": "Direct handoff",
-        "2d-first-launcher": "2D-first launcher"
+        "2d-first-launcher": "2D-first launcher",
+        "minimal-apk-trigger-protocol": "Minimal two-APK protocol"
       };
       const label = kindLabels[receipt.kind] || "Runner job";
       const artifacts = receipt.artifacts || {};
@@ -5526,6 +5595,24 @@
         }
         if (receipt.twoDFirstLauncherGatePassed === false) {
           pieces.push("2D-first front door pending");
+        }
+      }
+      if (receipt.kind === "minimal-apk-trigger-protocol") {
+        const statuses = receipt.statuses || {};
+        if (statuses.passiveTriggerProtocol) {
+          pieces.push(`passive triggers ${statuses.passiveTriggerProtocol}`);
+        }
+        if (statuses.unityInputModality) {
+          pieces.push(`Unity input ${statuses.unityInputModality}`);
+        }
+        if (statuses.twoDFirstFrontDoor) {
+          pieces.push(`2D-first front door ${statuses.twoDFirstFrontDoor}`);
+        }
+        if (statuses.questionnaireApkGenerated) {
+          pieces.push(`questionnaire APK ${statuses.questionnaireApkGenerated}`);
+        }
+        if (Array.isArray(receipt.remainingLiveGates) && receipt.remainingLiveGates.length > 0) {
+          pieces.push(`${receipt.remainingLiveGates.length} live gates remain`);
         }
       }
       if (receipt.physicalQuestProductPathPending) {
@@ -5601,7 +5688,7 @@
     function manualSignoffReceiptText(data) {
       const receipt = data?.manualSignoffReceipt;
       if (!receipt) {
-        return physicalGatePacketReceiptText(data);
+        return twoApkLivePacketReceiptText(data);
       }
       const checks = receipt.checks || {};
       const counts = receipt.counts || {};
@@ -5637,6 +5724,54 @@
       }
       if (artifacts.operatorSignoffTemplatePath) {
         pieces.push(`template: ${artifacts.operatorSignoffTemplatePath}`);
+      }
+      if (artifacts.summaryPath) {
+        pieces.push(`summary: ${artifacts.summaryPath}`);
+      }
+      return `${pieces.join("; ")}.`;
+    }
+
+    function twoApkLivePacketReceiptText(data) {
+      const receipt = data?.twoApkLivePacketReceipt;
+      if (!receipt) {
+        return physicalGatePacketReceiptText(data);
+      }
+      const checks = receipt.checks || {};
+      const artifacts = receipt.artifacts || {};
+      const statuses = receipt.statuses || {};
+      const contract = receipt.contract || {};
+      const pieces = [`Evidence receipt: questionnaire-first two-APK packet ${receipt.status || "unknown"}`];
+      if (checks.twoApkPairAuditPass) {
+        pieces.push("two-APK pair audit pass");
+      } else if (statuses.twoApkPairAudit) {
+        pieces.push(`two-APK pair audit ${statuses.twoApkPairAudit}`);
+      }
+      if (checks.dryRunPreflightPassOrSkipped && statuses.dryRunPreflight) {
+        pieces.push(`dry-run preflight ${statuses.dryRunPreflight}`);
+      }
+      if (contract.participantFrontDoor) {
+        pieces.push(`front door: ${contract.participantFrontDoor}`);
+      }
+      if (contract.unityRole) {
+        pieces.push(`Unity role: ${contract.unityRole}`);
+      }
+      if (checks.operatorGuardrailsPresent || receipt.guardrails?.present) {
+        pieces.push("operator guardrails included: questionnaire starts first, Unity immersive/passive, no Meta/ADB repair");
+      }
+      if (checks.operatorSignoffTemplateWritten) {
+        pieces.push("operator template written");
+      }
+      if (checks.operatorSignoffPass) {
+        pieces.push("operator signoff pass");
+      } else {
+        pieces.push("live operator signoff pending");
+      }
+      const remaining = Number(receipt.remainingLiveGateCount || 0);
+      if (remaining > 0) {
+        pieces.push(`${remaining} live gates remain`);
+      }
+      if (artifacts.runbookPath) {
+        pieces.push(`runbook: ${artifacts.runbookPath}`);
       }
       if (artifacts.summaryPath) {
         pieces.push(`summary: ${artifacts.summaryPath}`);
@@ -5728,6 +5863,25 @@
       return "from the latest local evidence";
     }
 
+    function twoApkLivePacketPayloadFromState() {
+      const scenarioApkPath = lastScenarioApkPath || byId("stagedScenarioApkPath")?.value.trim() || "";
+      if (!scenarioApkPath) {
+        throw new Error("Scan or stage a Unity/stimulus APK before preparing the two-APK live packet.");
+      }
+      const config = buildConfig();
+      const payload = {
+        config,
+        questionnaireApk: lastGeneratedApkPath || expectedGeneratedApkPath(),
+        unityApk: scenarioApkPath,
+        questSerial: byId("workflowQuestSerial").value.trim()
+      };
+      const nextPackage = String(config.chainDefaults?.nextPackage || "").trim();
+      if (nextPackage && nextPackage === "org.questquestionnaire.circletriggerdemo") {
+        payload.unityProjectPath = "example-scenario-apk/unity-project/three-circle-trigger-demo";
+      }
+      return payload;
+    }
+
     function evidenceBundleSummaryPath(data) {
       return String(
         data?.workflowReceipt?.artifacts?.summaryPath ||
@@ -5735,6 +5889,7 @@
         data?.jobReceipt?.artifacts?.summaryPath ||
         data?.auditReceipt?.artifacts?.summaryPath ||
         data?.manualSignoffReceipt?.artifacts?.summaryPath ||
+        data?.twoApkLivePacketReceipt?.artifacts?.summaryPath ||
         data?.physicalGatePacketReceipt?.artifacts?.summaryPath ||
         data?.summaryPath ||
         ""
@@ -5763,7 +5918,7 @@
         return;
       }
       target.hidden = false;
-      target.className = `issue ${workflowReceiptLevel(data?.workflowReceipt || data?.generationReceipt || data?.jobReceipt || data?.auditReceipt || data?.manualSignoffReceipt || data?.physicalGatePacketReceipt)}`;
+      target.className = `issue ${workflowReceiptLevel(data?.workflowReceipt || data?.generationReceipt || data?.jobReceipt || data?.auditReceipt || data?.manualSignoffReceipt || data?.twoApkLivePacketReceipt || data?.physicalGatePacketReceipt)}`;
       target.textContent = text;
     }
 
@@ -6541,6 +6696,49 @@
       throw new Error(`Timed out waiting for 2D-first launcher job ${runId}.`);
     }
 
+    function minimalProtocolJobLevel(data) {
+      if (data?.jobStatus === "failed" || data?.protocolStatus === "fail" || data?.protocolStatus === "error") {
+        return "error";
+      }
+      if (data?.jobStatus === "completed" && data?.protocolStatus === "pass") {
+        return data?.jobReceipt?.physicalQuestProductPathPending ? "warn" : "ok";
+      }
+      if (data?.jobStatus === "completed") {
+        return "warn";
+      }
+      return "";
+    }
+
+    function minimalProtocolJobText(data) {
+      const runId = data?.runId || data?.jobId || "minimal-protocol";
+      const isLive = Boolean(data?.runLive || data?.jobReceipt?.runLive);
+      if (data?.jobStatus === "running") {
+        return isLive ? `Minimal two-APK live gate running: ${runId}.` : `Minimal two-APK dry-run preflight running: ${runId}.`;
+      }
+      if (data?.protocolStatus === "pass") {
+        return isLive
+          ? `Minimal two-APK live gate passed with remaining physical evidence notes; summary: ${data?.summaryPath || "not written yet"}`
+          : `Minimal two-APK dry-run preflight passed; live Quest gates still pending; summary: ${data?.summaryPath || "not written yet"}`;
+      }
+      return `Minimal two-APK protocol ${data?.protocolStatus || data?.jobStatus}; summary: ${data?.summaryPath || "not written yet"}`;
+    }
+
+    async function pollMinimalProtocolJob(runId, waitForReadySeconds = directHandoffWaitSeconds(), trialCount = 1) {
+      const startedAt = Date.now();
+      const timeoutMs = handoffPollTimeoutMs(waitForReadySeconds, trialCount, 360);
+      while (Date.now() - startedAt < timeoutMs) {
+        const data = await callAppBackend(`/api/minimal-protocol-job?runId=${encodeURIComponent(runId)}`);
+        setAppBackendStatus(minimalProtocolJobText(data), minimalProtocolJobLevel(data));
+        setWorkflowReceiptStatus(data);
+        setAppBackendLog(data);
+        if (data.jobStatus !== "running") {
+          return data;
+        }
+        await delay(2500);
+      }
+      throw new Error(`Timed out waiting for minimal two-APK protocol job ${runId}.`);
+    }
+
     function appendSequenceStep(sequenceLog, name, level, data) {
       const status = data?.launcherStatus || data?.handoffStatus || data?.replayStatus || data?.installStatus || data?.readiness || data?.status || data?.jobStatus || level || "done";
       const summaryPath = data?.summaryPath || data?.generationReceipt?.artifacts?.summaryPath || data?.workflowReceipt?.artifacts?.summaryPath || "";
@@ -6929,6 +7127,60 @@
       }
     }
 
+    async function runMinimalProtocolWithApp() {
+      const button = byId("minimalProtocolAppButton");
+      const wasDisabled = button.disabled;
+      button.disabled = true;
+      try {
+        const apkPath = lastGeneratedApkPath || expectedGeneratedApkPath();
+        const scenarioApkPath = lastScenarioApkPath || byId("stagedScenarioApkPath").value.trim();
+        if (!scenarioApkPath) {
+          throw new Error("Scan or stage a Unity/stimulus APK before validating the two-APK protocol.");
+        }
+        const preflightOnly = directHandoffPreflightOnly();
+        const runLive = !preflightOnly;
+        const waitForReadySeconds = runLive ? directHandoffWaitSeconds() : 0;
+        const trialCount = runLive ? directHandoffTrialCount() : 1;
+        const wakeBeforeReadiness = runLive ? directHandoffWakeBeforeReadiness() : false;
+        setAppBackendStatus(runLive ? "Starting minimal two-APK live Quest gate..." : "Starting minimal two-APK software preflight...", "");
+        setWorkflowReceiptStatus(null);
+        const config = buildConfig();
+        const payload = {
+          questionnaireApk: apkPath,
+          unityApk: scenarioApkPath,
+          unityPackage: config.chainDefaults?.nextPackage || "",
+          unityActivity: config.chainDefaults?.nextActivity || "",
+          questSerial: byId("workflowQuestSerial").value.trim(),
+          runLive,
+          skipQuestionnaireBuild: true,
+          trialCount,
+          waitForReadySeconds,
+          waitSeconds: runLive ? 45 : 1,
+          wakeBeforeReadiness
+        };
+        if (!runLive) {
+          payload.skipInstall = true;
+        }
+        const data = await callAppBackend("/api/minimal-protocol", payload);
+        setAppBackendStatus(minimalProtocolJobText(data), minimalProtocolJobLevel(data));
+        setWorkflowReceiptStatus(data);
+        setAppBackendLog(data);
+        if (data.jobStatus === "running" && (data.runId || data.jobId)) {
+          const finalData = await pollMinimalProtocolJob(data.runId || data.jobId, waitForReadySeconds, trialCount);
+          setAppBackendStatus(minimalProtocolJobText(finalData), minimalProtocolJobLevel(finalData));
+          setWorkflowReceiptStatus(finalData);
+          setAppBackendLog(finalData);
+        }
+      } catch (error) {
+        setAppBackendStatus(error.message || String(error), "error");
+        setWorkflowReceiptStatus(error.backendData || null);
+        setAppBackendLog(error.backendData || error.message || String(error));
+      } finally {
+        button.disabled = wasDisabled;
+        updateWorkflowGate();
+      }
+    }
+
     async function validateWorkflowWithApp() {
       const button = byId("validateWorkflowAppButton");
       const wasDisabled = button.disabled;
@@ -7013,6 +7265,28 @@
         setWorkflowReceiptStatus(null);
         const data = await callAppBackend("/api/physical-gate-packet", payload);
         setAppBackendStatus(physicalGatePacketReceiptText(data), workflowReceiptLevel(data?.physicalGatePacketReceipt));
+        setWorkflowReceiptStatus(data);
+        setAppBackendLog(data);
+      } catch (error) {
+        setAppBackendStatus(error.message || String(error), "error");
+        setWorkflowReceiptStatus(error.backendData || null);
+        setAppBackendLog(error.backendData || error.message || String(error));
+      } finally {
+        button.disabled = wasDisabled;
+        updateWorkflowGate();
+      }
+    }
+
+    async function prepareTwoApkLivePacketWithApp() {
+      const button = byId("twoApkLivePacketAppButton");
+      const wasDisabled = button.disabled;
+      button.disabled = true;
+      try {
+        const payload = twoApkLivePacketPayloadFromState();
+        setAppBackendStatus("Preparing questionnaire-first two-APK live packet from the current config and scanned Unity APK...", "");
+        setWorkflowReceiptStatus(null);
+        const data = await callAppBackend("/api/two-apk-live-packet", payload);
+        setAppBackendStatus(twoApkLivePacketReceiptText(data), workflowReceiptLevel(data?.twoApkLivePacketReceipt));
         setWorkflowReceiptStatus(data);
         setAppBackendLog(data);
       } catch (error) {
@@ -7213,10 +7487,17 @@
     byId("saveConfigAppButton").addEventListener("click", saveConfigWithApp);
     byId("validateConfigAppButton").addEventListener("click", validateConfigWithApp);
     byId("generateApkAppButton").addEventListener("click", generateApkWithApp);
+    byId("questionnaireApkAppName").addEventListener("input", () => {
+      questionnaireApkAppNameTouched = byId("questionnaireApkAppName").value.trim().length > 0;
+      syncQuestionnaireApkAppNameDefault(false, false);
+      refresh();
+    });
     byId("installApkAppButton").addEventListener("click", installGeneratedApkWithApp);
     byId("questReplayAppButton").addEventListener("click", runQuestReplayWithApp);
     byId("twoDFirstLauncherAppButton").addEventListener("click", runTwoDFirstLauncherWithApp);
     byId("directHandoffAppButton").addEventListener("click", runDirectHandoffWithApp);
+    byId("minimalProtocolAppButton").addEventListener("click", runMinimalProtocolWithApp);
+    byId("twoApkLivePacketAppButton").addEventListener("click", prepareTwoApkLivePacketWithApp);
     byId("headsetSequenceAppButton").addEventListener("click", runHeadsetSequenceWithApp);
     byId("validateWorkflowAppButton").addEventListener("click", validateWorkflowWithApp);
     byId("auditHandoffReadinessButton").addEventListener("click", auditHandoffReadinessWithApp);
@@ -7303,6 +7584,7 @@
     setStartupQuestionnaireSequence([], "none");
     makePictographicFields();
     makeBlockList();
+    syncQuestionnaireApkAppNameDefault(true);
     refresh();
   </script>
 </body>

@@ -3,7 +3,7 @@
   "catalogVersion": "1.0.0",
   "scenarioId": "quest-questionnaire-three-circle-trigger-demo",
   "package": "org.questquestionnaire.circletriggerdemo",
-  "activity": "com.unity3d.player.UnityPlayerGameActivity",
+  "activity": "org.questquestionnaire.circletriggerdemo.QuestQuestionnaireUnityActivity",
   "label": "Three Circle Trigger Demo",
   "triggers": [
     {

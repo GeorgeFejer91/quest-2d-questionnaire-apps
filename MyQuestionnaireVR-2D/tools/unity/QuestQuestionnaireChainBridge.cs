@@ -18,6 +18,9 @@ public static class QuestQuestionnaireChainBridge
     public const string BrokerPackageExtra = "mq.brokerPackage";
     public const string BrokerActivityExtra = "mq.brokerActivity";
     public const string ChainLinkCommandExtra = "mq.command";
+    public const string TriggerReceiverPackageExtra = "mq.triggerReceiverPackage";
+    public const string TriggerReceiverActivityExtra = "mq.triggerReceiverActivity";
+    public const string TriggerReceiverActionExtra = "mq.triggerReceiverAction";
     public const string ChainLinkNextBlockCommand = "nextBlock";
     public const string ChainLinkTriggerCommand = "trigger";
     public const string HandoffSchemaExtra = "mq.handoffSchema";
@@ -31,7 +34,7 @@ public static class QuestQuestionnaireChainBridge
 
     public static void LaunchQuestionnaire(Dictionary<string, string> extras)
     {
-        LaunchPanel(QuestionnairePackage, QuestionnaireActivity, RunAction, extras);
+        LaunchPanel(QuestionnairePackage, QuestionnaireActivity, RunAction, extras, true);
     }
 
     public static void LaunchQuestionnaireTrigger(string triggerId, Dictionary<string, string> extras = null)
@@ -45,30 +48,40 @@ public static class QuestQuestionnaireChainBridge
 
     public static void LaunchTemporalTracer(Dictionary<string, string> extras)
     {
-        LaunchPanel(TemporalTracerPackage, TemporalTracerActivity, TemporalTracerRunAction, extras);
+        LaunchPanel(TemporalTracerPackage, TemporalTracerActivity, TemporalTracerRunAction, extras, false);
     }
 
-    private static void LaunchPanel(string packageName, string activityName, string action, Dictionary<string, string> extras)
+    private static void LaunchPanel(string packageName, string activityName, string action, Dictionary<string, string> extras, bool resolveTriggerReceiver)
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
         using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
         using (var currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
-        using (var intent = new AndroidJavaObject("android.content.Intent", action))
         {
-            intent.Call<AndroidJavaObject>("setClassName", packageName, activityName);
-            intent.Call<AndroidJavaObject>("addFlags", FlagActivityReorderToFront | FlagActivitySingleTop);
-            intent.Call<AndroidJavaObject>("putExtra", HandoffSchemaExtra, HandoffSchemaV1);
-            if (extras != null)
-            {
-                foreach (var pair in extras)
+            TriggerReceiver receiver = resolveTriggerReceiver
+                ? ResolveTriggerReceiver(currentActivity, extras)
+                : new TriggerReceiver
                 {
-                    intent.Call<AndroidJavaObject>("putExtra", pair.Key, pair.Value ?? "");
-                }
-            }
-            using (var returnPendingIntent = CreateReturnPendingIntent(currentActivity, extras))
+                    packageName = packageName,
+                    activityName = NormalizeActivity(packageName, activityName),
+                    action = action
+                };
+            using (var intent = new AndroidJavaObject("android.content.Intent", receiver.action))
             {
-                intent.Call<AndroidJavaObject>("putExtra", ReturnPendingIntentExtra, returnPendingIntent);
-                currentActivity.Call("startActivity", intent);
+                intent.Call<AndroidJavaObject>("setClassName", receiver.packageName, receiver.activityName);
+                intent.Call<AndroidJavaObject>("addFlags", FlagActivityReorderToFront | FlagActivitySingleTop);
+                intent.Call<AndroidJavaObject>("putExtra", HandoffSchemaExtra, HandoffSchemaV1);
+                if (extras != null)
+                {
+                    foreach (var pair in extras)
+                    {
+                        intent.Call<AndroidJavaObject>("putExtra", pair.Key, pair.Value ?? "");
+                    }
+                }
+                using (var returnPendingIntent = CreateReturnPendingIntent(currentActivity, extras))
+                {
+                    intent.Call<AndroidJavaObject>("putExtra", ReturnPendingIntentExtra, returnPendingIntent);
+                    currentActivity.Call("startActivity", intent);
+                }
             }
         }
 #else
@@ -257,6 +270,44 @@ public static class QuestQuestionnaireChainBridge
     }
 
 #if UNITY_ANDROID && !UNITY_EDITOR
+    private sealed class TriggerReceiver
+    {
+        public string packageName;
+        public string activityName;
+        public string action;
+    }
+
+    private static TriggerReceiver ResolveTriggerReceiver(AndroidJavaObject currentActivity, Dictionary<string, string> extras)
+    {
+        string packageName = FirstNonEmpty(
+            GetExtraOrDefault(extras, TriggerReceiverPackageExtra, ""),
+            GetLaunchIntentExtra(currentActivity, TriggerReceiverPackageExtra),
+            QuestionnairePackage);
+        string activityName = FirstNonEmpty(
+            GetExtraOrDefault(extras, TriggerReceiverActivityExtra, ""),
+            GetLaunchIntentExtra(currentActivity, TriggerReceiverActivityExtra),
+            QuestionnaireActivity);
+        string action = FirstNonEmpty(
+            GetExtraOrDefault(extras, TriggerReceiverActionExtra, ""),
+            GetLaunchIntentExtra(currentActivity, TriggerReceiverActionExtra),
+            RunAction);
+
+        return new TriggerReceiver
+        {
+            packageName = packageName,
+            activityName = NormalizeActivity(packageName, activityName),
+            action = action
+        };
+    }
+
+    private static string GetLaunchIntentExtra(AndroidJavaObject currentActivity, string key)
+    {
+        using (var launchIntent = currentActivity.Call<AndroidJavaObject>("getIntent"))
+        {
+            return launchIntent == null ? "" : launchIntent.Call<string>("getStringExtra", key);
+        }
+    }
+
     private static AndroidJavaObject CreateReturnPendingIntent(AndroidJavaObject currentActivity, Dictionary<string, string> extras)
     {
         string callerPackage = GetExtraOrDefault(extras, "mq.callerPackage", currentActivity.Call<string>("getPackageName"));
@@ -314,6 +365,22 @@ public static class QuestQuestionnaireChainBridge
             return value;
         }
         return fallback;
+    }
+
+    private static string FirstNonEmpty(params string[] values)
+    {
+        if (values == null)
+        {
+            return "";
+        }
+        for (int index = 0; index < values.Length; index++)
+        {
+            if (!string.IsNullOrEmpty(values[index]))
+            {
+                return values[index];
+            }
+        }
+        return "";
     }
 
     private static string NormalizeActivity(string packageName, string activityName)

@@ -213,7 +213,7 @@ function loadEditor() {
   };
   context.window = context;
   vm.createContext(context);
-  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, csvTemplateText, downloadCsvTemplate, pictographicZipManifestText, downloadPictographicZipTemplate, loadConfig, applyTriggerCatalog, applyQuestionnaireFirstDefaults, refresh, buildExperimentBlockRegistry, buildChainPlan, loadTriggerCatalogFile, directHandoffWorkflowOptions, workflowValidationPayload, runHeadsetSequenceWithApp, physicalGatePacketPayloadFromEvidence, evidenceBundleSummaryPath, auditReceiptText, manualSignoffReceiptText, physicalGatePacketReceiptText, applyHostedFinalProductMode, appBackendRequiredCapabilities };`, context, {
+  vm.runInContext(`${scriptMatch[1]}\nthis.__api = { buildConfig, validate, qualityReport, applyCsvText, csvTemplateText, downloadCsvTemplate, pictographicZipManifestText, downloadPictographicZipTemplate, loadConfig, applyTriggerCatalog, applyQuestionnaireFirstDefaults, refresh, buildExperimentBlockRegistry, buildChainPlan, loadTriggerCatalogFile, directHandoffWorkflowOptions, workflowValidationPayload, runHeadsetSequenceWithApp, runMinimalProtocolWithApp, twoApkLivePacketPayloadFromState, prepareTwoApkLivePacketWithApp, physicalGatePacketPayloadFromEvidence, evidenceBundleSummaryPath, auditReceiptText, manualSignoffReceiptText, twoApkLivePacketReceiptText, physicalGatePacketReceiptText, applyHostedFinalProductMode, appBackendRequiredCapabilities };`, context, {
     filename: htmlPath
   });
   return { context, document, html };
@@ -681,6 +681,8 @@ assert(document.getElementById("downloadBlockRegistryButton"), "Block registry d
 assert(document.getElementById("downloadChainPlanButton"), "Chain plan download button was not rendered.");
 assert(document.getElementById("headsetSequenceAppButton"), "Headset sequence button was not rendered.");
 assert(typeof context.__api.runHeadsetSequenceWithApp === "function", "Headset sequence runner should be exposed.");
+assert(document.getElementById("minimalProtocolAppButton"), "Minimal two-APK protocol button was not rendered.");
+assert(typeof context.__api.runMinimalProtocolWithApp === "function", "Minimal two-APK protocol runner should be exposed.");
 assert(typeof context.__api.physicalGatePacketPayloadFromEvidence === "function", "Physical packet payload helper should be exposed.");
 assert(html.includes("operator-guardrail-receipts"), "Hosted/offline GUI should require the operator guardrail receipt capability.");
 assert(html.includes("packet-bundle-audit-receipts"), "Hosted/offline GUI should require the packet-bundle audit receipt capability.");
@@ -754,6 +756,11 @@ assert(html.includes('id="chainQuestionnaireSequence"'), "Generated config shoul
 assert(html.includes('id="downloadPictographicZipTemplateButton"'), "Hosted product flow should expose pictographic ZIP template download.");
 assert(html.includes('id="loadPictographicZipInput"'), "Hosted product flow should expose pictographic ZIP upload.");
 assert(html.includes('id="validateWorkflowAppButton" type="button" data-dev-only'), "Validate workflow button should be hidden in hosted product mode.");
+assert(html.includes('id="minimalProtocolAppButton" type="button" data-dev-only'), "Minimal protocol gate should be hidden in hosted product mode.");
+assert(html.includes('id="twoApkLivePacketAppButton" type="button" data-dev-only'), "Two-APK live packet button should be hidden in hosted product mode.");
+assert(html.includes('/api/minimal-protocol'), "GUI should call the minimal two-APK protocol companion endpoint.");
+assert(html.includes('/api/minimal-protocol-job'), "GUI should poll the minimal two-APK protocol companion job endpoint.");
+assert(html.includes('/api/two-apk-live-packet'), "GUI should call the questionnaire-first two-APK packet companion endpoint.");
 assert(html.includes('id="review-stage" class="stage" data-requires-apk data-dev-only'), "Review pipeline stage should be hidden in hosted product mode.");
 const preloadedDemoResults = [
   assertPreloadedDemo("one-trigger-demo", {
@@ -793,7 +800,28 @@ const hostedCapabilities = context.__api.appBackendRequiredCapabilities().map(it
 assert(hostedCapabilities.includes("generate-apk"), "Hosted product mode should require APK generation.");
 assert(hostedCapabilities.includes("install-apk"), "Hosted product mode should require Quest APK install.");
 assert(!hostedCapabilities.includes("validate-workflow"), "Hosted product mode should not require developer validation workflow capability.");
+assert(!hostedCapabilities.includes("minimal-apk-trigger-protocol"), "Hosted product mode should not require the developer minimal protocol gate.");
+assert(!hostedCapabilities.includes("two-apk-live-validation-packet"), "Hosted product mode should not require the developer two-APK live packet gate.");
 context.location = { protocol: "http:", hostname: "127.0.0.1" };
+
+const offlineCapabilities = context.__api.appBackendRequiredCapabilities().map(item => item.id);
+assert(offlineCapabilities.includes("minimal-apk-trigger-protocol"), "Offline/developer mode should require the minimal protocol gate capability.");
+assert(offlineCapabilities.includes("minimal-apk-trigger-protocol-job-status"), "Offline/developer mode should require minimal protocol job polling.");
+assert(offlineCapabilities.includes("two-apk-live-validation-packet"), "Offline/developer mode should require the questionnaire-first two-APK live packet capability.");
+
+const connectorMode = loadEditor();
+connectorMode.context.location = { protocol: "http:", hostname: "127.0.0.1", search: "" };
+connectorMode.context.MQ_LOCAL_BACKEND_MODE = "OnlineConnector";
+connectorMode.context.__api.applyHostedFinalProductMode();
+assert(connectorMode.document.body.classList.contains("hosted-final-product"), "OnlineConnector loopback page should use final-product mode by default.");
+const connectorCapabilities = connectorMode.context.__api.appBackendRequiredCapabilities().map(item => item.id);
+assert(!connectorCapabilities.includes("validate-workflow"), "OnlineConnector mode should not require developer workflow validation capability.");
+
+const developerMode = loadEditor();
+developerMode.context.location = { protocol: "http:", hostname: "127.0.0.1", search: "?developerMode=1" };
+developerMode.context.MQ_LOCAL_BACKEND_MODE = "OnlineConnector";
+developerMode.context.__api.applyHostedFinalProductMode();
+assert(!developerMode.document.body.classList.contains("hosted-final-product"), "developerMode=1 should keep the loopback engineering surface available.");
 
 context.__api.applyTriggerCatalog({
   schemaVersion: "mq.quest_questionnaire_trigger_catalog.v1",
@@ -857,6 +885,40 @@ const companionPacketPayload = context.__api.physicalGatePacketPayloadFromEviden
   endToEndReceipt: { artifacts: { summaryPath: "C:\\artifacts\\companion-summary.json" } }
 });
 assert(companionPacketPayload.companionSummaryPath === "C:\\artifacts\\companion-summary.json", "Physical packet payload should fall back to the visible companion workflow summary.");
+document.getElementById("stagedScenarioApkPath").value = "C:\\staged\\QuestQuestionnaireThreeCircleTriggerDemo.apk";
+const twoApkPacketPayload = context.__api.twoApkLivePacketPayloadFromState();
+assert(twoApkPacketPayload.unityApk === "C:\\staged\\QuestQuestionnaireThreeCircleTriggerDemo.apk", "Two-APK packet payload should use the scanned/staged local Unity APK path.");
+assert(twoApkPacketPayload.config && twoApkPacketPayload.config.schemaVersion === "my-questionnaire-vr.config.v1", "Two-APK packet payload should include the current generated questionnaire config.");
+const twoApkPacketText = context.__api.twoApkLivePacketReceiptText({
+  twoApkLivePacketReceipt: {
+    status: "ready-for-operator",
+    checks: {
+      twoApkPairAuditPass: true,
+      dryRunPreflightPassOrSkipped: true,
+      operatorGuardrailsPresent: true,
+      operatorSignoffTemplateWritten: true
+    },
+    statuses: {
+      dryRunPreflight: "pass"
+    },
+    contract: {
+      participantFrontDoor: "generated 2D questionnaire APK",
+      unityRole: "immersive stimulus APK that emits passive trigger IDs only"
+    },
+    remainingLiveGateCount: 7,
+    artifacts: {
+      runbookPath: "C:\\artifacts\\two-apk-runbook.md",
+      summaryPath: "C:\\artifacts\\two-apk-summary.json"
+    }
+  }
+});
+assert(twoApkPacketText.includes("questionnaire-first two-APK packet ready-for-operator"), "Two-APK packet receipt should show the operator-ready boundary.");
+assert(twoApkPacketText.includes("front door: generated 2D questionnaire APK"), "Two-APK packet receipt should state that the questionnaire APK is the participant front door.");
+assert(twoApkPacketText.includes("Unity role: immersive stimulus APK that emits passive trigger IDs only"), "Two-APK packet receipt should state Unity is passive.");
+const twoApkBundleSummaryPath = context.__api.evidenceBundleSummaryPath({
+  twoApkLivePacketReceipt: { artifacts: { summaryPath: "C:\\artifacts\\two-apk-summary.json" } }
+});
+assert(twoApkBundleSummaryPath === "C:\\artifacts\\two-apk-summary.json", "Evidence bundle download should target the visible two-APK packet summary.");
 const physicalPacketBundleSummaryPath = context.__api.evidenceBundleSummaryPath({
   physicalGatePacketReceipt: { artifacts: { summaryPath: "C:\\artifacts\\physical-packet-summary.json" } }
 });
@@ -986,6 +1048,13 @@ assert(triggered.chainDefaults.questionnaireSequence.length === 0, "Catalog load
 assert(triggered.chainDefaults.triggerId === "study_start_block_1", "Hosted product catalog load should use a generic block 1 start trigger when Unity only declares later passive triggers.");
 assert(triggered.chainDefaults.nextPackage === "com.example.scenario", "Hosted product catalog load should target the scanned APK as nextPackage.");
 assert(triggered.appDisplayName === "Start Experiment | Demo scenario", "Hosted product catalog load should name the generated APK from the scanned scenario label.");
+assert(document.getElementById("questionnaireApkAppName").value === "Start Experiment | Demo scenario", "Bake step should expose the auto generated questionnaire APK app name.");
+document.getElementById("questionnaireApkAppName").value = "Custom Lab Study Launcher";
+const manuallyNamedTriggered = context.__api.buildConfig();
+assert(manuallyNamedTriggered.appDisplayName === "Custom Lab Study Launcher", "Manual Bake-step questionnaire APK name should override the generated app label.");
+document.getElementById("questionnaireApkAppName").value = "";
+const defaultNamedTriggered = context.__api.buildConfig();
+assert(defaultNamedTriggered.appDisplayName === "Start Experiment | Demo scenario", "Clearing the manual APK name should fall back to the scanned scenario label.");
 assert(triggered.triggerQuestionnaireMapping.triggers.length === 2, "Trigger catalog should produce two trigger mappings.");
 assert(triggered.triggerQuestionnaireMapping.triggers[0].questionnaireSequence.length === 0, "Scanned Unity triggers should start without questionnaire assignments.");
 assert(triggered.triggerQuestionnaireMapping.triggers[1].questionnaireSequence.length === 0, "Second scanned Unity trigger should start without questionnaire assignments.");
@@ -1061,7 +1130,10 @@ assert(handoff.chainDefaults.questionnaireMode === "none", "Hosted handoff catal
 assert(handoff.chainDefaults.questionnaireSequence.length === 0, "Hosted handoff catalog should keep editable block 1 empty until the user adds elements.");
 assert(handoff.chainDefaults.triggerId === "study_start_block_1", "Hosted handoff catalog should not treat Unity manifest triggers as block 1 questionnaire decisions.");
 assert(handoff.chainDefaults.nextPackage === "org.questquestionnaire.stimulusdemo", "Hosted handoff catalog should target the Unity package as nextPackage.");
-assert(handoff.appDisplayName === "Start Experiment | Aesthetic Chills 1 Trigger Demo", "Hosted handoff catalog should name the generated APK as the experiment starter for the Unity demo.");
+assert(
+  handoff.appDisplayName === "Start Experiment | Aesthetic Chills 1 Trigger Demo",
+  `Hosted handoff catalog should name the generated APK as the experiment starter for the Unity demo. Got: ${handoff.appDisplayName}`
+);
 assert(handoff.triggerQuestionnaireMapping.triggers.length === 1, "Handoff demo catalog should produce one passive Unity-return trigger mapping.");
 assert(handoff.triggerQuestionnaireMapping.passiveTriggerWarnings.length === 0, "Handoff demo catalog should not encode questionnaire behavior in Unity trigger metadata.");
 assert(handoff.triggerQuestionnaireMapping.triggers[0].triggerId === "trigger_1_complete", "Handoff demo catalog should expose the single passive trigger id.");

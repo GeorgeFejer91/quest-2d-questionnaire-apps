@@ -15,27 +15,23 @@ public sealed class QuestQuestionnairePassiveTriggerDemo : MonoBehaviour
 
     public enum PassiveTriggerAction
     {
-        LaunchQuestionnaire,
+        QuestionnaireReceiver,
         ChainLinkTrigger
     }
 
     [Header("Demo trigger sequence")]
     public bool armOnStart = true;
     public bool useRealtime = true;
-    public PassiveTriggerAction action = PassiveTriggerAction.LaunchQuestionnaire;
+    public PassiveTriggerAction action = PassiveTriggerAction.QuestionnaireReceiver;
     public List<PassiveTriggerStep> triggers = new List<PassiveTriggerStep>
     {
         new PassiveTriggerStep { triggerId = "trigger_1_complete", delaySeconds = 10f },
         new PassiveTriggerStep { triggerId = "trigger_2_complete", delaySeconds = 10f }
     };
 
-    [Header("Launch metadata")]
-    public string finishBehavior = "resumeCaller";
+    [Header("Session metadata")]
     public string callerPackage = "";
     public string callerActivity = "";
-    public string autoCloseDelayMs = "2000";
-
-    [Header("Session metadata")]
     public string sessionId = "";
     public string experimentId = "";
     public string scenarioId = "";
@@ -115,7 +111,7 @@ public sealed class QuestQuestionnairePassiveTriggerDemo : MonoBehaviour
         }
         else
         {
-            QuestQuestionnaireChainBridge.LaunchQuestionnaireTrigger(triggerId, extras);
+            QuestQuestionnairePassiveTriggerBridge.EmitTrigger(triggerId, extras);
         }
 
         Debug.Log("QuestQuestionnairePassiveTriggerDemo emitted passive trigger "
@@ -133,9 +129,7 @@ public sealed class QuestQuestionnairePassiveTriggerDemo : MonoBehaviour
             ["mq.triggerSource"] = "unity-passive-trigger-demo",
             ["mq.triggerTimestampUtc"] = utcNow.ToString("o"),
             ["mq.triggerTimestampUnixMs"] = ToUnixMilliseconds(utcNow).ToString(CultureInfo.InvariantCulture),
-            ["mq.triggerSequence"] = sequenceNumber.ToString(CultureInfo.InvariantCulture),
-            ["mq.finishBehavior"] = finishBehavior,
-            ["mq.autoCloseDelayMs"] = autoCloseDelayMs
+            ["mq.triggerSequence"] = sequenceNumber.ToString(CultureInfo.InvariantCulture)
         };
 
         AddIfSet(extras, "mq.callerPackage", callerPackage);

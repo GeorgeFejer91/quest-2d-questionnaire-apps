@@ -35,6 +35,7 @@ final class QuestChainBroker {
 
     static final String COMMAND_START_PLAN = "startPlan";
     static final String COMMAND_CONTINUE_PLAN = "continuePlan";
+    static final String COMMAND_TRIGGER = "trigger";
     static final String COMMAND_START_QUESTIONNAIRE = "startQuestionnaire";
     static final String COMMAND_OPEN_APP = "openApp";
     static final String COMMAND_GO_HOME = "goHome";
@@ -67,6 +68,9 @@ final class QuestChainBroker {
         }
         if (COMMAND_CONTINUE_PLAN.equals(command)) {
             return continuePlan(context, intent);
+        }
+        if (COMMAND_TRIGGER.equals(command)) {
+            return triggerPlan(context, intent);
         }
         if (COMMAND_START_QUESTIONNAIRE.equals(command)) {
             return startQuestionnaire(context, intent);
@@ -136,6 +140,50 @@ final class QuestChainBroker {
 
         writeState(context, state.plan, state.chainId, nextStep, "running", resultJson(intent));
         return executeStep(context, state.plan, state.chainId, nextStep, intent);
+    }
+
+    private static Result triggerPlan(Context context, Intent intent) throws IOException, JSONException {
+        State state = readState(context);
+        if (state == null && hasPlanPayload(intent)) {
+            JSONObject plan = readPlanFromIntent(intent);
+            state = new State();
+            state.plan = plan;
+            state.chainId = firstNonBlank(
+                stringValue(intent, QuestionnaireLaunchContext.EXTRA_CHAIN_ID, "chainId"),
+                plan.optString("chainId", ""),
+                TimeUtil.newRunId());
+            state.stepIndex = -1;
+            writeState(context, state.plan, state.chainId, state.stepIndex, "running", null);
+        }
+        if (state == null) {
+            appendEvent(context, "trigger-without-active-plan", "", intent);
+            return new Result(null, "no-active-plan");
+        }
+
+        String triggerId = triggerIdFromIntent(intent);
+        if (isBlank(triggerId)) {
+            appendEvent(context, "trigger-invalid", "missing-trigger-id", intent);
+            return new Result(null, "missing-trigger-id");
+        }
+
+        JSONArray steps = state.plan.optJSONArray("steps");
+        if (steps == null) {
+            appendEvent(context, "trigger-plan-invalid", "missing-steps", intent);
+            return new Result(null, "missing-steps");
+        }
+
+        int match = findStepForTrigger(steps, triggerId, state.stepIndex + 1);
+        if (match < 0) {
+            match = findRepeatableStepForTrigger(steps, triggerId);
+        }
+        if (match < 0) {
+            appendEvent(context, "trigger-unmapped", triggerId, intent);
+            return new Result(null, "trigger-unmapped:" + triggerId);
+        }
+
+        writeState(context, state.plan, state.chainId, match, "running", resultJson(intent));
+        appendEvent(context, "trigger-route", triggerId, intent);
+        return executeStep(context, state.plan, state.chainId, match, intent);
     }
 
     private static Result startQuestionnaire(Context context, Intent intent) {
@@ -405,6 +453,7 @@ final class QuestChainBroker {
             QuestionnaireLaunchContext.EXTRA_RESULT_STATUS,
             QuestionnaireLaunchContext.EXTRA_RUN_ID,
             QuestionnaireLaunchContext.EXTRA_SESSION_ID,
+            QuestionnaireLaunchContext.EXTRA_TRIGGER_ID,
             QuestionnaireLaunchContext.EXTRA_CHAIN_ID,
             QuestionnaireLaunchContext.EXTRA_CHAIN_STEP_ID,
             QuestionnaireLaunchContext.EXTRA_CHAIN_STEP_INDEX,
@@ -460,6 +509,7 @@ final class QuestChainBroker {
         for (String key : extras.keySet()) {
             if (key != null && (QuestionnaireLaunchContext.EXTRA_RESULT_STATUS.equals(key)
                 || QuestionnaireLaunchContext.EXTRA_RUN_ID.equals(key)
+                || QuestionnaireLaunchContext.EXTRA_TRIGGER_ID.equals(key)
                 || QuestionnaireLaunchContext.EXTRA_EXPORT_JSON_PATH.equals(key)
                 || QuestionnaireLaunchContext.EXTRA_EXPORT_CSV_PATH.equals(key)
                 || EXTRA_SCENARIO_RESULT_STATUS.equals(key)
@@ -507,11 +557,24 @@ final class QuestChainBroker {
         if (intent != null && RESULT_COMPLETE.equals(intent.getStringExtra(QuestionnaireLaunchContext.EXTRA_RESULT_STATUS))) {
             return COMMAND_CONTINUE_PLAN;
         }
+        if (!isBlank(triggerIdFromIntent(intent))) {
+            return COMMAND_TRIGGER;
+        }
         if (!isBlank(stringValue(intent, EXTRA_CHAIN_PLAN_JSON, "chainPlanJson"))
             || !isBlank(stringValue(intent, EXTRA_CHAIN_PLAN_PATH, "chainPlanPath"))) {
             return COMMAND_START_PLAN;
         }
         return COMMAND_PING;
+    }
+
+    private static boolean hasPlanPayload(Intent intent) {
+        return !isBlank(stringValue(intent, EXTRA_CHAIN_PLAN_JSON, "chainPlanJson"))
+            || !isBlank(stringValue(intent, EXTRA_CHAIN_PLAN_BASE64, "chainPlanBase64"))
+            || !isBlank(stringValue(intent, EXTRA_CHAIN_PLAN_PATH, "chainPlanPath"));
+    }
+
+    private static String triggerIdFromIntent(Intent intent) {
+        return stringValue(intent, QuestionnaireLaunchContext.EXTRA_TRIGGER_ID, "triggerId");
     }
 
     private static String stringValue(Intent intent, String extraName, String queryName) {
@@ -562,6 +625,48 @@ final class QuestChainBroker {
             || EXTRA_CHAIN_PLAN_JSON.equals(key)
             || EXTRA_CHAIN_PLAN_BASE64.equals(key)
             || EXTRA_CHAIN_PLAN_PATH.equals(key);
+    }
+
+    private static int findStepForTrigger(JSONArray steps, String triggerId, int startIndex) {
+        String wanted = clean(triggerId);
+        for (int i = Math.max(0, startIndex); i < steps.length(); i++) {
+            JSONObject step = steps.optJSONObject(i);
+            if (step != null && stepMatchesTrigger(step, wanted)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static int findRepeatableStepForTrigger(JSONArray steps, String triggerId) {
+        String wanted = clean(triggerId);
+        for (int i = 0; i < steps.length(); i++) {
+            JSONObject step = steps.optJSONObject(i);
+            if (step != null && stepAllowsRepeat(step) && stepMatchesTrigger(step, wanted)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static boolean stepMatchesTrigger(JSONObject step, String triggerId) {
+        if (triggerId.equals(step.optString("triggerId", "")) || triggerId.equals(step.optString("id", ""))) {
+            return true;
+        }
+        JSONObject trigger = step.optJSONObject("trigger");
+        if (trigger != null && (triggerId.equals(trigger.optString("triggerId", "")) || triggerId.equals(trigger.optString("id", "")))) {
+            return true;
+        }
+        JSONObject extras = step.optJSONObject("extras");
+        return extras != null && triggerId.equals(extras.optString(QuestionnaireLaunchContext.EXTRA_TRIGGER_ID, ""));
+    }
+
+    private static boolean stepAllowsRepeat(JSONObject step) {
+        if (step.optBoolean("allowRepeat", false) || step.optBoolean("repeatable", false)) {
+            return true;
+        }
+        JSONObject trigger = step.optJSONObject("trigger");
+        return trigger != null && (trigger.optBoolean("allowRepeat", false) || trigger.optBoolean("repeatable", false));
     }
 
     private static String normalizeActivity(String packageName, String activityName) {

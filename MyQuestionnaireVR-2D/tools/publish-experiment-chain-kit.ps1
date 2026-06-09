@@ -343,7 +343,7 @@ Android 2D app for Meta Horizon OS and Quest 2D Questionnaire scenario APKs.
 - `tools\audit-unity-source-hook-candidates.ps1`: inspect Unity source scenes/build profiles for source-hook readiness.
 - `tools\build-unity-source-hook-apk.ps1`: build a chosen Unity scene/package with the source-hook entrypoint.
 - `tools\validate-unity-chainlink-hook.ps1`: static validation for the drop-in ChainLink Unity hook.
-- `tools\lsl-chain-bridge.ps1`: optional LSL-to-broker command source.
+- `tools\lsl-chain-bridge.ps1`: optional passive LSL trigger-to-broker adapter.
 - `unity\QuestQuestionnaireChainBridge.cs`: source-hook helper for rebuildable Unity scenarios.
 - `unity\ChainLinkControllerHook.cs`: drop-in left-controller foreground hook for ChainLink `nextBlock`.
 - `docs\experiment-chain-workflow.md`: operational recipe and current evidence notes.

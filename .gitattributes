@@ -1,8 +1,8 @@
 *.apk binary
 *.wav binary
+*.mp3 binary
 *.png binary
 *.jpg binary
 *.jpeg binary
 *.webp binary
 *.zip binary
-

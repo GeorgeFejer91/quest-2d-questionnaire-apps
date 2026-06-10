@@ -39,6 +39,15 @@ checks, validation, and APK generation, start the local companion from
 `MyQuestionnaireVR-2D\Start-QuestionnaireBuilderOnlineConnector.cmd` and enter
 the printed pairing token in the page.
 
+## Big Red Button Questionnaire Change Audio
+
+Two MP3 notes for the Big Red Button questionnaire change request are published
+under `docs/big-red-button-questionnaire-change-audio/`:
+
+- [Playable GitHub Pages audio page](https://georgefejer91.github.io/quest-2d-questionnaire-apps/docs/big-red-button-questionnaire-change-audio/)
+- [First questionnaire change](docs/big-red-button-questionnaire-change-audio/questionnaire-change-1-first-questionnaire-change.mp3)
+- [Second questionnaire change excuse](docs/big-red-button-questionnaire-change-audio/questionnaire-change-2-second-questionnaire-change-excuse.mp3)
+
 ## XR Handoff Contract
 
 The preferred product path is:

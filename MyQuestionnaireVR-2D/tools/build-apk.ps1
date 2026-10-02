@@ -8,14 +8,45 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Get-JavaMajorVersion {
+    param([string]$JavaExe)
+
+    if (-not (Test-Path -LiteralPath $JavaExe)) {
+        return 0
+    }
+
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $JavaExe
+    $startInfo.Arguments = '-version'
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $process = [System.Diagnostics.Process]::Start($startInfo)
+    $stdout = $process.StandardOutput.ReadToEnd()
+    $stderr = $process.StandardError.ReadToEnd()
+    $process.WaitForExit()
+
+    $versionText = "$stdout`n$stderr"
+    if ($versionText -match 'version "1\.(\d+)') {
+        return [int]$Matches[1]
+    }
+    if ($versionText -match 'version "(\d+)') {
+        return [int]$Matches[1]
+    }
+    return 0
+}
+
 function Test-UnityAndroidRoot {
     param([string]$Path)
 
     if ([string]::IsNullOrWhiteSpace($Path)) {
         return $false
     }
-    return (Test-Path -LiteralPath (Join-Path $Path 'OpenJDK\bin\java.exe')) -and
-        (Test-Path -LiteralPath (Join-Path $Path 'SDK'))
+    $javaExe = Join-Path $Path 'OpenJDK\bin\java.exe'
+    return (Test-Path -LiteralPath $javaExe) -and
+        ((Get-JavaMajorVersion -JavaExe $javaExe) -ge 17) -and
+        (Test-Path -LiteralPath (Join-Path $Path 'SDK')) -and
+        (Test-Path -LiteralPath (Join-Path $Path 'Tools\gradle\lib\gradle-launcher-8.11.jar'))
 }
 
 function Resolve-UnityAndroidRoot {
@@ -74,7 +105,7 @@ else {
 
 $UnityAndroidRoot = Resolve-UnityAndroidRoot -RequestedRoot $UnityAndroidRoot
 if ([string]::IsNullOrWhiteSpace($UnityAndroidRoot)) {
-    throw "Unity Android Build Support was not found. Install Unity with Android Build Support or set UNITY_ANDROID_ROOT to the AndroidPlayer folder."
+    throw "Unity Android Build Support with OpenJDK 17+, Android SDK, and Gradle 8.11 was not found. Install Unity 6000.2.7f2 with Android Build Support or set UNITY_ANDROID_ROOT to the matching AndroidPlayer folder."
 }
 
 $javaHome = Join-Path $UnityAndroidRoot 'OpenJDK'

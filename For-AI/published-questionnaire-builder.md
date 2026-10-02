@@ -1,4 +1,4 @@
-# Published Questionnaire Builder Handoff
+﻿# Published Questionnaire Builder Handoff
 
 This documents the online/offline questionnaire builder work completed on
 June 6, 2026.
@@ -249,3 +249,6 @@ During publication, these checks passed:
 Offline and online GUI behavior must stay identical or near-identical. The only
 expected difference is the online pairing step required to connect the hosted
 page to the local companion.
+## Quest ADB Access
+
+Use the configured ADB wrapper. If a headset is unauthorized, approve it in the headset UI. Keep headset serials, key locations, and workstation-specific paths out of this public repository.

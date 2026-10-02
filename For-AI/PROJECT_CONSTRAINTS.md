@@ -1,4 +1,4 @@
-# Project Constraints For AI Agents
+﻿# Project Constraints For AI Agents
 
 These are living constraints for the whole repository. Update this file when
 the user gives a project rule that future agents must preserve.
@@ -348,3 +348,6 @@ the installed Quest app.
   `build/`, `local.properties`, or oversized Unity/scenario APKs.
 - Curated release APKs belong in `apks/`, with `apks/checksums.sha256` updated
   when they change.
+## Quest ADB Access
+
+Use the configured ADB wrapper. If a headset is unauthorized, approve it in the headset UI. Keep headset serials, key locations, and workstation-specific paths out of this public repository.

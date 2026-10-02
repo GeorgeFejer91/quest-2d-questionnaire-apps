@@ -5,6 +5,20 @@ Use absolute dates.
 
 ## 2026-06-09
 
+- Hardened local build helper discovery after the next-PC pull: the
+  three-circle Unity build helper now searches Program Files Unity Hub installs
+  and the user-profile Hub install path, requires the editor version from
+  `ProjectSettings/ProjectVersion.txt`, invokes Unity through standard
+  batchmode, and reports license/Android module blockers from the Unity log.
+  The questionnaire APK build helper now rejects Unity AndroidPlayer folders
+  that lack the repo-required Gradle 8.11 launcher. On this PC, Unity
+  `6000.2.7f2` and Android Build Support were installed under the user profile,
+  JDK 17/SDK/NDK were wired in without UAC, and
+  `Builds/quest-questionnaire-three-circle-protocol-demo-1.0.0.apk` was
+  generated successfully. The remaining offline blocker is the Unity stimulus
+  APK: the non-admin Unity install has AndroidPlayer files but Unity still logs
+  `Switching to AndroidPlayer is disabled`, while the older Unity fallback logs
+  `No valid Unity Editor license found`.
 - Added `For-AI/HANDOFF_2026-06-09_TWO_APK_V2.md` as the current continuation
   inventory before pushing to GitHub. It records the questionnaire-first
   two-APK product contract, implemented scripts/docs/GUI controls, latest local

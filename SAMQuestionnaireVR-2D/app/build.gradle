@@ -1,0 +1,39 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'org.questquestionnaire.sam2d'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'org.questquestionnaire.sam2d'
+        minSdk 29
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.1'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests.includeAndroidResources = true
+        unitTests.all {
+            systemProperty 'sam.render.enabled', System.getProperty('sam.render.enabled', 'false')
+            systemProperty 'sam.render.outputDir', System.getProperty('sam.render.outputDir', '')
+            systemProperty 'sam.render.sizes', System.getProperty('sam.render.sizes', '1280x800,900x800')
+            systemProperty 'sam.render.runId', System.getProperty('sam.render.runId', '')
+        }
+    }
+}
+
+dependencies {
+    implementation 'com.caverock:androidsvg-aar:1.4'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+}

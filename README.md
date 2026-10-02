@@ -5,10 +5,12 @@ Horizon OS questionnaire work:
 
 - `MyQuestionnaireVR-2D`: demographic, MAIA-2, pictographic, slider, builder,
   ChainLink, orchestrator, hook-wrapper, and source-hook helper project.
+- `SAMQuestionnaireVR-2D`: standalone SAM valence/arousal and
+  Affective Slider-style 2D panel questionnaire app.
 - `TemporalExperienceTracerVR-2D`: temporal experience tracer 2D panel app with
   loss-safe SVG/CSV/JSON trace exports.
-- `apks`: curated APK copies for installing the demographic questionnaire and
-  temporal experience tracer questionnaire.
+- `apks`: curated APK copies for installing the demographic questionnaire, SAM
+  questionnaire, and temporal experience tracer questionnaire.
 - `workflow`: the reusable Quest 2D questionnaire app workflow notes learned
   while building, chaining, validating, and packaging these apps.
 - `For-AI`: documentation-only project memory and first-read instructions for
@@ -67,12 +69,14 @@ compiler, validator, and fallback router. See
 | App | APK | Package | Launch action |
 | --- | --- | --- | --- |
 | Demographic questionnaire | `apks/demographic-questionnaire/MyQuestionnaireVR-2D.apk` | `org.questquestionnaire.questionnaires2d` | `org.questquestionnaire.questionnaires2d.RUN` |
+| SAM valence/arousal questionnaire | `apks/sam-questionnaire/SAMQuestionnaireVR-2D.apk` | `org.questquestionnaire.sam2d` | `org.questquestionnaire.sam2d.RUN` |
 | Temporal experience tracer | `apks/temporal-experience-tracer/TemporalExperienceTracerVR-2D.apk` | `org.questquestionnaire.temporaltracer2d` | `org.questquestionnaire.temporaltracer2d.RUN` |
 
 Install with ADB:
 
 ```powershell
 adb -s <serial> install -r -d apks\demographic-questionnaire\MyQuestionnaireVR-2D.apk
+adb -s <serial> install -r -d apks\sam-questionnaire\SAMQuestionnaireVR-2D.apk
 adb -s <serial> install -r -d apks\temporal-experience-tracer\TemporalExperienceTracerVR-2D.apk
 ```
 
@@ -93,6 +97,13 @@ Temporal experience tracer:
 
 ```powershell
 cd TemporalExperienceTracerVR-2D
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\build-apk.ps1
+```
+
+SAM valence/arousal questionnaire:
+
+```powershell
+cd SAMQuestionnaireVR-2D
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\build-apk.ps1
 ```
 

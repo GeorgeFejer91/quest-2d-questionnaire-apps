@@ -1,4 +1,4 @@
-# Agent First-Read Instructions
+﻿# Agent First-Read Instructions
 
 Before making changes in this repository, read:
 
@@ -11,3 +11,6 @@ between sessions.
 
 Do not skip those notes when changing code, docs, APK packaging, the
 questionnaire builder, or Quest validation workflows.
+## Quest ADB Access
+
+Use the configured ADB wrapper. If a headset is unauthorized, approve it in the headset UI. Keep headset serials, key locations, and workstation-specific paths out of this public repository.

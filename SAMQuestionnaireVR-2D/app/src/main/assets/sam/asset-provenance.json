@@ -1,0 +1,79 @@
+﻿{
+    "schema":  "quest-questionnaire.sam-assets.v1",
+    "sourceRepository":  "https://github.com/hexa-/SAM-vectors",
+    "sourceLicense":  "CC0-1.0",
+    "sourceReference":  "Lang, P. J. (1980). Behavioral treatment and bio-behavioral assessment: computer applications.",
+    "generatedAtUtc":  "2026-06-16T18:56:19.3326403Z",
+    "sourceFiles":  [
+                        {
+                            "dimension":  "valence",
+                            "file":  "valence-1.svg",
+                            "relativePath":  "source/valence/valence-1.svg",
+                            "sha256":  "f3658301bb07746536f86be677d9bca854fe949a36577ed777b430aae35f6307"
+                        },
+                        {
+                            "dimension":  "valence",
+                            "file":  "valence-2.svg",
+                            "relativePath":  "source/valence/valence-2.svg",
+                            "sha256":  "ab120f790ba690f43aacb50c5c81383015c34139cc8d5ed5861e9796b33ab04b"
+                        },
+                        {
+                            "dimension":  "valence",
+                            "file":  "valence-3.svg",
+                            "relativePath":  "source/valence/valence-3.svg",
+                            "sha256":  "ab0f7d5c52d02425b039ccbde78884e3c4ee420e9eb3b39a998a323744c60713"
+                        },
+                        {
+                            "dimension":  "valence",
+                            "file":  "valence-4.svg",
+                            "relativePath":  "source/valence/valence-4.svg",
+                            "sha256":  "35111cb65fbf448f1a3490999a7681845ecd609fc1d2796bc47de8220a3c78b0"
+                        },
+                        {
+                            "dimension":  "valence",
+                            "file":  "valence-5.svg",
+                            "relativePath":  "source/valence/valence-5.svg",
+                            "sha256":  "b73bb2ef7ac9d358f7949ba618e31c042cff9a53218ab8ff583503a63702c0f7"
+                        },
+                        {
+                            "dimension":  "arousal",
+                            "file":  "arousal-1.svg",
+                            "relativePath":  "source/arousal/arousal-1.svg",
+                            "sha256":  "e0c3ae075b621d2b09f273acca98286fd3491e2ea90f80c04a80d568a28df6e1"
+                        },
+                        {
+                            "dimension":  "arousal",
+                            "file":  "arousal-2.svg",
+                            "relativePath":  "source/arousal/arousal-2.svg",
+                            "sha256":  "72652c4f8febf46c332ec959a1d26281dc117375f8ec3ea3f1f8ed8ac2bbe110"
+                        },
+                        {
+                            "dimension":  "arousal",
+                            "file":  "arousal-3.svg",
+                            "relativePath":  "source/arousal/arousal-3.svg",
+                            "sha256":  "8c581c56330bf37049ef66d43763a52fc213c0b1930287e735e49aba03da33c8"
+                        },
+                        {
+                            "dimension":  "arousal",
+                            "file":  "arousal-4.svg",
+                            "relativePath":  "source/arousal/arousal-4.svg",
+                            "sha256":  "7db9f59bac2b2e513a0eb07b473a127e6759b2506d3ef90521d86079068e190c"
+                        },
+                        {
+                            "dimension":  "arousal",
+                            "file":  "arousal-5.svg",
+                            "relativePath":  "source/arousal/arousal-5.svg",
+                            "sha256":  "09c3a9a3e06af2691287d393907bab27876d31fcf8cee07a447516881c84baf7"
+                        }
+                    ],
+    "composedGrids":  {
+                          "valence":  {
+                                          "relativePath":  "grid/sam_valence_grid.svg",
+                                          "sha256":  "20bcc793e3663e12af13f8e439ef8012b765e3416cf42ba98644f78289496b9d"
+                                      },
+                          "arousal":  {
+                                          "relativePath":  "grid/sam_arousal_grid.svg",
+                                          "sha256":  "133a229c4825ef126c9c8a3872f0560dbee5f88d2b484fb780b4f4251efd519b"
+                                      }
+                      }
+}
